@@ -8,8 +8,7 @@ Local dashboard for **Cursor IDE usage** — token timeline, costs, models, budg
 
 | Page | Focus |
 | ---- | ----- |
-| [usage-events-chart.html](usage-events-chart.html) | Per-event token **timeline** (zoom/pan) |
-| [cursor-usage-analytics.html](cursor-usage-analytics.html) | **Costs & patterns**, live data, budget |
+| [cursor-usage-analytics.html](cursor-usage-analytics.html) | **Costs & patterns**, live data, budget, zoom |
 | [index.html](index.html) | Hub / navigation |
 
 ## Quick start
@@ -87,7 +86,6 @@ In analytics: **Live (proxy)** or **Both**. Health: http://127.0.0.1:8060/health
 serve.py
 config/users.example.json
 cursor-usage-analytics.html
-usage-events-chart.html
 static/cursor-analytics/
 data/                 # gitignored CSV exports
 docs/REFERENCE.md
@@ -110,7 +108,6 @@ See [docs/screenshots/README.md](docs/screenshots/README.md) — add PNGs before
 - Python server required
 - Chart.js from jsDelivr CDN
 - No Enterprise Admin API
-- Event chart: no cost analysis; analytics: no per-event zoom like event chart
 - Large event sets may slow the browser
 
 ## License

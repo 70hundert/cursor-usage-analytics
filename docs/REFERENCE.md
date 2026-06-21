@@ -5,7 +5,7 @@
 
 # Cursor Usage Dashboard — Feature-Referenz
 
-Master-Referenz für AI-Chats. Abdeckung: Hub, Analytics (Thin-Shell), Event-Chart (Fork), Shared-Module, Backend.
+Master-Referenz für AI-Chats. Abdeckung: Hub, Analytics (Thin-Shell), Shared-Module, Backend.
 
 ---
 
@@ -19,9 +19,8 @@ Master-Referenz für AI-Chats. Abdeckung: Hub, Analytics (Thin-Shell), Event-Cha
 | Chart-Rendering, Legend-Persistenz, Zoom, Marker-Annotationen | `static/cursor-analytics/charts.js`                                                            |
 | Projekt-Marker (CRUD, Statistik, Sync)                        | `static/cursor-analytics/markers.js`                                                           |
 | Analytics-UI, Live-Fetch, Toolbar, Budget                     | `cursor-usage-analytics.html` (inline `<script>`)                                              |
-| Event-Zoom-Charts (pro User, CSV-only)                        | `usage-events-chart.html` (inline `<script>`)                                                  |
 | Live-API, Static-Serving, Event-Cache                         | `serve.py`                                                                                     |
-| Multi-User-Konfiguration                                      | `parser.js` (`USERS`), `usage-events-chart.html` (`USERS`), `serve.py` (`USER_TOKENS`), `.env` |
+| Multi-User-Konfiguration                                      | `users-config.js`, `serve.py` (`USER_TOKENS`), `.env`                                          |
 | Navigation Hub                                                | `index.html`                                                                                   |
 | Server-Start / Live-Setup                                     | `start.ps1`, `setup-live.ps1`                                                                  |
 
@@ -30,14 +29,13 @@ Master-Referenz für AI-Chats. Abdeckung: Hub, Analytics (Thin-Shell), Event-Cha
 
 ## 2. Architektur-Überblick
 
-**Muster:** Hybrid aus parallelen Einstiegspunkten **ohne Runtime-Flag** (`isVariant` existiert nicht).
+**Muster:** Analytics Thin-Shell + optionaler Hub — ein Parser in `parser.js`, kein Fork.
 
 ```mermaid
 flowchart LR
   subgraph entry [Einstiegspunkte]
     hub[index.html]
     analytics[cursor-usage-analytics.html]
-    events[usage-events-chart.html]
   end
   subgraph shared [Shared Frontend]
     parser[parser.js]
@@ -50,14 +48,12 @@ flowchart LR
     cursorAPI[cursor.com API]
   end
   hub --> analytics
-  hub --> events
   analytics --> parser
   analytics --> metrics
   analytics --> charts
   analytics --> markers
-  events --> markers
   analytics -->|Live CSV| serve
-  events -->|CSV only| data[data/]
+  analytics -->|CSV| data[data/]
   serve --> cursorAPI
 ```
 
@@ -67,7 +63,6 @@ flowchart LR
 | Einstiegspunkt  | Muster               | Datenquellen                      | Shared-Module                  |
 | --------------- | -------------------- | --------------------------------- | ------------------------------ |
 | **Analytics**   | Thin-Shell           | CSV, Live (Proxy), Beides (Merge) | Ja — `window.CursorAnalytics`  |
-| **Event-Chart** | Fork                 | Nur CSV                           | `markers.js` (+ inline Parser) |
 | **Hub**         | Static HTML          | —                                 | Nein                           |
 | **Backend**     | Python `http.server` | Proxy zu cursor.com               | —                              |
 
@@ -84,7 +79,6 @@ flowchart LR
 serve.py                          # Static + API-Proxy
 index.html                        # Hub
 cursor-usage-analytics.html       # Analytics Thin-Shell
-usage-events-chart.html           # Event-Chart Fork
 static/cursor-analytics/
   parser.js                       # Event-Modell
   metrics.js                      # Aggregationen
@@ -102,12 +96,6 @@ data/                             # CSV-Exports + project-markers.json (gitignor
 4. `**syncFromServer()`** (Marker) → `**initMarkerUi()**` → `**initToolbar()**` + `**loadDefaultCsvs()**`
 
 Cache-Busting: Query `?v=15` auf Modul-URLs.
-
-### Event-Chart — Script-Ladereihenfolge
-
-1. **Head (defer):** Hammer.js → Chart.js → chartjs-plugin-zoom → chartjs-plugin-annotation → `markers.js`
-2. **DOMContentLoaded → `initWhenReady()`:** wartet auf `Chart`, `Hammer`, `CursorAnalytics.markers`
-3. `**syncFromServer()`** → `**initMarkerUi()**` → `**initToolbar()**` + `**loadDefaultCsvs()**`
 
 ### Backend — Routen
 
@@ -132,7 +120,7 @@ Event-Cache: In-Memory, TTL `CURSOR_EVENTS_CACHE_TTL` (Default 120 s), Key `user
 
 ### Hub (`index.html`)
 
-- Ein `<main>` mit zwei Links: Event-Verlauf, Analytics
+- Ein `<main>` mit Link zu Analytics
 - Inline-CSS, keine JS-Abhängigkeiten
 
 ### Analytics (`cursor-usage-analytics.html`)
@@ -153,19 +141,6 @@ Event-Cache: In-Memory, TTL `CURSOR_EVENTS_CACHE_TTL` (Default 120 s), Key `user
 | Tabellen            | `#daily-table-body`, `#expensive-table-body`, `#events-table-body` | Tages-, Teuerste-, Einzelanfragen (Spalte **Projekt**)                                                                                                   |
 | Pagination          | `#events-pagination`                                               | 50 Events/Seite                                                                                                                                          |
 | Budget              | `#budget-input`, `#budget-panel`                                   | Monatsbudget USD                                                                                                                                         |
-
-
-### Event-Chart (`usage-events-chart.html`)
-
-
-| Section        | ID                                          | Inhalt                                     |
-| -------------- | ------------------------------------------- | ------------------------------------------ |
-| Toolbar        | `#history-toolbar`                          | Zeitraum-Presets, Custom-Datum, CSV-Upload |
-| Chart info     | `#chart-tokens-info`, `#chart-stats-info`   | Zoom/Pan pro Event, User info              |
-| Chart slope    | `#chart-tokens-slope`, `#chart-stats-slope` | Zoom/Pan, Marker-Annotationen              |
-| Projekt-Marker | `#marker-card`, `#marker-table-body`        | Intervall-Statistik (Tokens, kein Cost)    |
-| Marker-Dialog  | `#marker-modal`                             | CRUD pro User-Chart                        |
-| Tages-Tabelle  | `#usage-daily-table`, `#usage-daily-body`   | Tokens je Tag                              |
 
 
 ---
@@ -213,62 +188,26 @@ Mapping in `CHART_CANVAS_IDS` (inline JS):
 | byWeekday       | `chart-weekday`        | `byWeekday`                                            |
 
 
-### Event-Chart — User-Konfiguration
-
-`USERS` (inline, Zeile ~447):
-
-
-| User  | defaultPaths                                                   | chartCanvasId        | statsId             |
-| ----- | -------------------------------------------------------------- | -------------------- | ------------------- |
-| info  | `./data/usage-events-2026.csv`, `./data/usage-events-2025.csv` | `chart-tokens-info`  | `chart-stats-info`  |
-| slope | `./data/usage-events-slope.csv`                                | `chart-tokens-slope` | `chart-stats-slope` |
-
-
-Event-Objekt (Fork): `{ user, date, dayKey, inputNoCache, cacheRead, outputTokens, totalTokens }` — **kein** `costCents`, **kein** `model`.
-
-Analytics-Event (parser.js): `{ timestamp, dayKey, userLabel, model, kind, … costCents, source }`.
+Analytics-Event (`parser.js`): `{ timestamp, dayKey, userLabel, model, kind, … costCents, source }`.
 
 ---
 
-## 6. Abgrenzung zum Rest des Projekts
+## 6. Override-/Patch-Verhalten
 
-
-| Aspekt         | Analytics                                                                           | Event-Chart                                             |
-| -------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| Parser         | `parser.js` (CSV + API)                                                             | Inline `parseUsageEvents`                               |
-| Kosten         | Ja (`costCents`, Budget)                                                            | Nein                                                    |
-| Live-API       | Ja (via `serve.py`)                                                                 | Nein                                                    |
-| Charts         | 10+ Chart-Typen, Granularität; Anfragen-Modus: Timeline-Zoom für Overview/Kumuliert | 2 Line-Charts, pro Event                                |
-| User-Filter    | Gesamt / info / slope                                                               | Immer beide Charts parallel                             |
-| Zeitraum-Input | `datetime-local`                                                                    | `date` (nur Datum)                                      |
-| Dedupe         | `parser.mergeEvents` / `eventDedupeKey`                                             | Eigene `eventDedupeKey` (andere Felder)                 |
-| Export         | JSON (+ Marker im Payload)                                                          | Marker JSON Export/Import                               |
-| localStorage   | Budget, Granularität, Selection-Mode, Count, Chart-Sichtbarkeit, Marker             | Marker auch serverseitig in `data/project-markers.json` |
-
-
-**Drift-Risiko:** CSV-Pfade und User-Labels an drei Stellen (`parser.js`, `usage-events-chart.html`, `serve.py` + `.env`). Spalten-Erwartungen im Event-Chart sind Teilmenge von Analytics (kein Cost/Model/Kind).
+Keine Monkey-Patches. CSV-Parsing ausschließlich in `parser.js` (`parseUsageEventsCsv`, `normalizeApiEvent`).
 
 ---
 
-## 7. Override-/Patch-Verhalten
+## 7. CSS-Architektur
 
-Keine Monkey-Patches. Event-Chart ist ein **Fork** — Änderungen an `parser.js` wirken **nicht** automatisch auf `usage-events-chart.html`.
-
-Bei CSV-Format-Änderungen: beide Parser prüfen (`parseUsageEventsCsv` vs. inline `parseUsageEvents`).
-
----
-
-## 8. CSS-Architektur
-
-- **Kein gemeinsames Stylesheet** — Design-Tokens in `:root` sind in beiden HTML-Dateien **dupliziert**
-- Gemeinsame Tokens: `--bg`, `--surface`, `--surface-2`, `--text`, `--muted`, `--accent`, `--warn`, `--danger`, `--border`, `--radius`
-- Analytics hat zusätzliche Klassen: `.dashboard-grid`, `.kpi-grid`, `.drop-zone`, `.live-loading`, `.events-pagination`
-- Event-Chart: `.history-toolbar`, `.history-btn`, `.chart-stats`, `.card--history`
+- **Kein gemeinsames Stylesheet** — Design-Tokens in `:root` in `cursor-usage-analytics.html`
+- Tokens: `--bg`, `--surface`, `--surface-2`, `--text`, `--muted`, `--accent`, `--warn`, `--danger`, `--border`, `--radius`
+- Analytics-Klassen: `.dashboard-grid`, `.kpi-grid`, `.drop-zone`, `.live-loading`, `.events-pagination`
 - Dynamischer Zustand: `.btn--active`, `.btn--loading`, `.drop-zone--hidden`, `.status-error`, `[aria-pressed="true"]` auf Chart-Höhe-Buttons
 
 ---
 
-## 9. Initialisierungsfluss
+## 8. Initialisierungsfluss
 
 ### Analytics
 
@@ -296,17 +235,6 @@ applyRangeAndRender / live-refresh
 
 Client-Cache: `liveFetchState` (5 Min TTL), incremental overlap 5 Min.
 
-### Event-Chart
-
-```
-DOMContentLoaded
-  → initWhenReady (poll Chart + Hammer + markers)
-    → syncFromServer → initMarkerUi → initToolbar
-      → loadDefaultCsvs
-        → fetchCsvText → parseUsageEvents → mergeEvents
-          → applyLoadedEvents → renderCharts + renderDailyTable
-```
-
 ### Backend
 
 ```
@@ -320,7 +248,7 @@ Marker-Sync: `GET/PUT /api/markers` → `data/project-markers.json` (atomisches 
 
 ---
 
-## 10. Datenmodell & APIs
+## 9. Datenmodell & APIs
 
 ### Projekt-Marker (`markers.js`)
 
@@ -349,7 +277,7 @@ Marker sind **keine CSV-Daten** — manuell gesetzte Metadaten zu Zeitintervalle
 - `**user`:** `info` | `slope` | `all`
 - Statistik (`computeStats`): Events im Intervall — nicht persistiert.
 
-**Chart-Annotationen:** Overview + Cumulative nutzen Kategorie-Achse → Bucket-Index-Mapping via `sortKey`. Event-Chart nutzt Zeitachse (`mode: 'time'`).
+**Chart-Annotationen:** Overview + Cumulative nutzen Kategorie-Achse → Bucket-Index-Mapping via `sortKey`.
 
 **Gotcha Granularität:** Bei Wechsel der Granularität verschieben sich Bucket-Grenzen — Marker-Positionen in Overview/Cumulative (Zeitraum-Modus mit grober Granularität) sind Näherungen. Marker-Boxen nutzen `bucketIndexRangeForInterval` (Überlappung von Intervall und sichtbaren Buckets; bei Pro-Anfrage-Buckets optional User-Filter).
 
@@ -364,8 +292,6 @@ Siehe `parser.js` → `normalizeEvent()`. Wichtige Felder: `timestamp`, `userLab
 **Grundprinzip:** Das Dashboard **berechnet keine Kosten aus Token-Mengen und Modell-Preisen**. Jede Anfrage erhält ein `costCents`-Feld aus der **Cursor-Quelle** (CSV-Spalte `Cost` oder Live-API). KPIs, Charts, Budget und Marker-Statistik **summieren** diese Werte — sie leiten sie nicht neu ab.
 
 **Ohne Gewähr:** Alle angezeigten Kosten, Summen, Budget-Vergleiche und Prognosen sind **rein informativ** und **ohne Gewähr**. Sie sind **keine offizielle Abrechnung** von Cursor, können von der tatsächlichen Rechnung abweichen und dienen nicht steuerlichen oder vertraglichen Zwecken. Abweichungen sind u. a. möglich durch: veraltete oder unvollständige CSV-Exports, Parse-Fehler, API-Änderungen, Merge/Dedupe, Included-/Chargeable-Logik, Rundung, unvollständige Live-Daten oder die Monats-Prognose-Heuristik (Ø/Tag × 30). Maßgeblich ist ausschließlich die Abrechnung im Cursor-Dashboard bzw. bei Cursor.
-
-**Event-Chart:** Keine Kosten (`usage-events-chart.html` parst keine `Cost`-Spalte).
 
 #### Pro Event: `costCents` (`parser.js`)
 
@@ -447,35 +373,33 @@ Upstream: `https://cursor.com/api/usage-summary`, `https://cursor.com/api/dashbo
 | `cursor-analytics-chart-visibility`   | `{}`                          | Legend-Sichtbarkeit pro Chart-Key                                           |
 | `cursor-usage-markers-v1`             | `{ version: 1, markers: [] }` | Projekt-Marker (Primary Client-Cache)                                       |
 | `cursor-event-chart-markers-v1`       | —                             | Legacy-Key (Migration → `cursor-usage-markers-v1`)                          |
-| `cursor-event-chart-custom-range`     | heute−2d / heute              | Von/Bis-Zeitraum (Event-Chart, JSON `{ customFrom, customTo }`)             |
 
 
 Server-Datei: `data/project-markers.json` (liegt unter gitignored `data/`).
 
 ---
 
-## 11. Impact-Checkliste bei Shared-Änderungen
+## 10. Impact-Checkliste bei Shared-Änderungen
 
 
 | Änderung an …              | Prüfen auch …                                                                |
 | -------------------------- | ---------------------------------------------------------------------------- |
-| CSV-Spalten / Parser-Logik | `parser.js` **und** `usage-events-chart.html` (Fork)                         |
-| User `info`/`slope` Pfade  | `parser.js` `USERS`, Event-Chart `USERS`, `serve.py` `USER_TOKENS`, `.env`   |
-| Design-Tokens / Theme      | Beide HTML-Dateien (`:root`)                                                 |
-| Chart.js-Version (CDN)     | Beide HTML-Heads                                                             |
+| CSV-Spalten / Parser-Logik | `parser.js`                                                                  |
+| User-IDs / CSV-Pfade       | `users-config.js`, `serve.py` `USER_TOKENS`, `.env`                          |
+| Design-Tokens / Theme      | `cursor-usage-analytics.html` (`:root`)                                      |
+| Chart.js-Version (CDN)     | `cursor-usage-analytics.html` Head                                           |
 | API-Response-Format        | `parser.js` `normalizeApiEvent`, `serve.py` Proxy                            |
-| Neue Analytics-Features    | Event-Chart bewusst out of scope — nur dokumentieren wenn Parität gewünscht  |
-| `serve.py`-Routen          | Analytics/Event-Chart `fetch()` (`PROXY_BASE` = `''`), Marker `/api/markers` |
-| Marker-Schema / Sync       | `markers.js`, `serve.py`, beide HTML-Einstiegspunkte                         |
+| `serve.py`-Routen          | Analytics `fetch()` (`PROXY_BASE` = `''`), Marker `/api/markers`             |
+| Marker-Schema / Sync       | `markers.js`, `serve.py`, `cursor-usage-analytics.html`                      |
 
 
 ---
 
-## 12. Bekannte Einschränkungen
+## 11. Bekannte Einschränkungen
 
-- Kosten in Analytics: übernommen/summiert aus CSV/API — **ohne Gewähr**, keine offizielle Abrechnung (siehe §10 Kostenberechnung)
+- Kosten in Analytics: übernommen/summiert aus CSV/API — **ohne Gewähr**, keine offizielle Abrechnung (siehe §9 Kostenberechnung)
 - Enterprise Admin API nicht implementiert
-- Event-Chart: keine Kosten; Analytics Anfragen-Modus: gleiche Pro-Anfrage-Bucket-Charts wie Zeitraum + Granularität `event`
+- Anfragen-Modus: Pro-Anfrage-Bucket-Charts wie Zeitraum + Granularität `event`
 - Sehr große Event-Mengen → Browser-Performance
 - Session-Tokens laufen ab (401 → Hinweis in `serve.py`)
 - `file://`-Öffnung: Modul-Laden und CSV-Fetch schlagen fehl → `python serve.py` nötig

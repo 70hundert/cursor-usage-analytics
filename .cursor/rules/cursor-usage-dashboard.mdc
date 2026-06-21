@@ -1,8 +1,7 @@
 ---
-description: Cursor Usage Dashboard — Architektur, Task-Routing und Gotchas für Analytics, Event-Chart und Backend
+description: Cursor Usage Dashboard — Architektur, Task-Routing und Gotchas für Analytics und Backend
 globs:
   - cursor-usage-analytics.html
-  - usage-events-chart.html
   - static/cursor-analytics/**
   - serve.py
   - index.html
@@ -11,17 +10,17 @@ alwaysApply: false
 
 # Cursor Usage Dashboard
 
-Parallele HTML-Einstiegspunkte ohne Runtime-Flag: **Analytics** (Thin-Shell + `window.CursorAnalytics`) und **Event-Chart** (Fork mit inline Parser). Backend: `serve.py` (Static + Live-Proxy).
+**Analytics** Thin-Shell (`cursor-usage-analytics.html` + `window.CursorAnalytics`) und optionaler Hub (`index.html`). Backend: `serve.py` (Static + Live-Proxy).
 
 **Vollständige Referenz:** [`docs/REFERENCE.md`](../../docs/REFERENCE.md)
 
-Bei Änderungen an Shared-Impact (User-Pfade, CSV-Format, Design-Tokens) REFERENCE.md Abschnitt 11 lesen — auch wenn die bearbeitete Datei nicht in diesen globs liegt.
+Bei Änderungen an Shared-Impact (User-Pfade, CSV-Format, Design-Tokens) REFERENCE.md Abschnitt 10 lesen — auch wenn die bearbeitete Datei nicht in diesen globs liegt.
 
 ## Top-3-Gotchas
 
-1. **Parser-Drift:** Event-Chart dupliziert CSV-Logik inline — Änderungen an `parser.js` gelten **nicht** automatisch für `usage-events-chart.html`.
-2. **User-Konfiguration:** [`config/users.json`](config/users.json) (gitignored) + [`static/cursor-analytics/users-config.js`](static/cursor-analytics/users-config.js) + Event-Chart `buildChartStackFromConfig` + [`serve.py`](serve.py) (`load_user_ids`, `CURSOR_SESSION_TOKEN_<USER>` in `.env`).
-3. **Server erforderlich:** Modul-Laden und CSV-Fetch scheitern bei `file://` — `python serve.py` (Port 8060).
+1. **User-Konfiguration:** [`config/users.json`](config/users.json) (gitignored) + [`static/cursor-analytics/users-config.js`](static/cursor-analytics/users-config.js) + [`serve.py`](serve.py) (`load_user_ids`, `CURSOR_SESSION_TOKEN_<USER>` in `.env`).
+2. **Server erforderlich:** Modul-Laden und CSV-Fetch scheitern bei `file://` — `python serve.py` (Port 8060).
+3. **Kosten:** Werden aus CSV/API übernommen und summiert — nicht aus Tokens berechnet (siehe REFERENCE.md §10).
 
 ## Task-Routing
 
@@ -33,7 +32,6 @@ Bei Änderungen an Shared-Impact (User-Pfade, CSV-Format, Design-Tokens) REFEREN
 | Charts, Legend-Persistenz, Marker-Annotationen | `static/cursor-analytics/charts.js` |
 | Projekt-Marker | `static/cursor-analytics/markers.js` |
 | Analytics-UI, Live-Fetch | `cursor-usage-analytics.html` |
-| Event-Zoom-Charts | `usage-events-chart.html` |
 | API-Proxy, Static-Serving | `serve.py` |
 
 Bei Shared-Änderungen mit Bezug zu diesem Scope: REFERENCE.md manuell lesen.

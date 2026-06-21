@@ -487,7 +487,6 @@ def main() -> None:
     print(f"Cursor Usage Dashboard auf {base_url}")
     print(f"  Hub:       {base_url}/")
     print(f"  Analytics: {base_url}/cursor-usage-analytics.html")
-    print(f"  Chart:     {base_url}/usage-events-chart.html")
     if configured:
         print(f"Live-API: Benutzer {', '.join(configured)}")
     else:

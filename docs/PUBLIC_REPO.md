@@ -7,15 +7,7 @@ Dieses Projekt nutzt **zwei Ordner**:
 | `Cursor-Usage-Dashboard` (privat) | Persönliche Config, Roadmap, AI-Prompts, Historie |
 | `Cursor-Usage-Dashboard-Public` | **Öffentliches Git-Repo** — ab v0.1 nur hier weiterarbeiten |
 
-## Einmalig: Public-Ordner erzeugen
-
-Im **privaten** Projektroot:
-
-```powershell
-.\scripts\init-public-repo.ps1
-```
-
-Das Skript kopiert den Stand nach `C:\Projekte\Cursor-Usage-Dashboard-Public` (ohne `.git`, `data/`, `.env`, lokale Dev-Dateien) und erstellt einen **Initial-Commit**.
+Die einmalige Migration vom privaten Ordner ins Public-Repo ist abgeschlossen. Für neue Setups reicht ein normaler Git-Clone.
 
 ## GitHub-Repo
 
@@ -23,23 +15,24 @@ Das Skript kopiert den Stand nach `C:\Projekte\Cursor-Usage-Dashboard-Public` (o
 
 Das alte Repo `Cursor-Usage-Dashboard` auf GitHub bleibt mit der bisherigen Historie — nicht weiter nutzen für neue Arbeit.
 
-## GitHub-Repo anlegen (falls neu klonen)
+## Repo klonen
 
 ```powershell
-cd C:\Projekte\Cursor-Usage-Dashboard-Public
-git clone https://github.com/70hundert/cursor-usage-analytics.git .
+cd C:\Projekte
+git clone https://github.com/70hundert/cursor-usage-analytics.git Cursor-Usage-Dashboard-Public
+cd Cursor-Usage-Dashboard-Public
 ```
 
-Oder nach `init-public-repo.ps1`:
+Falls du ein neues Remote-Repo anlegst:
 
 ```powershell
 gh repo create <name> --private --source=. --remote=origin
 git push -u origin main
 ```
 
-Später public schalten: GitHub → Settings → Change visibility (nur **ein** Initial-Commit sichtbar, keine alte Historie).
+Später public schalten: GitHub → Settings → Change visibility.
 
-## Nach dem Umzug
+## Nach dem Klon
 
 1. Cursor/IDE auf `Cursor-Usage-Dashboard-Public` öffnen
 2. `config/users.json` aus `config/users.example.json` kopieren und anpassen

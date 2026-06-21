@@ -8,8 +8,7 @@ Lokales Dashboard zur Analyse der **Cursor-Nutzung** — Token-Verlauf, Kosten, 
 
 | Seite | Fokus |
 | ----- | ----- |
-| [usage-events-chart.html](usage-events-chart.html) | Token-**Verlauf** pro Event (Zoom/Pan) |
-| [cursor-usage-analytics.html](cursor-usage-analytics.html) | **Kosten & Muster**, Live-Daten, Budget |
+| [cursor-usage-analytics.html](cursor-usage-analytics.html) | **Kosten & Muster**, Live-Daten, Budget, Zoom |
 | [index.html](index.html) | Hub / Navigation |
 
 ## Schnellstart
@@ -89,7 +88,6 @@ Im Analytics-Dashboard: **Live (Proxy)** oder **Beides**. Health: http://127.0.0
 serve.py
 config/users.example.json   # nach config/users.json kopieren
 cursor-usage-analytics.html
-usage-events-chart.html
 static/cursor-analytics/   # parser, metrics, charts, markers, users-config, i18n
 data/                      # CSV-Exports (gitignored, lokal anlegen)
 docs/REFERENCE.md
@@ -112,7 +110,6 @@ Siehe [docs/screenshots/README.md](docs/screenshots/README.md) — PNGs vor Rele
 - Python-Server erforderlich
 - Chart.js via jsDelivr (CDN) — Offline nur mit lokalem Vendor
 - Enterprise Admin API nicht implementiert
-- Event-Chart: keine Kosten-Analyse; Analytics: kein Event-Zoom wie Event-Chart
 - Sehr große Event-Mengen → Browser-Performance
 
 ## Lizenz
