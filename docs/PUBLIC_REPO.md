@@ -36,8 +36,10 @@ Später public schalten: GitHub → Settings → Change visibility.
 
 1. Cursor/IDE auf `Cursor-Usage-Dashboard-Public` öffnen
 2. `config/users.json` aus `config/users.example.json` kopieren und anpassen
-3. `.env` aus `.env.example` anlegen
-4. `data/` für CSV-Exports anlegen
+3. `.env` aus `.env.example` anlegen (optional, nur für Live-Modus)
+4. `data/` für eigene CSV-Exports anlegen (optional — Demo-Daten liegen unter `samples/`)
+
+**Demo out-of-the-box:** `users.example.json` enthält einen Demo-User mit `./samples/usage-events-demo.csv`. Projekt-Marker: `samples/project-markers-demo.json` wird beim ersten `python serve.py` nach `data/project-markers.json` kopiert, falls diese Datei noch fehlt.
 
 Lokale Dateien, die **nicht** im Public-Repo landen (siehe `.gitignore`):
 

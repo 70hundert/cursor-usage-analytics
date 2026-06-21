@@ -27,6 +27,17 @@ Browser: **http://127.0.0.1:8060/**
 
 > **Hinweis:** `file://` funktioniert nicht (ES-Modules, Fetch). Server nur lokal binden (`127.0.0.1`).
 
+## Demo ohne Live-Token
+
+Sofort ausprobieren mit synthetischen Daten unter [`samples/`](samples/):
+
+```powershell
+Copy-Item config\users.example.json config\users.json
+python serve.py
+```
+
+Im Analytics-Dashboard den User **Demo** wählen — 4 Wochen Usage-Events und Beispiel-Projekt-Marker (Marker werden beim ersten Start nach `data/project-markers.json` übernommen, falls die Datei noch nicht existiert). Daten neu erzeugen: `python scripts/generate_demo_data.py`
+
 ## Benutzer konfigurieren
 
 Bearbeite [`config/users.json`](config/users.json) (Vorlage: [`config/users.example.json`](config/users.example.json)):
@@ -87,6 +98,8 @@ Im Analytics-Dashboard: **Live (Proxy)** oder **Beides**. Health: http://127.0.0
 ```
 serve.py
 config/users.example.json   # nach config/users.json kopieren
+samples/                    # Demo-CSV + Marker (committed)
+scripts/generate_demo_data.py
 cursor-usage-analytics.html
 static/cursor-analytics/   # parser, metrics, charts, markers, users-config, i18n
 data/                      # CSV-Exports (gitignored, lokal anlegen)

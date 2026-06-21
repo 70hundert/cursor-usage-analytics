@@ -385,7 +385,8 @@ Server-Datei: `data/project-markers.json` (liegt unter gitignored `data/`).
 | Änderung an …              | Prüfen auch …                                                                |
 | -------------------------- | ---------------------------------------------------------------------------- |
 | CSV-Spalten / Parser-Logik | `parser.js`                                                                  |
-| User-IDs / CSV-Pfade       | `users-config.js`, `serve.py` `USER_TOKENS`, `.env`                          |
+| User-IDs / CSV-Pfade       | `users-config.js`, `serve.py` `USER_TOKENS`, `.env`, `config/users.example.json` |
+| Demo-Daten / Samples       | `scripts/generate_demo_data.py`, `samples/`, Marker-Seed in `serve.py`       |
 | Design-Tokens / Theme      | `cursor-usage-analytics.html` (`:root`)                                      |
 | Chart.js-Version (CDN)     | `cursor-usage-analytics.html` Head                                           |
 | API-Response-Format        | `parser.js` `normalizeApiEvent`, `serve.py` Proxy                            |

@@ -27,6 +27,17 @@ Open **http://127.0.0.1:8060/**
 
 > **Note:** Opening via `file://` does not work. Keep the server bound to `127.0.0.1` only.
 
+## Demo without a live token
+
+Try the dashboard with synthetic data in [`samples/`](samples/):
+
+```powershell
+Copy-Item config\users.example.json config\users.json
+python serve.py
+```
+
+Select user **Demo** in analytics — four weeks of usage events plus sample project markers (markers are seeded into `data/project-markers.json` on first start if that file does not exist yet). Regenerate: `python scripts/generate_demo_data.py`
+
 ## Configure users
 
 Edit [`config/users.json`](config/users.json) (template: [`config/users.example.json`](config/users.example.json)):
@@ -85,6 +96,8 @@ In analytics: **Live (proxy)** or **Both**. Health: http://127.0.0.1:8060/health
 ```
 serve.py
 config/users.example.json
+samples/              # demo CSV + markers (committed)
+scripts/generate_demo_data.py
 cursor-usage-analytics.html
 static/cursor-analytics/
 data/                 # gitignored CSV exports

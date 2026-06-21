@@ -95,6 +95,7 @@ _events_cache: dict[str, tuple[float, list[dict[str, Any]], int]] = {}
 _cache_lock = Lock()
 
 MARKERS_PATH = PROJECT_DIR / "data" / "project-markers.json"
+MARKERS_SAMPLE_PATH = PROJECT_DIR / "samples" / "project-markers-demo.json"
 _markers_lock = Lock()
 
 
@@ -169,9 +170,25 @@ def _empty_markers_store() -> dict[str, Any]:
     return {"version": 1, "markers": []}
 
 
+def _seed_markers_from_sample() -> bool:
+    if not MARKERS_SAMPLE_PATH.is_file():
+        return False
+    try:
+        sample = json.loads(MARKERS_SAMPLE_PATH.read_text(encoding="utf-8"))
+        validated = _validate_markers_store(sample)
+        if not validated:
+            return False
+        _save_markers_store(validated)
+        return True
+    except (json.JSONDecodeError, OSError):
+        return False
+
+
 def _load_markers_store() -> dict[str, Any]:
     MARKERS_PATH.parent.mkdir(parents=True, exist_ok=True)
     if not MARKERS_PATH.is_file():
+        if _seed_markers_from_sample():
+            return _load_markers_store()
         return _empty_markers_store()
     try:
         data = json.loads(MARKERS_PATH.read_text(encoding="utf-8"))
