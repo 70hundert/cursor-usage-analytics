@@ -667,6 +667,44 @@
         return [...byFamily.values()].sort((a, b) => b.costCents - a.costCents);
     }
 
+    function normalizeMaxMode(value) {
+        const normalized = String(value ?? '')
+            .trim()
+            .toLowerCase();
+        if (normalized === 'yes' || normalized === 'true' || normalized === '1') {
+            return 'Yes';
+        }
+        if (normalized === 'no' || normalized === 'false' || normalized === '0' || normalized === '') {
+            return 'No';
+        }
+        return String(value ?? 'No').trim() || 'No';
+    }
+
+    function aggregateByMaxMode(events) {
+        const byMode = new Map();
+
+        for (const event of events) {
+            const mode = normalizeMaxMode(event.maxMode);
+            const existing = byMode.get(mode) || {
+                mode,
+                tokens: 0,
+                costCents: 0,
+                calls: 0,
+            };
+            existing.tokens += event.totalTokens;
+            existing.costCents += event.costCents;
+            existing.calls += 1;
+            byMode.set(mode, existing);
+        }
+
+        return [...byMode.values()].sort((a, b) => {
+            if (a.mode === b.mode) {
+                return 0;
+            }
+            return a.mode === 'Yes' ? -1 : 1;
+        });
+    }
+
     function cacheEfficiency(events) {
         const cacheRead = sumField(events, 'cacheRead');
         const inputNoCache = sumField(events, 'inputNoCache');
@@ -698,6 +736,8 @@
         aggregateDailyTable,
         topExpensiveEvents,
         aggregateByModelFamily,
+        normalizeMaxMode,
+        aggregateByMaxMode,
         cacheEfficiency,
         sumField,
     };

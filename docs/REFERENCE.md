@@ -1,5 +1,5 @@
-> Letzte Verifikation: 2026-06-21
-> Geprüfte Dateien: 12
+> Letzte Verifikation: 2026-06-22
+> Geprüfte Dateien: 14
 > Projektstand: v0.1.0 (committed)
 > Cursor Rule: `.cursor/rules/cursor-usage-dashboard.mdc`
 
@@ -95,7 +95,7 @@ data/                             # CSV-Exports + project-markers.json (gitignor
 3. `**ensureModules()`:** sequentiell `parser.js?v=15` → `metrics.js?v=15` → `markers.js?v=15` → `charts.js?v=15`
 4. `**syncFromServer()`** (Marker) → `**initMarkerUi()**` → `**initToolbar()**` + `**loadDefaultCsvs()**`
 
-Cache-Busting: Query `?v=15` auf Modul-URLs.
+Cache-Busting: Query `?v=16` auf Modul-URLs.
 
 ### Backend — Routen
 
@@ -129,7 +129,7 @@ Event-Cache: In-Memory, TTL `CURSOR_EVENTS_CACHE_TTL` (Default 120 s), Key `user
 | Section             | ID / Selektor                                                      | Inhalt                                                                                                                                                   |
 | ------------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Toolbar             | `#main-toolbar`                                                    | Datenquelle, User, CSV, Live, Export, Marker Export/Import                                                                                               |
-| Projekt-Marker      | `#marker-card`, `#marker-table-body`                               | Intervall-Statistik mit Kosten                                                                                                                           |
+| Projekt-Marker      | `#marker-card`, `#marker-table-body`, `#marker-charts-section`     | Intervall-Statistik, Breakdown-Charts (Projekt/Kategorie)                                                                                                |
 | Projekt-Filter      | `#project-filter`                                                  | Filter für Einzelanfragen-Tabelle                                                                                                                        |
 | Marker-Dialog       | `#marker-modal`, `#marker-form`                                    | CRUD (Von/Bis/Projekt/Aufgabe/Notiz)                                                                                                                     |
 | Zeitraum / Anfragen | `#date-range-panel`                                                | Modus-Umschalter (`data-selection-mode`), Zeitraum-Presets (`#time-range-group`), Anfragen-Presets (`#count-range-group`, `data-count`), Custom datetime |
@@ -186,6 +186,9 @@ Mapping in `CHART_CANVAS_IDS` (inline JS):
 | inputOutput     | `chart-input-output`   | `inputOutput`                                          |
 | cacheEfficiency | `chart-cache`          | `cacheEfficiency`                                      |
 | byWeekday       | `chart-weekday`        | `byWeekday`                                            |
+| markerByProject | `chart-marker-by-project` | `markerByProject`                                   |
+| markerByCategory | `chart-marker-by-category` | `markerByCategory`                               |
+| maxMode         | `chart-max-mode`       | `maxMode`                                              |
 
 
 Analytics-Event (`parser.js`): `{ timestamp, dayKey, userLabel, model, kind, … costCents, source }`.
@@ -283,9 +286,30 @@ Marker sind **keine CSV-Daten** — manuell gesetzte Metadaten zu Zeitintervalle
 
 **Anfragen-Modus:** `filterEventsByCount` liefert die neuesten N Events oder einen Von–Bis-Bereich (`countRange`, 1 = neueste). Live-Fetch nutzt heuristische Zeitfenster nach Anzahl (nicht mehr pauschal „gesamter Verlauf“), nur User mit Token (`/health`). Beim Wechsel zurück zu Zeitraum wird der Vollcache invalidiert.
 
+#### Marker-Konvention (empfohlen)
+
+Marker sind manuell — ohne einheitliche Benennung lassen sich Projekt- und Kategorie-Charts schwer vergleichen. Empfohlenes Schema:
+
+| Feld | Bedeutung | Beispiele |
+| ---- | --------- | --------- |
+| **`project`** | Repo, Modul, Cursor-Modus oder Projektphase | `Cursor-Usage-Dashboard`, `Grow-Tagebuch/API`, `Agent`, `Editor` |
+| **`task`** | Kategorie + Kurzbeschreibung (`Kategorie: Aufgabe`) | `Feature: Marker-Charts`, `Bugfix: Login-Timeout`, `Analyse: fullEntryService.js` |
+| **`note`** | Freitext, Scope-Hinweise, Effizienz | `nur 2 Dateien`, `gesamtes Projekt` |
+| **`start` / `end`** | Arbeitsintervall | Bei Task-Start setzen, bei Task-Ende `end` setzen oder nächsten Marker starten |
+
+**Kategorie-Prefix in `task`:** Parser `parseTaskCategory()` erkennt Präfixe vor `:`, `-`, `–` oder `—`. Empfohlene Werte: `Bugfix`, `Feature`, `Refactoring`, `Analyse`, `Dokumentation`, `Suche`. Ohne Prefix → Gruppe „Ohne Kategorie“ in den Charts.
+
+**Modus (Agent vs. Editor):** Cursor exportiert kein Agent/Editor-Feld in Events. Modus als **`project`** markieren (z. B. `Agent`, `Editor`) oder in `note` festhalten — dann über Marker-Statistik und Projekt-Charts auswertbar.
+
+**Workflow:** Vor größeren Aufgaben Marker setzen (`Marker setzen` / Overview-Chart), nach Abschluss `end` setzen. 2–3 Wochen konsequent → belastbare Vergleiche (Modus, Kategorie, Projektphase).
+
+**Charts:** `aggregateEventsByMarkerDimension()` gruppiert gefilterte Events per `getMarkerForEvent` (keine Doppelzählung bei überlappenden Intervallen). UI: Doughnut/Bar „Tokens & Kosten nach Projekt/Kategorie“ in `#marker-charts-section`.
+
 ### Normalisiertes Event (Analytics)
 
-Siehe `parser.js` → `normalizeEvent()`. Wichtige Felder: `timestamp`, `userLabel`, `model`, `totalTokens`, `costCents`, `isIncluded`, `source` (`csv`|`api`).
+Siehe `parser.js` → `normalizeEvent()`. Wichtige Felder: `timestamp`, `userLabel`, `model`, `kind`, `maxMode`, `totalTokens`, `costCents`, `isIncluded`, `source` (`csv`|`api`).
+
+**`maxMode`:** CSV-Spalte `Max Mode` (`Yes`/`No`); Live-API → Boolean. UI: Filter in Einzelanfragen, Chart „Max Mode“ in Detail-Charts (`aggregateByMaxMode` in `metrics.js`).
 
 ### Kostenberechnung (Analytics)
 
@@ -331,6 +355,8 @@ Alle folgenden Werte nutzen **dieselbe Event-Liste** nach Toolbar-Filter (Datenq
 | Charts (Overview, Top-Kosten, kumuliert, …) | Bucket-/Modell-Summen aus `costCents`             | in `metrics.js` / `charts.js`                                             |
 | **Budget (aktueller Monat)**                | `sum(costCents)` aller Events **ab Monatsanfang** | Ignoriert Zeitraum-Toolbar; nutzt geladene Events (CSV + ggf. Live/Merge) |
 | **Projekt-Marker**                          | `sum(costCents)` im Intervall `[start, end)`      | in `markers.js` → `computeStats`                                          |
+| **Marker-Charts** (Projekt/Kategorie)       | Summe Tokens/Kosten pro Event-Marker-Zuordnung     | `markers.js` → `aggregateEventsByMarkerDimension`                         |
+| **Max-Mode-Chart**                          | Summe nach `maxMode` Yes/No                        | `metrics.js` → `aggregateByMaxMode`                                       |
 | Filter **Min. Kosten ($)**                  | Events mit `costCents ≥ eingegebener USD × 100`   | Nur Tabellenfilter, ändert keine Berechnung                               |
 
 
@@ -399,6 +425,9 @@ Server-Datei: `data/project-markers.json` (liegt unter gitignored `data/`).
 ## 11. Bekannte Einschränkungen
 
 - Kosten in Analytics: übernommen/summiert aus CSV/API — **ohne Gewähr**, keine offizielle Abrechnung (siehe §9 Kostenberechnung)
+- **Kein Prompt-Text** in CSV/API — „Top teuerste Prompts“ nur als Event-Liste, nicht semantisch
+- **Keine Git-/Commit-Metriken** (Tokens pro Commit, Tokens pro geänderter Datei) — würde Cursor-Hooks, Git-Integration oder manuelle Effizienz-Felder am Marker erfordern; bewusst nicht im Scope v0.1
+- Agent/Editor/Auto als Modus nur über **Marker-Konvention**, nicht automatisch aus Events
 - Enterprise Admin API nicht implementiert
 - Anfragen-Modus: Pro-Anfrage-Bucket-Charts wie Zeitraum + Granularität `event`
 - Sehr große Event-Mengen → Browser-Performance

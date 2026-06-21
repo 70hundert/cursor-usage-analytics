@@ -334,6 +334,68 @@
         }));
     }
 
+    const MARKER_CATEGORY_SUGGESTIONS = [
+        'Bugfix',
+        'Feature',
+        'Refactoring',
+        'Analyse',
+        'Dokumentation',
+        'Suche',
+    ];
+
+    const UNMARKED_DIMENSION_KEY = '__unmarked__';
+
+    function parseTaskCategory(task) {
+        const trimmed = String(task ?? '').trim();
+        if (!trimmed) {
+            return null;
+        }
+        const match = trimmed.match(/^([^:–—-]+?)\s*[:–—-]\s+/);
+        if (!match) {
+            return null;
+        }
+        const category = match[1].trim();
+        return category || null;
+    }
+
+    function aggregateEventsByMarkerDimension(events, markers, dimension) {
+        const byKey = new Map();
+
+        for (const event of events) {
+            const marker = getMarkerForEvent(event, markers);
+            let key;
+            let label;
+
+            if (dimension === 'project') {
+                key = marker?.project?.trim() || UNMARKED_DIMENSION_KEY;
+                label = key;
+            } else if (dimension === 'category') {
+                const category = parseTaskCategory(marker?.task);
+                key = category || UNMARKED_DIMENSION_KEY;
+                label = key;
+            } else {
+                continue;
+            }
+
+            const existing = byKey.get(key) || {
+                key,
+                label,
+                project: dimension === 'project' ? key : marker?.project || '',
+                calls: 0,
+                totalTokens: 0,
+                costCents: 0,
+            };
+            existing.calls += 1;
+            existing.totalTokens += event.totalTokens ?? 0;
+            existing.costCents += event.costCents ?? 0;
+            byKey.set(key, existing);
+        }
+
+        return [...byKey.values()].sort(
+            (a, b) => b.totalTokens - a.totalTokens || b.costCents - a.costCents
+        );
+    }
+
     function buildProjectColorMap(projects) {
         const unique = [...new Set(projects.filter(Boolean))].sort((a, b) =>
             a.localeCompare(b, 'de', { sensitivity: 'base' }),
@@ -1162,6 +1224,10 @@
         removeMarker,
         computeStats,
         computeIntervalRows,
+        parseTaskCategory,
+        MARKER_CATEGORY_SUGGESTIONS,
+        UNMARKED_DIMENSION_KEY,
+        aggregateEventsByMarkerDimension,
         toChartAnnotations,
         annotationPluginOptions,
         chartMarkerLabelTopPadding,

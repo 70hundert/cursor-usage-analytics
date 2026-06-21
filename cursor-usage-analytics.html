@@ -68,6 +68,16 @@
             min-width: 0;
         }
 
+        .dashboard-grid--marker-charts {
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            padding: 0;
+            margin-bottom: 0.75rem;
+        }
+
+        .dashboard-grid--marker-charts .chart-card {
+            min-width: 0;
+        }
+
         .card {
             background: var(--surface);
             border: 1px solid var(--border);
@@ -1126,6 +1136,18 @@
                 </div>
                 <div class="chart-card">
                     <div class="chart-card__header">
+                        <h3 data-i18n="chartMaxMode">Max Mode — Tokens & Kosten</h3>
+                        <div class="chart-card__actions">
+                            <button type="button" class="btn btn-chart-height" data-chart-key="maxMode"
+                                aria-pressed="false" data-i18n="stretch">Stretch</button>
+                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="maxMode" data-i18n="zoomReset">Zoom
+                                zurücksetzen</button>
+                        </div>
+                    </div>
+                    <div class="chart-wrap"><canvas id="chart-max-mode"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-card__header">
                         <h3 data-i18n="chartByHour">Nutzung nach Stunde</h3>
                         <div class="chart-card__actions">
                             <button type="button" class="btn btn-chart-height" data-chart-key="byHour"
@@ -1247,6 +1269,12 @@
                     </select>
                 </div>
                 <div class="toolbar-group">
+                    <span class="toolbar-label" data-i18n="maxModeFilter">Max Mode</span>
+                    <select class="project-filter-select" id="events-maxmode-filter" aria-label="Max-Mode-Filter">
+                        <option value="all" data-i18n="allMaxModes">Alle</option>
+                    </select>
+                </div>
+                <div class="toolbar-group">
                     <label class="toolbar-label">
                         <span data-i18n="minCost">Min. Kosten ($)</span>
                         <input type="number" class="budget-input" id="events-min-cost" min="0" step="0.01" value="0" style="width:5rem;">
@@ -1333,6 +1361,35 @@
                     </select>
                 </div>
             </div>
+            <p class="card-meta" id="marker-charts-intro" data-i18n="markerChartsIntro" hidden>
+                Anteile markierter Events im aktuellen Filter.
+            </p>
+            <div class="dashboard-grid dashboard-grid--marker-charts" id="marker-charts-section" hidden>
+                <div class="chart-card">
+                    <div class="chart-card__header">
+                        <h3 data-i18n="chartMarkerByProject">Tokens & Kosten nach Projekt</h3>
+                        <div class="chart-card__actions">
+                            <button type="button" class="btn btn-chart-height" data-chart-key="markerByProject"
+                                aria-pressed="false" data-i18n="stretch">Stretch</button>
+                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="markerByProject" data-i18n="zoomReset">Zoom
+                                zurücksetzen</button>
+                        </div>
+                    </div>
+                    <div class="chart-wrap"><canvas id="chart-marker-by-project"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-card__header">
+                        <h3 data-i18n="chartMarkerByCategory">Tokens nach Kategorie</h3>
+                        <div class="chart-card__actions">
+                            <button type="button" class="btn btn-chart-height" data-chart-key="markerByCategory"
+                                aria-pressed="false" data-i18n="stretch">Stretch</button>
+                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="markerByCategory" data-i18n="zoomReset">Zoom
+                                zurücksetzen</button>
+                        </div>
+                    </div>
+                    <div class="chart-wrap"><canvas id="chart-marker-by-category"></canvas></div>
+                </div>
+            </div>
             <p class="card-meta" id="marker-table-status" data-i18n="markerTableIntro">
                 Projekt- und Aufgaben-Marker — Intervall bis zum nächsten Marker oder Filter-Ende (*).
             </p>
@@ -1388,8 +1445,10 @@
                     <input type="text" id="marker-project" required maxlength="120">
                 </label>
                 <label><span data-i18n="taskOptional">Aufgabe (optional)</span>
-                    <input type="text" id="marker-task" maxlength="120">
+                    <input type="text" id="marker-task" maxlength="120" list="marker-category-suggestions"
+                        data-i18n-placeholder="markerTaskPlaceholder">
                 </label>
+                <datalist id="marker-category-suggestions"></datalist>
                 <label><span data-i18n="noteOptional">Notiz (optional)</span>
                     <textarea id="marker-note" maxlength="500"></textarea>
                 </label>
@@ -1448,7 +1507,7 @@
             }
             const base = new URL('.', window.location.href);
             for (const file of MODULE_FILES) {
-                await loadScript(new URL(`${file}?v=15`, base).href);
+                await loadScript(new URL(`${file}?v=16`, base).href);
             }
         }
 
@@ -1601,6 +1660,9 @@
             inputOutput: 'chart-input-output',
             cacheEfficiency: 'chart-cache',
             byWeekday: 'chart-weekday',
+            maxMode: 'chart-max-mode',
+            markerByProject: 'chart-marker-by-project',
+            markerByCategory: 'chart-marker-by-category',
         };
         let lastAggregated = null;
         let liveLoading = false;
@@ -1811,6 +1873,12 @@
             if (eventsKindFilter !== 'all') {
                 events = events.filter((event) => event.kind === eventsKindFilter);
             }
+            if (eventsMaxModeFilter !== 'all') {
+                const metrics = getMetrics();
+                events = events.filter(
+                    (event) => metrics.normalizeMaxMode(event.maxMode) === eventsMaxModeFilter
+                );
+            }
             if (eventsIncludedOnly) {
                 events = events.filter((event) => event.isIncluded);
             }
@@ -1824,23 +1892,40 @@
         function updateEventsFilterOptions(events) {
             const modelSelect = document.getElementById('events-model-filter');
             const kindSelect = document.getElementById('events-kind-filter');
-            if (!modelSelect || !kindSelect) {
+            const maxModeSelect = document.getElementById('events-maxmode-filter');
+            if (!modelSelect || !kindSelect || !maxModeSelect) {
                 return;
             }
+            const metrics = getMetrics();
             const models = [...new Set(events.map((e) => e.model).filter(Boolean))].sort();
             const kinds = [...new Set(events.map((e) => e.kind).filter(Boolean))].sort();
+            const maxModes = [
+                ...new Set(events.map((e) => metrics.normalizeMaxMode(e.maxMode)).filter(Boolean)),
+            ].sort((a, b) => (a === 'Yes' ? -1 : b === 'Yes' ? 1 : 0));
             const currentModel = eventsModelFilter;
             const currentKind = eventsKindFilter;
+            const currentMaxMode = eventsMaxModeFilter;
             modelSelect.innerHTML =
                 `<option value="all">${t('allModels')}</option>` +
                 models.map((m) => `<option value="${m.replace(/"/g, '&quot;')}">${m}</option>`).join('');
             kindSelect.innerHTML =
                 `<option value="all">${t('allKinds')}</option>` +
                 kinds.map((k) => `<option value="${k.replace(/"/g, '&quot;')}">${k}</option>`).join('');
+            maxModeSelect.innerHTML =
+                `<option value="all">${t('allMaxModes')}</option>` +
+                maxModes
+                    .map((mode) => {
+                        const label = mode === 'Yes' ? t('maxModeYes') : t('maxModeNo');
+                        return `<option value="${mode.replace(/"/g, '&quot;')}">${label}</option>`;
+                    })
+                    .join('');
             modelSelect.value = models.includes(currentModel) || currentModel === 'all' ? currentModel : 'all';
             kindSelect.value = kinds.includes(currentKind) || currentKind === 'all' ? currentKind : 'all';
+            maxModeSelect.value =
+                maxModes.includes(currentMaxMode) || currentMaxMode === 'all' ? currentMaxMode : 'all';
             eventsModelFilter = modelSelect.value;
             eventsKindFilter = kindSelect.value;
+            eventsMaxModeFilter = maxModeSelect.value;
         }
 
         function sortEventsForTable(events) {
@@ -2215,6 +2300,54 @@
                     </tr>`;
         }
 
+        function renderMarkerCharts(events) {
+            const api = getMarkersApi();
+            const charts = getCharts();
+            const section = document.getElementById('marker-charts-section');
+            const intro = document.getElementById('marker-charts-intro');
+            if (!api || !charts || !section) {
+                return;
+            }
+
+            const markers = api.getStore().markers;
+            const byProject = api.aggregateEventsByMarkerDimension(events, markers, 'project');
+            const byCategory = api.aggregateEventsByMarkerDimension(events, markers, 'category');
+            const markedProjects = byProject.filter(
+                (row) => row.key !== api.UNMARKED_DIMENSION_KEY && (row.totalTokens > 0 || row.costCents > 0)
+            );
+            const markedCategories = byCategory.filter(
+                (row) =>
+                    row.key !== api.UNMARKED_DIMENSION_KEY && (row.totalTokens > 0 || row.costCents > 0)
+            );
+            const hasMarked = markedProjects.length > 0 || markedCategories.length > 0;
+
+            section.hidden = !hasMarked;
+            if (intro) {
+                intro.hidden = !hasMarked;
+            }
+
+            if (!hasMarked) {
+                charts.destroyChart(chartInstances, 'markerByProject');
+                charts.destroyChart(chartInstances, 'markerByCategory');
+                return;
+            }
+
+            const colorMap = api.buildProjectColorMap(markers.map((marker) => marker.project));
+            charts.renderMarkerBreakdown(
+                chartInstances,
+                {
+                    byProject,
+                    byCategory,
+                    colorMap,
+                    canvases: {
+                        byProject: document.getElementById('chart-marker-by-project'),
+                        byCategory: document.getElementById('chart-marker-by-category'),
+                    },
+                },
+                { numberFmt, currencyFmt }
+            );
+        }
+
         function renderMarkerTable(events) {
             const bodyEl = document.getElementById('marker-table-body');
             const statusEl = document.getElementById('marker-table-status');
@@ -2299,7 +2432,19 @@
             syncMarkerSortHeaders();
         }
 
+        function initMarkerCategoryDatalist() {
+            const api = getMarkersApi();
+            const list = document.getElementById('marker-category-suggestions');
+            if (!api || !list) {
+                return;
+            }
+            list.innerHTML = api.MARKER_CATEGORY_SUGGESTIONS.map(
+                (category) => `<option value="${category}: "></option>`
+            ).join('');
+        }
+
         function initMarkerUi() {
+            initMarkerCategoryDatalist();
             document.getElementById('marker-add-overview')?.addEventListener('click', () => {
                 openMarkerModal();
             });
@@ -2428,6 +2573,12 @@
 
             document.getElementById('events-kind-filter')?.addEventListener('change', (event) => {
                 eventsKindFilter = event.target.value;
+                eventsPageIndex = 0;
+                renderEventsTable(eventsForTable());
+            });
+
+            document.getElementById('events-maxmode-filter')?.addEventListener('change', (event) => {
+                eventsMaxModeFilter = event.target.value;
                 eventsPageIndex = 0;
                 renderEventsTable(eventsForTable());
             });
@@ -2922,6 +3073,12 @@
                     el.setAttribute('title', t(key));
                 }
             });
+            document.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
+                const key = el.getAttribute('data-i18n-placeholder');
+                if (key) {
+                    el.setAttribute('placeholder', t(key));
+                }
+            });
             refreshMarkerChartDisplayLabels();
             syncChartHeightLabels();
             syncEventsSortHeaders();
@@ -2954,6 +3111,7 @@
         const collapsedEventGroups = new Set();
         let eventsModelFilter = 'all';
         let eventsKindFilter = 'all';
+        let eventsMaxModeFilter = 'all';
         let eventsMinCostUsd = 0;
         let eventsIncludedOnly = false;
         let eventsSortColumn = 'time';
@@ -3639,7 +3797,7 @@
         }
 
         function getEventsFilterKey() {
-            return `${dataSource}|${userFilter}|${selectionMode}|${range.mode}|${range.hours}|${range.count}|${range.countFrom}|${range.countTo}|${range.customFrom}|${range.customTo}|${projectFilter}|${eventsGroupMode}|${eventsPageSize}|${eventsModelFilter}|${eventsKindFilter}|${eventsMinCostUsd}|${eventsIncludedOnly}|${eventsSortColumn}|${eventsSortDir}`;
+            return `${dataSource}|${userFilter}|${selectionMode}|${range.mode}|${range.hours}|${range.count}|${range.countFrom}|${range.countTo}|${range.customFrom}|${range.customTo}|${projectFilter}|${eventsGroupMode}|${eventsPageSize}|${eventsModelFilter}|${eventsKindFilter}|${eventsMaxModeFilter}|${eventsMinCostUsd}|${eventsIncludedOnly}|${eventsSortColumn}|${eventsSortDir}`;
         }
 
         function formatEventCost(event) {
@@ -3895,6 +4053,7 @@
                 renderExpensiveTable([]);
                 renderEventsTable([]);
                 renderMarkerTable([]);
+                renderMarkerCharts([]);
                 setStatus(
                     selectionMode === 'count' ? t('noEventsCount') : t('noEvents')
                 );
@@ -3918,6 +4077,7 @@
             );
             const cumulative = metrics.cumulativeCostByDay(events);
             const families = metrics.aggregateByModelFamily(events);
+            const maxMode = metrics.aggregateByMaxMode(events);
             const cache = metrics.cacheEfficiency(events);
             const dailyRows = metrics.aggregateDailyTable(events);
             const expensive = metrics.topExpensiveEvents(events);
@@ -3943,6 +4103,7 @@
             renderExpensiveTable(expensive, events);
             renderEventsTable(eventsForTable());
             renderMarkerTable(events);
+            renderMarkerCharts(events);
             updateProjectFilterOptions();
             updateMarkerChartProjectFilterOptions();
 
@@ -3998,6 +4159,7 @@
                         cumulativeBuckets: chartCumulativeBuckets,
                         granularity: chartGranularity,
                         families,
+                        maxMode,
                         cache,
                         markerContext,
                         canvases: {
@@ -4010,6 +4172,7 @@
                             inputOutput: document.getElementById('chart-input-output'),
                             cacheEfficiency: document.getElementById('chart-cache'),
                             byWeekday: document.getElementById('chart-weekday'),
+                            maxMode: document.getElementById('chart-max-mode'),
                         },
                     },
                     formatters
