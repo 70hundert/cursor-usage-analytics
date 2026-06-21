@@ -39,6 +39,9 @@
             prevPage: 'Zurück',
             nextPage: 'Weiter',
             noEvents: 'Keine Events im gewählten Zeitraum',
+            sortClick: 'Klicken zum Sortieren',
+            sortAsc: 'Aufsteigend sortiert — erneut klicken für absteigend',
+            sortDesc: 'Absteigend sortiert — erneut klicken für aufsteigend',
             locale: 'Sprache',
         },
         en: {
@@ -75,6 +78,9 @@
             prevPage: 'Previous',
             nextPage: 'Next',
             noEvents: 'No events in the selected range',
+            sortClick: 'Click to sort',
+            sortAsc: 'Sorted ascending — click for descending',
+            sortDesc: 'Sorted descending — click for ascending',
             locale: 'Language',
         },
     };

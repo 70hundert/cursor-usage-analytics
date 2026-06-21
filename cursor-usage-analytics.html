@@ -64,6 +64,10 @@
             margin: 0 auto;
         }
 
+        .dashboard-grid > .card {
+            min-width: 0;
+        }
+
         .card {
             background: var(--surface);
             border: 1px solid var(--border);
@@ -146,6 +150,8 @@
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
             gap: 0.65rem;
+            width: 100%;
+            min-width: 0;
         }
 
         .kpi {
@@ -153,6 +159,7 @@
             border: 1px solid var(--border);
             border-radius: 10px;
             padding: 0.75rem;
+            min-width: 0;
         }
 
         .kpi__label {
@@ -193,6 +200,8 @@
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
             gap: 0.75rem;
+            width: 100%;
+            min-width: 0;
         }
 
         .chart-card {
@@ -200,6 +209,7 @@
             border: 1px solid var(--border);
             border-radius: 10px;
             padding: 0.75rem;
+            min-width: 0;
         }
 
         .chart-card__header {
@@ -261,12 +271,20 @@
         .chart-wrap {
             position: relative;
             height: 220px;
+            width: 100%;
+            min-width: 0;
             transition: height 0.2s ease;
+        }
+
+        .chart-wrap canvas {
+            display: block;
+            max-width: 100%;
         }
 
         .chart-wrap>div {
             height: 100% !important;
             width: 100% !important;
+            max-width: 100%;
         }
 
         .chart-wrap--expanded {
@@ -313,17 +331,28 @@
             cursor: pointer;
         }
 
-        .usage-table__group-header--toggle::before {
-            content: '▾ ';
+        .usage-table__group-chevron {
+            display: inline-block;
+            width: 1em;
+            margin-right: 0.15rem;
             color: var(--muted);
+            text-align: center;
         }
 
-        .usage-table__group-header--collapsed::before {
-            content: '▸ ';
+        .usage-table__group-chevron::before {
+            content: '▾';
+        }
+
+        .usage-table__group-header--collapsed .usage-table__group-chevron::before {
+            content: '▸';
         }
 
         .usage-table__row--group-member[hidden] {
             display: none;
+        }
+
+        .usage-table--events .usage-table__row--group-member td:first-child {
+            padding-left: 0.35rem;
         }
 
         .usage-table--events th[data-sort-col] {
@@ -430,10 +459,6 @@
             margin-top: 0.75rem;
         }
 
-        .project-filter-select {
-            min-width: 10rem;
-        }
-
         .marker-chart-display-control {
             display: flex;
             flex-wrap: wrap;
@@ -506,6 +531,7 @@
 
         .usage-table__group-header td:first-child {
             text-align: left;
+            padding-left: 0.35rem;
         }
 
         .usage-table__group-range {
@@ -606,7 +632,8 @@
             min-height: 320px;
         }
 
-        .chart-card--expanded {
+        .chart-card--expanded,
+        .chart-card--full-width {
             grid-column: 1 / -1;
         }
 
@@ -638,8 +665,8 @@
         .date-range-panel {
             display: flex;
             flex-wrap: wrap;
-            align-items: center;
-            gap: 0.65rem;
+            align-items: flex-start;
+            gap: 0.65rem 0.85rem;
             margin-top: 0.65rem;
             padding: 0.65rem 0.75rem;
             background: var(--surface-2);
@@ -651,7 +678,31 @@
             font-size: 0.82rem;
             font-weight: 600;
             color: var(--text);
-            margin-right: 0.15rem;
+            margin-right: 0;
+        }
+
+        #time-range-group,
+        #count-range-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            flex: 1 1 20rem;
+            min-width: 0;
+        }
+
+        .range-group-header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.45rem 0.65rem;
+        }
+
+        .range-group-header > .toolbar-label {
+            flex: 0 0 auto;
+        }
+
+        .range-group-header > .toolbar-group {
+            flex: 1 1 auto;
         }
 
         .date-range-custom {
@@ -682,6 +733,12 @@
         .date-range-sep {
             font-size: 0.78rem;
             color: var(--muted);
+            align-self: center;
+        }
+
+        .date-range-end {
+            display: inline-flex;
+            align-items: center;
         }
 
         .granularity-control {
@@ -699,19 +756,25 @@
             letter-spacing: 0;
         }
 
-        .granularity-select {
+        .granularity-select,
+        .project-filter-select {
             appearance: none;
             background: var(--surface);
             border: 1px solid var(--border);
             color: var(--text);
             border-radius: 999px;
             padding: 0.35rem 2rem 0.35rem 0.85rem;
-            font-size: 0.82rem;
+            font-size: 0.78rem;
             font-family: inherit;
             cursor: pointer;
+            color-scheme: dark;
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238b9aab' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
             background-repeat: no-repeat;
             background-position: right 0.65rem center;
+        }
+
+        .project-filter-select {
+            min-width: 10rem;
         }
 
         .btn:disabled {
@@ -787,7 +850,8 @@
             flex-wrap: wrap;
         }
 
-        .granularity-select:focus {
+        .granularity-select:focus,
+        .project-filter-select:focus {
             outline: none;
             border-color: var(--accent);
             box-shadow: 0 0 0 1px var(--accent);
@@ -808,29 +872,14 @@
             flex-wrap: wrap;
         }
 
-        .count-range-custom {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: flex-end;
-            gap: 0.5rem 0.75rem;
-        }
-
-        .count-range-custom label {
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-            font-size: 0.78rem;
-            color: var(--muted);
-        }
-
         .count-input {
-            width: 5.5rem;
+            width: 4.25rem;
             background: var(--surface);
             border: 1px solid var(--border);
             color: var(--text);
-            border-radius: 8px;
-            padding: 0.35rem 0.55rem;
-            font-size: 0.82rem;
+            border-radius: 6px;
+            padding: 0.28rem 0.45rem;
+            font-size: 0.78rem;
             font-family: inherit;
         }
 
@@ -891,17 +940,19 @@
                     </div>
                 </div>
                 <div id="time-range-group">
-                    <span class="toolbar-label">Zeitraum</span>
-                    <div class="toolbar-group preset-range-group">
-                        <button type="button" class="btn" data-hours="1">1&nbsp;Std</button>
-                        <button type="button" class="btn" data-hours="2">2&nbsp;Std</button>
-                        <button type="button" class="btn" data-hours="3">3&nbsp;Std</button>
-                        <button type="button" class="btn" data-hours="6">6&nbsp;Std</button>
-                        <button type="button" class="btn" data-hours="12">12&nbsp;Std</button>
-                        <button type="button" class="btn btn--active" data-hours="24">1&nbsp;Tag</button>
-                        <button type="button" class="btn" data-hours="168">7&nbsp;Tage</button>
-                        <button type="button" class="btn" data-hours="720">30&nbsp;Tage</button>
-                        <button type="button" class="btn" data-all="true">Alle</button>
+                    <div class="range-group-header">
+                        <span class="toolbar-label">Zeitraum</span>
+                        <div class="toolbar-group preset-range-group">
+                            <button type="button" class="btn" data-hours="1">1&nbsp;Std</button>
+                            <button type="button" class="btn" data-hours="2">2&nbsp;Std</button>
+                            <button type="button" class="btn" data-hours="3">3&nbsp;Std</button>
+                            <button type="button" class="btn" data-hours="6">6&nbsp;Std</button>
+                            <button type="button" class="btn" data-hours="12">12&nbsp;Std</button>
+                            <button type="button" class="btn btn--active" data-hours="24">1&nbsp;Tag</button>
+                            <button type="button" class="btn" data-hours="168">7&nbsp;Tage</button>
+                            <button type="button" class="btn" data-hours="720">30&nbsp;Tage</button>
+                            <button type="button" class="btn" data-all="true">Alle</button>
+                        </div>
                     </div>
                     <div class="date-range-custom">
                         <label>Von
@@ -909,7 +960,7 @@
                                 aria-label="Von Datum und Uhrzeit">
                         </label>
                         <span class="date-range-sep">bis</span>
-                        <label>Bis
+                        <label class="date-range-end">
                             <input type="datetime-local" class="date-input date-input--wide" id="custom-to"
                                 aria-label="Bis Datum und Uhrzeit">
                         </label>
@@ -928,25 +979,29 @@
                     </div>
                 </div>
                 <div id="count-range-group" hidden>
-                    <span class="toolbar-label">Letzte Anfragen</span>
-                    <div class="toolbar-group count-range-buttons">
-                        <button type="button" class="btn" data-count="10">10</button>
-                        <button type="button" class="btn" data-count="25">25</button>
-                        <button type="button" class="btn btn--active" data-count="50">50</button>
-                        <button type="button" class="btn" data-count="100">100</button>
-                        <button type="button" class="btn" data-count="250">250</button>
-                        <button type="button" class="btn" data-count="500">500</button>
-                        <button type="button" class="btn" data-count="1000">1000</button>
-                        <button type="button" class="btn" data-count-all="true">Alle</button>
+                    <div class="range-group-header">
+                        <span class="toolbar-label">Letzte Anfragen</span>
+                        <div class="toolbar-group count-range-buttons">
+                            <button type="button" class="btn" data-count="10">10</button>
+                            <button type="button" class="btn" data-count="25">25</button>
+                            <button type="button" class="btn btn--active" data-count="50">50</button>
+                            <button type="button" class="btn" data-count="100">100</button>
+                            <button type="button" class="btn" data-count="250">250</button>
+                            <button type="button" class="btn" data-count="500">500</button>
+                            <button type="button" class="btn" data-count="1000">1000</button>
+                            <button type="button" class="btn" data-count-all="true">Alle</button>
+                        </div>
                     </div>
-                    <div class="count-range-custom">
-                        <label>Von (neueste #)
+                    <div class="date-range-custom">
+                        <label>Von&nbsp;#
                             <input type="number" class="count-input" id="count-from" min="1" step="1" value="1"
+                                title="Von Anfrage (1 = neueste)"
                                 aria-label="Von Anfrage (1 = neueste)">
                         </label>
                         <span class="date-range-sep">bis</span>
-                        <label>Bis (neueste #)
+                        <label class="date-range-end">
                             <input type="number" class="count-input" id="count-to" min="1" step="1" value="50"
+                                title="Bis Anfrage (neueste #)"
                                 aria-label="Bis Anfrage">
                         </label>
                         <button type="button" class="btn" id="count-custom-apply">Anwenden</button>
@@ -969,7 +1024,7 @@
                             aria-label="Marker-Sichtbarkeit"></div>
                         <div class="chart-card__actions">
                             <button type="button" class="btn btn-chart-height" data-chart-key="overview"
-                                aria-pressed="false">90&nbsp;% Höhe</button>
+                                aria-pressed="false">Stretch</button>
                             <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="overview">Zoom
                                 zurücksetzen</button>
                             <button type="button" class="btn" id="marker-add-overview">Marker setzen</button>
@@ -993,7 +1048,7 @@
                         <h3>Top 5 Modelle nach Kosten</h3>
                         <div class="chart-card__actions">
                             <button type="button" class="btn btn-chart-height" data-chart-key="topCost"
-                                aria-pressed="false">90&nbsp;% Höhe</button>
+                                aria-pressed="false">Stretch</button>
                             <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="topCost">Zoom
                                 zurücksetzen</button>
                         </div>
@@ -1005,7 +1060,7 @@
                         <h3>Top 5 Modelle nach Tokens</h3>
                         <div class="chart-card__actions">
                             <button type="button" class="btn btn-chart-height" data-chart-key="topTokens"
-                                aria-pressed="false">90&nbsp;% Höhe</button>
+                                aria-pressed="false">Stretch</button>
                             <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="topTokens">Zoom
                                 zurücksetzen</button>
                         </div>
@@ -1017,7 +1072,7 @@
                         <h3>Token-Typ-Verteilung</h3>
                         <div class="chart-card__actions">
                             <button type="button" class="btn btn-chart-height" data-chart-key="tokenTypes"
-                                aria-pressed="false">90&nbsp;% Höhe</button>
+                                aria-pressed="false">Stretch</button>
                             <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="tokenTypes" disabled
                                 hidden>Zoom zurücksetzen</button>
                         </div>
@@ -1029,7 +1084,7 @@
                         <h3>Modell-Familien</h3>
                         <div class="chart-card__actions">
                             <button type="button" class="btn btn-chart-height" data-chart-key="modelFamily"
-                                aria-pressed="false">90&nbsp;% Höhe</button>
+                                aria-pressed="false">Stretch</button>
                             <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="modelFamily">Zoom
                                 zurücksetzen</button>
                         </div>
@@ -1041,7 +1096,7 @@
                         <h3>Nutzung nach Stunde</h3>
                         <div class="chart-card__actions">
                             <button type="button" class="btn btn-chart-height" data-chart-key="byHour"
-                                aria-pressed="false">90&nbsp;% Höhe</button>
+                                aria-pressed="false">Stretch</button>
                             <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="byHour">Zoom
                                 zurücksetzen</button>
                         </div>
@@ -1050,26 +1105,10 @@
                 </div>
                 <div class="chart-card">
                     <div class="chart-card__header">
-                        <h3 id="chart-cumulative-title">Kumulierte Ausgaben</h3>
-                        <div class="chart-card__header-actions">
-                            <div class="marker-chart-display-control" data-marker-display-host
-                                aria-label="Marker-Sichtbarkeit"></div>
-                            <div class="chart-card__actions">
-                                <button type="button" class="btn btn-chart-height" data-chart-key="cumulative"
-                                    aria-pressed="false">90&nbsp;% Höhe</button>
-                                <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="cumulative">Zoom
-                                    zurücksetzen</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="chart-wrap"><canvas id="chart-cumulative"></canvas></div>
-                </div>
-                <div class="chart-card">
-                    <div class="chart-card__header">
                         <h3>Input vs. Output</h3>
                         <div class="chart-card__actions">
                             <button type="button" class="btn btn-chart-height" data-chart-key="inputOutput"
-                                aria-pressed="false">90&nbsp;% Höhe</button>
+                                aria-pressed="false">Stretch</button>
                             <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="inputOutput">Zoom
                                 zurücksetzen</button>
                         </div>
@@ -1081,7 +1120,7 @@
                         <h3>Cache-Effizienz</h3>
                         <div class="chart-card__actions">
                             <button type="button" class="btn btn-chart-height" data-chart-key="cacheEfficiency"
-                                aria-pressed="false">90&nbsp;% Höhe</button>
+                                aria-pressed="false">Stretch</button>
                             <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="cacheEfficiency"
                                 disabled hidden>Zoom zurücksetzen</button>
                         </div>
@@ -1093,12 +1132,28 @@
                         <h3>Nutzung nach Wochentag</h3>
                         <div class="chart-card__actions">
                             <button type="button" class="btn btn-chart-height" data-chart-key="byWeekday"
-                                aria-pressed="false">90&nbsp;% Höhe</button>
+                                aria-pressed="false">Stretch</button>
                             <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="byWeekday">Zoom
                                 zurücksetzen</button>
                         </div>
                     </div>
                     <div class="chart-wrap"><canvas id="chart-weekday"></canvas></div>
+                </div>
+                <div class="chart-card chart-card--full-width">
+                    <div class="chart-card__header">
+                        <h3 id="chart-cumulative-title">Kumulierte Ausgaben</h3>
+                        <div class="chart-card__header-actions">
+                            <div class="marker-chart-display-control" data-marker-display-host
+                                aria-label="Marker-Sichtbarkeit"></div>
+                            <div class="chart-card__actions">
+                                <button type="button" class="btn btn-chart-height" data-chart-key="cumulative"
+                                    aria-pressed="false">Stretch</button>
+                                <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="cumulative">Zoom
+                                    zurücksetzen</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chart-wrap"><canvas id="chart-cumulative"></canvas></div>
                 </div>
             </div>
         </section>
@@ -1853,11 +1908,19 @@
             );
         }
 
+        function getEventsSortHeaderTitle(col) {
+            if (col !== eventsSortColumn) {
+                return t('sortClick');
+            }
+            return eventsSortDir === 'asc' ? t('sortAsc') : t('sortDesc');
+        }
+
         function syncEventsSortHeaders() {
             document.querySelectorAll('.usage-table--events th[data-sort-col]').forEach((th) => {
                 const col = th.getAttribute('data-sort-col');
                 th.classList.toggle('sort-active', col === eventsSortColumn);
                 th.classList.toggle('sort-desc', col === eventsSortColumn && eventsSortDir === 'desc');
+                th.title = getEventsSortHeaderTitle(col);
             });
         }
 
@@ -2172,6 +2235,8 @@
                     renderEventsTable(eventsForTable());
                 });
             });
+
+            syncEventsSortHeaders();
 
             document.getElementById('events-table-body')?.addEventListener('click', (event) => {
                 const row = event.target.closest('.usage-table__group-header--toggle');
@@ -3274,7 +3339,7 @@
             const collapsedClass = collapsed ? ' usage-table__group-header--collapsed' : '';
             const safeKey = String(group.key).replace(/"/g, '&quot;');
             return `<tr class="usage-table__group-header usage-table__group-header--toggle${collapsedClass}" data-group-key="${safeKey}" role="button" tabindex="0">
-                    <td colspan="5">${title}</td>
+                    <td colspan="5"><span class="usage-table__group-chevron" aria-hidden="true"></span>${title}</td>
                     <td>—</td>
                     <td>—</td>
                     <td>${numberFmt.format(group.stats.cacheRead)}</td>
@@ -3583,6 +3648,7 @@
                     },
                     formatters
                 );
+                resizeAllCharts();
             } catch (error) {
                 console.error(error);
                 setStatus(`Chart-Fehler: ${error.message}`, true);
@@ -3871,6 +3937,31 @@
             return canvas?.closest('.chart-wrap') ?? null;
         }
 
+        let resizeChartsFrame = null;
+
+        function resizeAllCharts() {
+            if (resizeChartsFrame) {
+                window.cancelAnimationFrame(resizeChartsFrame);
+            }
+            resizeChartsFrame = window.requestAnimationFrame(() => {
+                resizeChartsFrame = null;
+                document.querySelectorAll('.chart-wrap').forEach((wrap) => {
+                    const canvas = wrap.querySelector('canvas');
+                    const chart =
+                        canvas && typeof Chart !== 'undefined' ? Chart.getChart(canvas) : null;
+                    if (!chart) {
+                        return;
+                    }
+                    const rect = wrap.getBoundingClientRect();
+                    const width = Math.floor(rect.width);
+                    const height = Math.floor(rect.height);
+                    if (width > 0 && height > 0) {
+                        chart.resize(width, height);
+                    }
+                });
+            });
+        }
+
         function setChartExpanded(key, expanded) {
             const wrap = getChartWrap(key);
             const btn = document.querySelector(`.btn-chart-height[data-chart-key="${key}"]`);
@@ -3891,10 +3982,8 @@
             }
 
             wrap.offsetHeight;
-            chart.resize();
-            window.requestAnimationFrame(() => {
-                chart.resize();
-            });
+            resizeAllCharts();
+            wrap.addEventListener('transitionend', () => resizeAllCharts(), { once: true });
         }
 
         function initChartControls() {
@@ -3912,11 +4001,14 @@
                 });
             });
 
-            window.addEventListener('resize', () => {
-                document.querySelectorAll('.btn-chart-height[aria-pressed="true"]').forEach((btn) => {
-                    chartInstances[btn.dataset.chartKey]?.resize();
+            window.addEventListener('resize', resizeAllCharts);
+
+            if (typeof ResizeObserver !== 'undefined') {
+                const layoutObserver = new ResizeObserver(resizeAllCharts);
+                document.querySelectorAll('.dashboard-grid, .chart-wrap').forEach((el) => {
+                    layoutObserver.observe(el);
                 });
-            });
+            }
         }
 
         function initToolbar() {

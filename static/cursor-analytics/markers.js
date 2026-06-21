@@ -678,44 +678,61 @@
         return 20 * 60 * 1000;
     }
 
-    const CHART_LABEL_LINE_LEN = 22;
-    const CHART_LABEL_LANE_HEIGHT = 16;
-    const CHART_LABEL_OFFSET_TOP = -15;
-    const CHART_LABEL_OFFSET_LEFT = 2;
+    const CHART_LABEL_MAX_LEN = 28;
+    const CHART_LABEL_LANE_HEIGHT = 22;
+    const CHART_LABEL_GAP = 8;
+    const CHART_LABEL_OFFSET_LEFT = 6;
+    const CHART_LABEL_OFFSET_TOP = -9;
+    const CHART_LABEL_COLLISION_GAP = 0.12;
 
-    function splitChartLabelLines(text) {
-        const value = String(text ?? '').trim();
-        if (!value) {
-            return [];
-        }
-        if (value.length <= CHART_LABEL_LINE_LEN) {
-            return [value];
-        }
-        const splitAt = value.lastIndexOf(' ', CHART_LABEL_LINE_LEN);
-        if (splitAt > 6) {
-            const first = value.slice(0, splitAt);
-            const rest = value.slice(splitAt + 1).trim();
-            if (rest.length <= CHART_LABEL_LINE_LEN) {
-                return [first, rest];
-            }
-            return [first, `${rest.slice(0, CHART_LABEL_LINE_LEN - 1)}…`];
-        }
-        return [`${value.slice(0, CHART_LABEL_LINE_LEN - 1)}…`];
-    }
-
-    /** Mehrzeiliger Chart-Text — Projekt steht in Popover und Marker-Farbe. */
-    function chartLabelContent(marker) {
+    function compactChartLabelText(marker) {
         const task = String(marker.task ?? '').trim();
         const project = String(marker.project ?? '').trim();
-        return splitChartLabelLines(task || project);
+        let text = task || project;
+        if (!text) {
+            return '';
+        }
+
+        const parts = text.split(/\s*[-–—]\s+/).map((part) => part.trim()).filter(Boolean);
+        if (parts.length > 1) {
+            const shortest = parts.reduce((a, b) => (a.length <= b.length ? a : b));
+            const last = parts[parts.length - 1];
+            if (shortest.length >= 4 && shortest.length <= CHART_LABEL_MAX_LEN) {
+                text = shortest;
+            } else if (last.length >= 4 && last.length <= CHART_LABEL_MAX_LEN) {
+                text = last;
+            }
+        }
+
+        if (text.length <= CHART_LABEL_MAX_LEN) {
+            return text;
+        }
+        const splitAt = text.lastIndexOf(' ', CHART_LABEL_MAX_LEN);
+        if (splitAt > 8) {
+            return `${text.slice(0, splitAt)}…`;
+        }
+        return `${text.slice(0, CHART_LABEL_MAX_LEN - 1)}…`;
+    }
+
+    /** Einzeiliger Chart-Text — vollständige Details im Popover und per Hover. */
+    function chartLabelContent(marker) {
+        const text = compactChartLabelText(marker);
+        return text ? [text] : [];
+    }
+
+    function labelTextFromContent(content) {
+        if (Array.isArray(content)) {
+            return content.join(' ').trim();
+        }
+        return String(content ?? '').trim();
     }
 
     function estimateLabelWidthUnits(content, mode) {
-        const longestLine = content.reduce((max, line) => Math.max(max, line.length), 0);
+        const len = labelTextFromContent(content).length;
         if (mode === 'category') {
-            return Math.max(0.45, longestLine * 0.085);
+            return Math.max(2.4, len * 0.17);
         }
-        return Math.max(25 * 60 * 1000, longestLine * 2.5 * 60 * 1000);
+        return Math.max(25 * 60 * 1000, len * 3 * 60 * 1000);
     }
 
     function computeCollisionLabelLanes(placements) {
@@ -729,7 +746,7 @@
 
         for (const item of sorted) {
             let lane = 0;
-            while (lane < laneEnds.length && item.x < laneEnds[lane] - 0.02) {
+            while (lane < laneEnds.length && item.x < laneEnds[lane] - CHART_LABEL_COLLISION_GAP) {
                 lane += 1;
             }
             laneEnds[lane] = item.x + item.width;
@@ -791,23 +808,25 @@
         if (maxLane < 0) {
             return 0;
         }
-        return 8 + CHART_LABEL_OFFSET_TOP + (maxLane + 1) * CHART_LABEL_LANE_HEIGHT;
+        return CHART_LABEL_OFFSET_TOP + CHART_LABEL_GAP + (maxLane + 1) * CHART_LABEL_LANE_HEIGHT + 4;
     }
 
     function chartAnnotationLabelOptions(content, laneIndex, color, variant = 'box') {
-        const lineCount = Array.isArray(content) ? content.length : 1;
-        const laneOffset = laneIndex * CHART_LABEL_LANE_HEIGHT + CHART_LABEL_OFFSET_TOP;
+        const text = labelTextFromContent(content);
+        const laneOffset = CHART_LABEL_OFFSET_TOP + CHART_LABEL_GAP + laneIndex * CHART_LABEL_LANE_HEIGHT;
         const base = {
-            display: Boolean(content?.length),
-            content,
-            color: '#e8eef4',
-            backgroundColor: `${color}dd`,
-            font: { size: 9, lineHeight: 1.15 },
-            padding: { top: 4, bottom: 3, left: 6, right: 5 },
+            display: Boolean(text),
+            content: text,
+            color,
+            backgroundColor: 'rgba(11, 17, 26, 0.94)',
+            borderColor: `${color}66`,
+            borderWidth: 1,
+            font: { size: 10, weight: '600', lineHeight: 1.2 },
+            padding: { top: 5, bottom: 3, left: 9, right: 6 },
             rotation: 0,
             textAlign: 'start',
             clip: false,
-            borderRadius: 4,
+            borderRadius: 3,
         };
 
         if (variant === 'box') {
@@ -815,7 +834,7 @@
                 ...base,
                 position: { x: 'start', y: 'start' },
                 xAdjust: CHART_LABEL_OFFSET_LEFT,
-                yAdjust: -(laneOffset + (lineCount - 1) * 6),
+                yAdjust: -laneOffset,
             };
         }
 
@@ -823,7 +842,7 @@
             ...base,
             position: 'end',
             xAdjust: CHART_LABEL_OFFSET_LEFT,
-            yAdjust: -(laneOffset + (lineCount - 1) * 6),
+            yAdjust: -laneOffset,
         };
     }
 

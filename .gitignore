@@ -8,6 +8,10 @@ __pycache__/
 .specstory/
 .specstory/.project.json
 
+# Node (nur lokal, z. B. Playwright-Tests — kein Projekt-Dependency)
+node_modules/
+package-lock.json
+
 # Lokale Dev-/Planungsdateien (nicht für Public-Repo)
 config/users.json
 docs/PROMPT-feature-reference.md
