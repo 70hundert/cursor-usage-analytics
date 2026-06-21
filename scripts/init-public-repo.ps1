@@ -80,6 +80,7 @@ Write-Host "Initialisiere Git..."
 Set-Location $DestinationRoot
 git init -b main
 git add -A
+git commit -m "Initial public release preparation (clean export)."
 git status
 
 Write-Host ""
