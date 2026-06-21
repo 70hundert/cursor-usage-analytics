@@ -20,7 +20,7 @@ Bei Änderungen an Shared-Impact (User-Pfade, CSV-Format, Design-Tokens) REFEREN
 ## Top-3-Gotchas
 
 1. **Parser-Drift:** Event-Chart dupliziert CSV-Logik inline — Änderungen an `parser.js` gelten **nicht** automatisch für `usage-events-chart.html`.
-2. **User-Konfiguration an drei Stellen:** `parser.js` (`USERS`), Event-Chart `USERS`, `serve.py` (`USER_TOKENS`) + `.env` — synchron halten.
+2. **User-Konfiguration:** [`config/users.json`](config/users.json) (gitignored) + [`static/cursor-analytics/users-config.js`](static/cursor-analytics/users-config.js) + Event-Chart `buildChartStackFromConfig` + [`serve.py`](serve.py) (`load_user_ids`, `CURSOR_SESSION_TOKEN_<USER>` in `.env`).
 3. **Server erforderlich:** Modul-Laden und CSV-Fetch scheitern bei `file://` — `python serve.py` (Port 8060).
 
 ## Task-Routing
@@ -28,6 +28,7 @@ Bei Änderungen an Shared-Impact (User-Pfade, CSV-Format, Design-Tokens) REFEREN
 | Aufgabe | Primäre Datei(en) |
 |---------|-------------------|
 | CSV/API-Parsing, Dedupe | `static/cursor-analytics/parser.js` |
+| User-Liste, CSV-Pfade | `static/cursor-analytics/users-config.js`, `config/users.example.json` |
 | KPIs, Filter, Granularität | `static/cursor-analytics/metrics.js` |
 | Charts, Legend-Persistenz, Marker-Annotationen | `static/cursor-analytics/charts.js` |
 | Projekt-Marker | `static/cursor-analytics/markers.js` |
@@ -36,3 +37,5 @@ Bei Änderungen an Shared-Impact (User-Pfade, CSV-Format, Design-Tokens) REFEREN
 | API-Proxy, Static-Serving | `serve.py` |
 
 Bei Shared-Änderungen mit Bezug zu diesem Scope: REFERENCE.md manuell lesen.
+
+
