@@ -27,6 +27,14 @@
         '#818cf8', // Indigo
     ];
 
+    function t(key) {
+        return global.CursorAnalytics?.i18n?.t(key) ?? key;
+    }
+
+    function tf(key, params) {
+        return global.CursorAnalytics?.i18n?.tf(key, params) ?? t(key);
+    }
+
     function generateId() {
         if (global.crypto?.randomUUID) {
             return `m-${global.crypto.randomUUID()}`;
@@ -178,7 +186,7 @@
             createdAt: markerInput.createdAt || new Date().toISOString(),
         });
         if (!marker) {
-            throw new Error('Ungültiger Marker — Projekt und Startzeit sind Pflicht.');
+            throw new Error(t('markerInvalid'));
         }
         const store = getStore();
         const index = store.markers.findIndex((m) => m.id === marker.id);
@@ -498,7 +506,7 @@
         popoverEl.hidden = true;
         popoverEl.innerHTML =
             '<div class="marker-chart-popover__body"></div>' +
-            '<button type="button" class="marker-chart-popover__edit">Bearbeiten</button>';
+            `<button type="button" class="marker-chart-popover__edit">${t('popoverEdit')}</button>`;
         popoverEl.addEventListener('mouseenter', () => {
             clearPopoverHideTimer();
             popoverPinned = true;
@@ -580,7 +588,14 @@
         let statsHtml = '';
         if (events?.length) {
             const stats = computeStats(events, marker, allMarkers, filterEndMs);
-            const parts = [`${stats.calls} Events`, `${stats.totalTokens.toLocaleString('de-DE')} Tokens`];
+            const numberFmt = formatters?.numberFmt;
+            const tokenLabel = numberFmt
+                ? numberFmt.format(stats.totalTokens)
+                : String(stats.totalTokens);
+            const parts = [
+                tf('kpiEventsSub', { count: stats.calls }),
+                `${tokenLabel} ${t('tokens')}`,
+            ];
             if (stats.costCents > 0 || formatters?.currencyFmt) {
                 const costLabel = formatters?.currencyFmt
                     ? formatters.currencyFmt.format(stats.costCents / 100)
@@ -591,19 +606,19 @@
         }
 
         const taskRow = marker.task
-            ? `<div class="marker-chart-popover__row">Aufgabe: <strong>${escapeHtml(marker.task)}</strong></div>`
+            ? `<div class="marker-chart-popover__row">${t('task')}: <strong>${escapeHtml(marker.task)}</strong></div>`
             : '';
         const noteRow = marker.note
-            ? `<div class="marker-chart-popover__row">Notiz: <strong>${escapeHtml(marker.note)}</strong></div>`
+            ? `<div class="marker-chart-popover__row">${t('popoverNote')}: <strong>${escapeHtml(marker.note)}</strong></div>`
             : '';
-        const userLabel = marker.user === 'all' ? 'Gesamt' : escapeHtml(marker.user);
+        const userLabel = marker.user === 'all' ? t('usersAll') : escapeHtml(marker.user);
 
         return `
             <div class="marker-chart-popover__title">${escapeHtml(marker.project)}</div>
             ${taskRow}
-            <div class="marker-chart-popover__row">Benutzer: <strong>${userLabel}</strong></div>
-            <div class="marker-chart-popover__row">Von: <strong>${formatPopoverDate(marker.start, formatters)}</strong></div>
-            <div class="marker-chart-popover__row">Bis: <strong>${endLabel}</strong></div>
+            <div class="marker-chart-popover__row">${t('users')}: <strong>${userLabel}</strong></div>
+            <div class="marker-chart-popover__row">${t('from')}: <strong>${formatPopoverDate(marker.start, formatters)}</strong></div>
+            <div class="marker-chart-popover__row">${t('colEnd')}: <strong>${endLabel}</strong></div>
             ${noteRow}
             ${statsHtml}
         `;
@@ -661,6 +676,7 @@
         el._onEdit = chartContext.onEditMarker || null;
         el.querySelector('.marker-chart-popover__body').innerHTML = buildPopoverHtml(marker, chartContext);
         const editBtn = el.querySelector('.marker-chart-popover__edit');
+        editBtn.textContent = t('popoverEdit');
         if (chartContext.onEditMarker) {
             editBtn.hidden = false;
         } else {

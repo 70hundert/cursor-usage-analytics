@@ -926,7 +926,7 @@
     <header class="page-header">
         <div>
             <h1>Cursor Usage Analytics</h1>
-            <p class="subtitle">Kosten, Modelle und Nutzungsmuster</p>
+            <p class="subtitle" data-i18n="subtitle">Kosten, Modelle und Nutzungsmuster</p>
         </div>
     </header>
 
@@ -934,10 +934,10 @@
         <section class="card card--main">
             <div class="toolbar" id="main-toolbar">
                 <div class="toolbar-group">
-                    <span class="toolbar-label">Datenquelle</span>
-                    <button type="button" class="btn btn--active" data-source="csv">CSV</button>
-                    <button type="button" class="btn" data-source="live">Live (Proxy)</button>
-                    <button type="button" class="btn" data-source="merge">Beides</button>
+                    <span class="toolbar-label" data-i18n="dataSource">Datenquelle</span>
+                    <button type="button" class="btn btn--active" data-source="csv" data-i18n="dataCsv">CSV</button>
+                    <button type="button" class="btn" data-source="live" data-i18n="dataLive">Live (Proxy)</button>
+                    <button type="button" class="btn" data-source="merge" data-i18n="dataMerge">Beides</button>
                 </div>
                 <div class="toolbar-group" id="user-filter-toolbar">
                     <span class="toolbar-label" data-i18n="users">Benutzer</span>
@@ -950,68 +950,68 @@
                 </div>
                 <div class="toolbar-group">
                     <label class="file-input-label">
-                        CSV laden
+                        <span data-i18n="loadCsv">CSV laden</span>
                         <input type="file" id="csv-file-input" accept=".csv,text/csv" multiple>
                     </label>
-                    <button type="button" class="btn btn--primary" id="live-refresh-btn">Live aktualisieren</button>
-                    <button type="button" class="btn" id="export-json-btn">Export JSON</button>
-                    <button type="button" class="btn" id="marker-export-btn">Marker exportieren</button>
+                    <button type="button" class="btn btn--primary" id="live-refresh-btn" data-i18n="liveRefresh">Live aktualisieren</button>
+                    <button type="button" class="btn" id="export-json-btn" data-i18n="exportJson">Export JSON</button>
+                    <button type="button" class="btn" id="marker-export-btn" data-i18n="exportMarkers">Marker exportieren</button>
                     <label class="file-input-label">
-                        Marker importieren
+                        <span data-i18n="importMarkers">Marker importieren</span>
                         <input type="file" id="marker-import-input" accept=".json,application/json">
                     </label>
                 </div>
             </div>
             <div class="date-range-panel" id="date-range-panel">
                 <div class="selection-mode-group">
-                    <span class="toolbar-label">Ansicht</span>
+                    <span class="toolbar-label" data-i18n="view">Ansicht</span>
                     <div class="toolbar-group">
-                        <button type="button" class="btn btn--active" data-selection-mode="time">Zeitraum</button>
-                        <button type="button" class="btn" data-selection-mode="count">Anfragen</button>
+                        <button type="button" class="btn btn--active" data-selection-mode="time" data-i18n="timeRange">Zeitraum</button>
+                        <button type="button" class="btn" data-selection-mode="count" data-i18n="requests">Anfragen</button>
                     </div>
                 </div>
                 <div id="time-range-group">
                     <div class="range-group-header">
-                        <span class="toolbar-label">Zeitraum</span>
+                        <span class="toolbar-label" data-i18n="timeRange">Zeitraum</span>
                         <div class="toolbar-group preset-range-group">
-                            <button type="button" class="btn" data-hours="1">1&nbsp;Std</button>
-                            <button type="button" class="btn" data-hours="2">2&nbsp;Std</button>
-                            <button type="button" class="btn" data-hours="3">3&nbsp;Std</button>
-                            <button type="button" class="btn" data-hours="6">6&nbsp;Std</button>
-                            <button type="button" class="btn" data-hours="12">12&nbsp;Std</button>
-                            <button type="button" class="btn btn--active" data-hours="24">1&nbsp;Tag</button>
-                            <button type="button" class="btn" data-hours="168">7&nbsp;Tage</button>
-                            <button type="button" class="btn" data-hours="720">30&nbsp;Tage</button>
-                            <button type="button" class="btn" data-all="true">Alle</button>
+                            <button type="button" class="btn" data-hours="1" data-i18n="preset1h">1&nbsp;Std</button>
+                            <button type="button" class="btn" data-hours="2" data-i18n="preset2h">2&nbsp;Std</button>
+                            <button type="button" class="btn" data-hours="3" data-i18n="preset3h">3&nbsp;Std</button>
+                            <button type="button" class="btn" data-hours="6" data-i18n="preset6h">6&nbsp;Std</button>
+                            <button type="button" class="btn" data-hours="12" data-i18n="preset12h">12&nbsp;Std</button>
+                            <button type="button" class="btn btn--active" data-hours="24" data-i18n="preset1d">1&nbsp;Tag</button>
+                            <button type="button" class="btn" data-hours="168" data-i18n="preset7d">7&nbsp;Tage</button>
+                            <button type="button" class="btn" data-hours="720" data-i18n="preset30d">30&nbsp;Tage</button>
+                            <button type="button" class="btn" data-all="true" data-i18n="all">Alle</button>
                         </div>
                     </div>
                     <div class="date-range-custom">
-                        <label>Von
+                        <label><span data-i18n="from">Von</span>
                             <input type="datetime-local" class="date-input date-input--wide" id="custom-from"
-                                aria-label="Von Datum und Uhrzeit">
+                                data-i18n-aria="dateFromAria" aria-label="Von Datum und Uhrzeit">
                         </label>
-                        <span class="date-range-sep">bis</span>
+                        <span class="date-range-sep" data-i18n="toSep">bis</span>
                         <label class="date-range-end">
                             <input type="datetime-local" class="date-input date-input--wide" id="custom-to"
-                                aria-label="Bis Datum und Uhrzeit">
+                                data-i18n-aria="dateToAria" aria-label="Bis Datum und Uhrzeit">
                         </label>
-                        <button type="button" class="btn" id="custom-apply">Anwenden</button>
-                        <button type="button" class="btn" id="custom-reset">Zurücksetzen</button>
+                        <button type="button" class="btn" id="custom-apply" data-i18n="apply">Anwenden</button>
+                        <button type="button" class="btn" id="custom-reset" data-i18n="reset">Zurücksetzen</button>
                     </div>
                     <div class="granularity-control" id="granularity-control">
-                        <select class="granularity-select" id="granularity-select" aria-label="Granularität">
-                            <option value="event">Pro Anfrage</option>
-                            <option value="quarter">15 Minuten</option>
-                            <option value="hour">Stündlich</option>
-                            <option value="day">Täglich</option>
-                            <option value="week">Wöchentlich</option>
-                            <option value="month">Monatlich</option>
+                        <select class="granularity-select" id="granularity-select" data-i18n-aria="granularity" aria-label="Granularität">
+                            <option value="event" data-i18n="granEvent">Pro Anfrage</option>
+                            <option value="quarter" data-i18n="granQuarter">15 Minuten</option>
+                            <option value="hour" data-i18n="granHour">Stündlich</option>
+                            <option value="day" data-i18n="granDay">Täglich</option>
+                            <option value="week" data-i18n="granWeek">Wöchentlich</option>
+                            <option value="month" data-i18n="granMonth">Monatlich</option>
                         </select>
                     </div>
                 </div>
                 <div id="count-range-group" hidden>
                     <div class="range-group-header">
-                        <span class="toolbar-label">Letzte Anfragen</span>
+                        <span class="toolbar-label" data-i18n="lastRequests">Letzte Anfragen</span>
                         <div class="toolbar-group count-range-buttons">
                             <button type="button" class="btn" data-count="10">10</button>
                             <button type="button" class="btn" data-count="25">25</button>
@@ -1020,30 +1020,32 @@
                             <button type="button" class="btn" data-count="250">250</button>
                             <button type="button" class="btn" data-count="500">500</button>
                             <button type="button" class="btn" data-count="1000">1000</button>
-                            <button type="button" class="btn" data-count-all="true">Alle</button>
+                            <button type="button" class="btn" data-count-all="true" data-i18n="all">Alle</button>
                         </div>
                     </div>
                     <div class="date-range-custom">
-                        <label>Von&nbsp;#
+                        <label><span data-i18n="fromWithHash">Von&nbsp;#</span>
                             <input type="number" class="count-input" id="count-from" min="1" step="1" value="1"
+                                data-i18n-title="countFromTitle" data-i18n-aria="countFromTitle"
                                 title="Von Anfrage (1 = neueste)"
                                 aria-label="Von Anfrage (1 = neueste)">
                         </label>
-                        <span class="date-range-sep">bis</span>
+                        <span class="date-range-sep" data-i18n="toSep">bis</span>
                         <label class="date-range-end">
                             <input type="number" class="count-input" id="count-to" min="1" step="1" value="50"
+                                data-i18n-title="countToTitle" data-i18n-aria="countToTitle"
                                 title="Bis Anfrage (neueste #)"
                                 aria-label="Bis Anfrage">
                         </label>
-                        <button type="button" class="btn" id="count-custom-apply">Anwenden</button>
+                        <button type="button" class="btn" id="count-custom-apply" data-i18n="apply">Anwenden</button>
                     </div>
                 </div>
             </div>
             <div class="live-loading" id="live-loading" hidden aria-live="polite" aria-busy="false">
                 <div class="live-loading__spinner" aria-hidden="true"></div>
-                <p class="live-loading__text" id="live-loading-text">Live-Daten werden geladen…</p>
+                <p class="live-loading__text" id="live-loading-text" data-i18n="liveLoading">Live-Daten werden geladen…</p>
             </div>
-            <div class="drop-zone" id="drop-zone">
+            <div class="drop-zone" id="drop-zone" data-i18n="dropZone">
                 CSV hier ablegen oder „CSV laden“ wählen
             </div>
             <div class="kpi-grid" id="kpi-grid" style="margin-top: 0.75rem;"></div>
@@ -1052,35 +1054,35 @@
                     <h3 class="overview-section__title" id="overview-section-title">Übersicht — Tokens &amp; Kosten</h3>
                     <div class="overview-section__toolbar">
                         <div class="marker-chart-display-control" data-marker-display-host
-                            aria-label="Marker-Sichtbarkeit"></div>
+                            data-i18n-aria="markerVisibilityAria" aria-label="Marker-Sichtbarkeit"></div>
                         <div class="chart-card__actions">
                             <button type="button" class="btn btn-chart-height" data-chart-key="overview"
-                                aria-pressed="false">Stretch</button>
-                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="overview">Zoom
+                                aria-pressed="false" data-i18n="stretch">Stretch</button>
+                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="overview" data-i18n="zoomReset">Zoom
                                 zurücksetzen</button>
-                            <button type="button" class="btn" id="marker-add-overview">Marker setzen</button>
+                            <button type="button" class="btn" id="marker-add-overview" data-i18n="markerSet">Marker setzen</button>
                         </div>
                     </div>
                 </div>
                 <div class="chart-wrap chart-wrap--overview">
-                    <canvas id="chart-overview-daily" aria-label="Tagesübersicht Tokens und Kosten"></canvas>
+                    <canvas id="chart-overview-daily" data-i18n-aria="overviewChartAria" aria-label="Tagesübersicht Tokens und Kosten"></canvas>
                 </div>
             </div>
-            <p class="card-meta" id="status-line">Lade Daten…</p>
+            <p class="card-meta" id="status-line" data-i18n="loadingData">Lade Daten…</p>
             <p class="hint-text" id="load-hint"></p>
         </section>
 
         <section class="card">
-            <h2>Visualisierungen</h2>
-            <p class="chart-zoom-hint">Mausrad: Zoomen · Strg + Ziehen: Verschieben · Pinch auf Touch</p>
+            <h2 data-i18n="visualizations">Visualisierungen</h2>
+            <p class="chart-zoom-hint" data-i18n="chartZoomHint">Mausrad: Zoomen · Strg + Ziehen: Verschieben · Pinch auf Touch</p>
             <div class="chart-grid">
                 <div class="chart-card">
                     <div class="chart-card__header">
-                        <h3>Top 5 Modelle nach Kosten</h3>
+                        <h3 data-i18n="chartTopCost">Top 5 Modelle nach Kosten</h3>
                         <div class="chart-card__actions">
                             <button type="button" class="btn btn-chart-height" data-chart-key="topCost"
-                                aria-pressed="false">Stretch</button>
-                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="topCost">Zoom
+                                aria-pressed="false" data-i18n="stretch">Stretch</button>
+                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="topCost" data-i18n="zoomReset">Zoom
                                 zurücksetzen</button>
                         </div>
                     </div>
@@ -1088,11 +1090,11 @@
                 </div>
                 <div class="chart-card">
                     <div class="chart-card__header">
-                        <h3>Top 5 Modelle nach Tokens</h3>
+                        <h3 data-i18n="chartTopTokens">Top 5 Modelle nach Tokens</h3>
                         <div class="chart-card__actions">
                             <button type="button" class="btn btn-chart-height" data-chart-key="topTokens"
-                                aria-pressed="false">Stretch</button>
-                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="topTokens">Zoom
+                                aria-pressed="false" data-i18n="stretch">Stretch</button>
+                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="topTokens" data-i18n="zoomReset">Zoom
                                 zurücksetzen</button>
                         </div>
                     </div>
@@ -1100,23 +1102,23 @@
                 </div>
                 <div class="chart-card">
                     <div class="chart-card__header">
-                        <h3>Token-Typ-Verteilung</h3>
+                        <h3 data-i18n="chartTokenTypes">Token-Typ-Verteilung</h3>
                         <div class="chart-card__actions">
                             <button type="button" class="btn btn-chart-height" data-chart-key="tokenTypes"
-                                aria-pressed="false">Stretch</button>
+                                aria-pressed="false" data-i18n="stretch">Stretch</button>
                             <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="tokenTypes" disabled
-                                hidden>Zoom zurücksetzen</button>
+                                hidden data-i18n="zoomReset">Zoom zurücksetzen</button>
                         </div>
                     </div>
                     <div class="chart-wrap"><canvas id="chart-token-types"></canvas></div>
                 </div>
                 <div class="chart-card">
                     <div class="chart-card__header">
-                        <h3>Modell-Familien</h3>
+                        <h3 data-i18n="chartModelFamily">Modell-Familien</h3>
                         <div class="chart-card__actions">
                             <button type="button" class="btn btn-chart-height" data-chart-key="modelFamily"
-                                aria-pressed="false">Stretch</button>
-                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="modelFamily">Zoom
+                                aria-pressed="false" data-i18n="stretch">Stretch</button>
+                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="modelFamily" data-i18n="zoomReset">Zoom
                                 zurücksetzen</button>
                         </div>
                     </div>
@@ -1124,11 +1126,11 @@
                 </div>
                 <div class="chart-card">
                     <div class="chart-card__header">
-                        <h3>Nutzung nach Stunde</h3>
+                        <h3 data-i18n="chartByHour">Nutzung nach Stunde</h3>
                         <div class="chart-card__actions">
                             <button type="button" class="btn btn-chart-height" data-chart-key="byHour"
-                                aria-pressed="false">Stretch</button>
-                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="byHour">Zoom
+                                aria-pressed="false" data-i18n="stretch">Stretch</button>
+                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="byHour" data-i18n="zoomReset">Zoom
                                 zurücksetzen</button>
                         </div>
                     </div>
@@ -1136,11 +1138,11 @@
                 </div>
                 <div class="chart-card">
                     <div class="chart-card__header">
-                        <h3>Input vs. Output</h3>
+                        <h3 data-i18n="chartInputOutput">Input vs. Output</h3>
                         <div class="chart-card__actions">
                             <button type="button" class="btn btn-chart-height" data-chart-key="inputOutput"
-                                aria-pressed="false">Stretch</button>
-                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="inputOutput">Zoom
+                                aria-pressed="false" data-i18n="stretch">Stretch</button>
+                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="inputOutput" data-i18n="zoomReset">Zoom
                                 zurücksetzen</button>
                         </div>
                     </div>
@@ -1148,23 +1150,23 @@
                 </div>
                 <div class="chart-card">
                     <div class="chart-card__header">
-                        <h3>Cache-Effizienz</h3>
+                        <h3 data-i18n="chartCacheEfficiency">Cache-Effizienz</h3>
                         <div class="chart-card__actions">
                             <button type="button" class="btn btn-chart-height" data-chart-key="cacheEfficiency"
-                                aria-pressed="false">Stretch</button>
+                                aria-pressed="false" data-i18n="stretch">Stretch</button>
                             <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="cacheEfficiency"
-                                disabled hidden>Zoom zurücksetzen</button>
+                                disabled hidden data-i18n="zoomReset">Zoom zurücksetzen</button>
                         </div>
                     </div>
                     <div class="chart-wrap"><canvas id="chart-cache"></canvas></div>
                 </div>
                 <div class="chart-card">
                     <div class="chart-card__header">
-                        <h3>Nutzung nach Wochentag</h3>
+                        <h3 data-i18n="chartByWeekday">Nutzung nach Wochentag</h3>
                         <div class="chart-card__actions">
                             <button type="button" class="btn btn-chart-height" data-chart-key="byWeekday"
-                                aria-pressed="false">Stretch</button>
-                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="byWeekday">Zoom
+                                aria-pressed="false" data-i18n="stretch">Stretch</button>
+                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="byWeekday" data-i18n="zoomReset">Zoom
                                 zurücksetzen</button>
                         </div>
                     </div>
@@ -1172,14 +1174,14 @@
                 </div>
                 <div class="chart-card chart-card--full-width">
                     <div class="chart-card__header">
-                        <h3 id="chart-cumulative-title">Kumulierte Ausgaben</h3>
+                        <h3 id="chart-cumulative-title" data-i18n="chartCumulative">Kumulierte Ausgaben</h3>
                         <div class="chart-card__header-actions">
                             <div class="marker-chart-display-control" data-marker-display-host
-                                aria-label="Marker-Sichtbarkeit"></div>
+                                data-i18n-aria="markerVisibilityAria" aria-label="Marker-Sichtbarkeit"></div>
                             <div class="chart-card__actions">
                                 <button type="button" class="btn btn-chart-height" data-chart-key="cumulative"
-                                    aria-pressed="false">Stretch</button>
-                                <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="cumulative">Zoom
+                                    aria-pressed="false" data-i18n="stretch">Stretch</button>
+                                <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="cumulative" data-i18n="zoomReset">Zoom
                                     zurücksetzen</button>
                             </div>
                         </div>
@@ -1190,17 +1192,17 @@
         </section>
 
         <section class="card">
-            <h2>Tokens je Tag</h2>
+            <h2 data-i18n="tokensPerDay">Tokens je Tag</h2>
             <div class="usage-table-wrap">
                 <table class="usage-table">
                     <thead>
                         <tr>
-                            <th>Datum</th>
-                            <th>Benutzer</th>
-                            <th>Events</th>
-                            <th>Total Tokens</th>
-                            <th>Kosten</th>
-                            <th>Top-Modell</th>
+                            <th data-i18n="date">Datum</th>
+                            <th data-i18n="users">Benutzer</th>
+                            <th data-i18n="events">Events</th>
+                            <th data-i18n="totalTokens">Total Tokens</th>
+                            <th data-i18n="cost">Kosten</th>
+                            <th data-i18n="topModel">Top-Modell</th>
                         </tr>
                     </thead>
                     <tbody id="daily-table-body"></tbody>
@@ -1209,16 +1211,16 @@
         </section>
 
         <section class="card">
-            <h2>Teuerste Events</h2>
+            <h2 data-i18n="mostExpensiveEvents">Teuerste Events</h2>
             <div class="usage-table-wrap">
                 <table class="usage-table">
                     <thead>
                         <tr>
-                            <th>Zeit</th>
-                            <th>Benutzer</th>
-                            <th>Modell</th>
-                            <th>Tokens</th>
-                            <th>Kosten</th>
+                            <th data-i18n="time">Zeit</th>
+                            <th data-i18n="users">Benutzer</th>
+                            <th data-i18n="modelFilter">Modell</th>
+                            <th data-i18n="tokens">Tokens</th>
+                            <th data-i18n="cost">Kosten</th>
                         </tr>
                     </thead>
                     <tbody id="expensive-table-body"></tbody>
@@ -1242,7 +1244,8 @@
                     </select>
                 </div>
                 <div class="toolbar-group">
-                    <label class="toolbar-label" data-i18n="minCost">Min. Kosten ($)
+                    <label class="toolbar-label">
+                        <span data-i18n="minCost">Min. Kosten ($)</span>
                         <input type="number" class="budget-input" id="events-min-cost" min="0" step="0.01" value="0" style="width:5rem;">
                     </label>
                 </div>
@@ -1259,18 +1262,18 @@
                 <div class="toolbar-group">
                     <span class="toolbar-label" data-i18n="projectFilter">Projekt-Filter</span>
                     <select class="project-filter-select" id="project-filter" aria-label="Projekt-Filter">
-                        <option value="all">Alle Projekte</option>
+                        <option value="all" data-i18n="allProjects">Alle Projekte</option>
                     </select>
                 </div>
                 <div class="toolbar-group">
-                    <span class="toolbar-label">Gruppierung</span>
+                    <span class="toolbar-label" data-i18n="grouping">Gruppierung</span>
                     <div class="toolbar-group">
-                        <button type="button" class="btn" data-events-group="marker">Pro Marker</button>
-                        <button type="button" class="btn" data-events-group="task">Pro Aufgabe</button>
+                        <button type="button" class="btn" data-events-group="marker" data-i18n="groupByMarker">Pro Marker</button>
+                        <button type="button" class="btn" data-events-group="task" data-i18n="groupByTask">Pro Aufgabe</button>
                     </div>
                 </div>
                 <div class="toolbar-group">
-                    <span class="toolbar-label">Pro Seite</span>
+                    <span class="toolbar-label" data-i18n="perPage">Pro Seite</span>
                     <div class="toolbar-group">
                         <button type="button" class="btn" data-events-page-size="10">10</button>
                         <button type="button" class="btn" data-events-page-size="25">25</button>
@@ -1294,17 +1297,17 @@
                 <table class="usage-table usage-table--events">
                     <thead>
                         <tr>
-                            <th data-sort-col="time">Zeit</th>
-                            <th data-sort-col="user">Benutzer</th>
-                            <th>Projekt</th>
-                            <th data-sort-col="model">Modell</th>
-                            <th data-sort-col="kind">Kind</th>
-                            <th>Input (w/ Cache Write)</th>
-                            <th>Input (w/o Cache Write)</th>
-                            <th>Cache Read</th>
-                            <th data-sort-col="output">Output</th>
-                            <th data-sort-col="total">Total</th>
-                            <th data-sort-col="cost">Kosten</th>
+                            <th data-sort-col="time" data-i18n="time">Zeit</th>
+                            <th data-sort-col="user" data-i18n="users">Benutzer</th>
+                            <th data-i18n="project">Projekt</th>
+                            <th data-sort-col="model" data-i18n="modelFilter">Modell</th>
+                            <th data-sort-col="kind" data-i18n="kindFilter">Kind</th>
+                            <th data-i18n="inputWithCacheWrite">Input (w/ Cache Write)</th>
+                            <th data-i18n="inputNoCacheWrite">Input (w/o Cache Write)</th>
+                            <th data-i18n="cacheRead">Cache Read</th>
+                            <th data-sort-col="output" data-i18n="output">Output</th>
+                            <th data-sort-col="total" data-i18n="total">Total</th>
+                            <th data-sort-col="cost" data-i18n="cost">Kosten</th>
                         </tr>
                     </thead>
                     <tbody id="events-table-body"></tbody>
@@ -1318,31 +1321,31 @@
         </section>
 
         <section class="card" id="marker-card">
-            <h2>Projekt-Marker</h2>
+            <h2 data-i18n="projectMarkers">Projekt-Marker</h2>
             <div class="toolbar" style="margin-bottom: 0.5rem;">
                 <div class="toolbar-group">
                     <span class="toolbar-label" data-i18n="projectFilter">Projekt-Filter</span>
                     <select class="project-filter-select" id="marker-project-filter" aria-label="Marker-Projekt-Filter">
-                        <option value="all">Alle Projekte</option>
+                        <option value="all" data-i18n="allProjects">Alle Projekte</option>
                     </select>
                 </div>
             </div>
-            <p class="card-meta" id="marker-table-status">
+            <p class="card-meta" id="marker-table-status" data-i18n="markerTableIntro">
                 Projekt- und Aufgaben-Marker — Intervall bis zum nächsten Marker oder Filter-Ende (*).
             </p>
             <div class="usage-table-wrap">
                 <table class="usage-table usage-table--markers" id="marker-table">
                     <thead>
                         <tr>
-                            <th data-sort-col="start">Von</th>
-                            <th data-sort-col="end">Bis</th>
-                            <th data-sort-col="user">Benutzer</th>
-                            <th data-sort-col="project">Projekt</th>
-                            <th data-sort-col="task">Aufgabe</th>
-                            <th data-sort-col="events">Events</th>
-                            <th class="usage-table__total" data-sort-col="total">Total Tokens</th>
-                            <th data-sort-col="output">Output</th>
-                            <th data-sort-col="cost">Kosten</th>
+                            <th data-sort-col="start" data-i18n="from">Von</th>
+                            <th data-sort-col="end" data-i18n="colEnd">Bis</th>
+                            <th data-sort-col="user" data-i18n="users">Benutzer</th>
+                            <th data-sort-col="project" data-i18n="project">Projekt</th>
+                            <th data-sort-col="task" data-i18n="task">Aufgabe</th>
+                            <th data-sort-col="events" data-i18n="events">Events</th>
+                            <th class="usage-table__total" data-sort-col="total" data-i18n="totalTokens">Total Tokens</th>
+                            <th data-sort-col="output" data-i18n="output">Output</th>
+                            <th data-sort-col="cost" data-i18n="cost">Kosten</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -1352,12 +1355,12 @@
         </section>
 
         <section class="card">
-            <h2>Budget (aktueller Monat)</h2>
+            <h2 data-i18n="budgetCurrentMonth">Budget (aktueller Monat)</h2>
             <div class="toolbar" style="margin-bottom: 0.75rem;">
-                <label>Monatsbudget ($)
+                <label><span data-i18n="monthlyBudget">Monatsbudget ($)</span>
                     <input type="number" class="budget-input" id="budget-input" min="0" step="1" value="70">
                 </label>
-                <button type="button" class="btn" id="budget-save-btn">Speichern</button>
+                <button type="button" class="btn" id="budget-save-btn" data-i18n="save">Speichern</button>
             </div>
             <div id="budget-panel"></div>
         </section>
@@ -1366,30 +1369,30 @@
     <div class="marker-modal" id="marker-modal" hidden>
         <div class="marker-modal__backdrop" id="marker-modal-backdrop"></div>
         <div class="marker-modal__panel" role="dialog" aria-labelledby="marker-modal-title">
-            <h3 id="marker-modal-title">Projekt-Marker</h3>
+            <h3 id="marker-modal-title" data-i18n="projectMarkers">Projekt-Marker</h3>
             <form class="marker-form" id="marker-form">
                 <input type="hidden" id="marker-id">
-                <label>Benutzer
-                    <select id="marker-user" aria-label="Benutzer"></select>
+                <label><span data-i18n="users">Benutzer</span>
+                    <select id="marker-user" data-i18n-aria="users" aria-label="Benutzer"></select>
                 </label>
-                <label>Von
+                <label><span data-i18n="from">Von</span>
                     <input type="datetime-local" id="marker-start" required>
                 </label>
-                <label>Bis (optional)
+                <label><span data-i18n="endOptional">Bis (optional)</span>
                     <input type="datetime-local" id="marker-end">
                 </label>
-                <label>Projekt
+                <label><span data-i18n="project">Projekt</span>
                     <input type="text" id="marker-project" required maxlength="120">
                 </label>
-                <label>Aufgabe (optional)
+                <label><span data-i18n="taskOptional">Aufgabe (optional)</span>
                     <input type="text" id="marker-task" maxlength="120">
                 </label>
-                <label>Notiz (optional)
+                <label><span data-i18n="noteOptional">Notiz (optional)</span>
                     <textarea id="marker-note" maxlength="500"></textarea>
                 </label>
                 <div class="marker-form__actions">
-                    <button type="button" class="btn" id="marker-cancel-btn">Abbrechen</button>
-                    <button type="submit" class="btn btn--primary">Speichern</button>
+                    <button type="button" class="btn" id="marker-cancel-btn" data-i18n="cancel">Abbrechen</button>
+                    <button type="submit" class="btn btn--primary" data-i18n="save">Speichern</button>
                 </div>
             </form>
         </div>
@@ -1424,7 +1427,7 @@
                 script.src = url;
                 script.dataset.src = url;
                 script.onload = () => resolve();
-                script.onerror = () => reject(new Error(`Skript nicht gefunden: ${url}`));
+                script.onerror = () => reject(new Error(tf('scriptNotFound', { url })));
                 document.head.appendChild(script);
             });
         }
@@ -1671,11 +1674,11 @@
 
         function mountMarkerChartDisplayControls() {
             const template = `
-                <span class="toolbar-label">Chart-Marker</span>
-                <button type="button" class="btn btn--active" data-marker-chart-visible aria-pressed="true">Anzeigen</button>
-                <button type="button" class="btn btn--active" data-marker-labels-visible aria-pressed="true">Beschriftungen</button>
-                <select class="project-filter-select" data-marker-project-filter aria-label="Marker nach Projekt filtern">
-                    <option value="all">Alle Projekte</option>
+                <span class="toolbar-label">${t('chartMarkers')}</span>
+                <button type="button" class="btn btn--active" data-marker-chart-visible aria-pressed="true">${t('showMarkers')}</button>
+                <button type="button" class="btn btn--active" data-marker-labels-visible aria-pressed="true">${t('showLabels')}</button>
+                <select class="project-filter-select" data-marker-project-filter aria-label="${t('projectFilter')}">
+                    <option value="all">${t('allProjects')}</option>
                 </select>
             `;
             document.querySelectorAll('[data-marker-display-host]').forEach((host) => {
@@ -1712,7 +1715,7 @@
             const projects = [...new Set(api.getStore().markers.map((m) => m.project).filter(Boolean))].sort();
             const current = markerChartDisplay.projectFilter;
             const optionsHtml =
-                '<option value="all">Alle Projekte</option>' +
+                `<option value="all">${t('allProjects')}</option>` +
                 projects
                     .map(
                         (project) =>
@@ -1777,7 +1780,7 @@
             const projects = [...new Set(api.getStore().markers.map((m) => m.project).filter(Boolean))].sort();
             const current = projectFilter;
             select.innerHTML =
-                '<option value="all">Alle Projekte</option>' +
+                `<option value="all">${t('allProjects')}</option>` +
                 projects
                     .map(
                         (project) =>
@@ -1990,8 +1993,8 @@
                 : '';
 
             document.getElementById('marker-modal-title').textContent = marker
-                ? 'Marker bearbeiten'
-                : 'Projekt-Marker setzen';
+                ? t('editMarker')
+                : t('setProjectMarker');
             modal.hidden = false;
         }
 
@@ -2058,7 +2061,7 @@
             const projects = [...new Set(api.getStore().markers.map((m) => m.project).filter(Boolean))].sort();
             const current = markerTableProjectFilter;
             select.innerHTML =
-                '<option value="all">Alle Projekte</option>' +
+                `<option value="all">${t('allProjects')}</option>` +
                 projects
                     .map(
                         (project) =>
@@ -2171,7 +2174,7 @@
             const collapsedClass = collapsed ? ' usage-table__group-header--collapsed' : '';
             const safeKey = String(group.key).replace(/"/g, '&quot;');
             const badge = renderMarkerProjectBadge(group.label, colorMap);
-            const markerLabel = group.stats.count === 1 ? 'Marker' : 'Marker';
+            const markerLabel = t('markerLabel');
             return `<tr class="usage-table__group-header usage-table__group-header--toggle${collapsedClass}" data-marker-group-key="${safeKey}" role="button" tabindex="0">
                     <td colspan="5"><span class="usage-table__group-chevron" aria-hidden="true"></span>${badge} · ${numberFmt.format(group.stats.count)} ${markerLabel}</td>
                     <td>${numberFmt.format(group.stats.calls)}</td>
@@ -2252,13 +2255,14 @@
             const projectGroups = buildMarkerProjectGroups(sorted);
 
             if (!sorted.length) {
+                const emptyMessage = t('statusNoMarkers');
                 bodyEl.innerHTML =
-                    '<tr><td class="usage-table__empty" colspan="10">Noch keine Marker — „Marker setzen“ in der Übersicht</td></tr>';
+                    `<tr><td class="usage-table__empty" colspan="10">${emptyMessage}</td></tr>`;
                 if (statusEl) {
                     statusEl.textContent =
                         markerTableProjectFilter !== 'all'
-                            ? `Keine Marker für Projekt „${markerTableProjectFilter}“`
-                            : 'Noch keine Marker — „Marker setzen“ in der Übersicht';
+                            ? tf('statusNoMarkersForProject', { project: markerTableProjectFilter })
+                            : emptyMessage;
                 }
                 syncMarkerSortHeaders();
                 return;
@@ -2282,9 +2286,12 @@
             if (statusEl) {
                 const filterHint =
                     markerTableProjectFilter !== 'all'
-                        ? ` · Projekt: ${markerTableProjectFilter}`
+                        ? tf('statusMarkerFilterProject', { project: markerTableProjectFilter })
                         : '';
-                statusEl.textContent = `${numberFmt.format(sorted.length)} Marker · * = implizites Intervall-Ende${filterHint}`;
+                statusEl.textContent = tf('statusMarkerCount', {
+                    count: numberFmt.format(sorted.length),
+                    filterHint,
+                });
             }
             syncMarkerSortHeaders();
         }
@@ -2394,7 +2401,7 @@
                     renderAll();
                 } catch (error) {
                     document.getElementById('marker-table-status').textContent =
-                        `Import fehlgeschlagen: ${error.message}`;
+                        tf('statusImportFailed', { message: error.message });
                 }
             });
         }
@@ -2581,7 +2588,7 @@
 
         function buildEventGroupLabel(marker, mode) {
             if (!marker) {
-                return 'Ohne Marker';
+                return t('withoutMarker');
             }
             if (marker.task) {
                 return `${marker.project} — ${marker.task}`;
@@ -2653,27 +2660,32 @@
             statsEl.hidden = false;
             const scopeHint =
                 displayMeta.shown < displayMeta.total
-                    ? `<span class="events-stat__scope">${numberFmt.format(displayMeta.shown)} von ${numberFmt.format(displayMeta.total)} Anfragen</span>`
-                    : `<span class="events-stat__scope">${numberFmt.format(displayMeta.shown)} Anfragen</span>`;
+                    ? `<span class="events-stat__scope">${tf('shownOfTotal', {
+                          shown: numberFmt.format(displayMeta.shown),
+                          total: numberFmt.format(displayMeta.total),
+                      })}</span>`
+                    : `<span class="events-stat__scope">${tf('shownRequests', {
+                          shown: numberFmt.format(displayMeta.shown),
+                      })}</span>`;
             totalsEl.innerHTML = `
                 <div class="events-stat events-stat--scope">
-                    <span class="events-stat__label">Angezeigt</span>
+                    <span class="events-stat__label">${t('displayed')}</span>
                     <span class="events-stat__value">${scopeHint}</span>
                 </div>
                 <div class="events-stat">
-                    <span class="events-stat__label">Total Tokens</span>
+                    <span class="events-stat__label">${t('totalTokens')}</span>
                     <span class="events-stat__value">${numberFmt.format(totalStats.totalTokens)}</span>
                 </div>
                 <div class="events-stat">
-                    <span class="events-stat__label">Output</span>
+                    <span class="events-stat__label">${t('output')}</span>
                     <span class="events-stat__value">${numberFmt.format(totalStats.outputTokens)}</span>
                 </div>
                 <div class="events-stat">
-                    <span class="events-stat__label">Cache Read</span>
+                    <span class="events-stat__label">${t('cacheRead')}</span>
                     <span class="events-stat__value">${numberFmt.format(totalStats.cacheRead)}</span>
                 </div>
                 <div class="events-stat">
-                    <span class="events-stat__label">Kosten</span>
+                    <span class="events-stat__label">${t('cost')}</span>
                     <span class="events-stat__value">${formatEventGroupCost(totalStats)}</span>
                 </div>
             `;
@@ -2682,7 +2694,7 @@
             if (hintEl) {
                 if (groups.length && !markedGroups.length) {
                     hintEl.hidden = false;
-                    hintEl.textContent = 'Keine markierten Aufgaben im Zeitraum';
+                    hintEl.textContent = t('noMarkedTasks');
                 } else {
                     hintEl.hidden = true;
                     hintEl.textContent = '';
@@ -2692,13 +2704,13 @@
             const showRange = mode === 'marker';
             if (headEl) {
                 headEl.innerHTML = `<tr>
-                    <th>Aufgabe</th>
-                    ${showRange ? '<th>Zeitraum</th>' : ''}
-                    <th>Anfragen</th>
-                    <th class="usage-table__total">Total</th>
-                    <th>Output</th>
-                    <th>Cache Read</th>
-                    <th>Kosten</th>
+                    <th>${t('task')}</th>
+                    ${showRange ? `<th>${t('colTimeRange')}</th>` : ''}
+                    <th>${t('requests')}</th>
+                    <th class="usage-table__total">${t('total')}</th>
+                    <th>${t('output')}</th>
+                    <th>${t('cacheRead')}</th>
+                    <th>${t('cost')}</th>
                 </tr>`;
             }
 
@@ -2726,18 +2738,19 @@
                 .join('');
         }
 
-        function setLiveLoading(loading, message = 'Live-Daten werden geladen…') {
+        function setLiveLoading(loading, message = null) {
             liveLoading = loading;
             const overlay = document.getElementById('live-loading');
             const text = document.getElementById('live-loading-text');
             const refreshBtn = document.getElementById('live-refresh-btn');
+            const loadingMessage = message ?? t('liveLoading');
 
             if (overlay) {
                 overlay.hidden = !loading;
                 overlay.setAttribute('aria-busy', loading ? 'true' : 'false');
             }
             if (text) {
-                text.textContent = message;
+                text.textContent = loadingMessage;
             }
 
             document.querySelectorAll('[data-source]').forEach((btn) => {
@@ -2772,6 +2785,37 @@
 
         function t(key) {
             return getI18n()?.t(key) ?? key;
+        }
+
+        function tf(key, params) {
+            return getI18n()?.tf(key, params) ?? t(key);
+        }
+
+        function trendLabelText(label) {
+            if (label === 'up') {
+                return t('trendUp');
+            }
+            if (label === 'down') {
+                return t('trendDown');
+            }
+            return t('trendStable');
+        }
+
+        function overviewTitleFor(granularity) {
+            const key = getI18n()?.getOverviewTitleKey(granularity) || 'overviewDefault';
+            return t(key);
+        }
+
+        function cumulativeTitleFor(granularity) {
+            const key = getI18n()?.getCumulativeTitleKey(granularity) || 'chartCumulative';
+            return t(key);
+        }
+
+        function syncChartHeightLabels() {
+            document.querySelectorAll('.btn-chart-height').forEach((btn) => {
+                const expanded = btn.getAttribute('aria-pressed') === 'true';
+                btn.textContent = expanded ? t('chartHeightStandard') : t('stretch');
+            });
         }
 
         function getValidUserFilters() {
@@ -2844,6 +2888,18 @@
                 ).join('') + `<option value="all">${t('usersAll')}</option>`;
         }
 
+        function refreshMarkerChartDisplayLabels() {
+            document.querySelectorAll('[data-marker-display-host] .toolbar-label').forEach((el) => {
+                el.textContent = t('chartMarkers');
+            });
+            document.querySelectorAll('[data-marker-chart-visible]').forEach((btn) => {
+                btn.textContent = t('showMarkers');
+            });
+            document.querySelectorAll('[data-marker-labels-visible]').forEach((btn) => {
+                btn.textContent = t('showLabels');
+            });
+        }
+
         function applyI18nLabels() {
             document.querySelectorAll('[data-i18n]').forEach((el) => {
                 const key = el.getAttribute('data-i18n');
@@ -2851,6 +2907,22 @@
                     el.textContent = t(key);
                 }
             });
+            document.querySelectorAll('[data-i18n-aria]').forEach((el) => {
+                const key = el.getAttribute('data-i18n-aria');
+                if (key) {
+                    el.setAttribute('aria-label', t(key));
+                }
+            });
+            document.querySelectorAll('[data-i18n-title]').forEach((el) => {
+                const key = el.getAttribute('data-i18n-title');
+                if (key) {
+                    el.setAttribute('title', t(key));
+                }
+            });
+            refreshMarkerChartDisplayLabels();
+            syncChartHeightLabels();
+            syncEventsSortHeaders();
+            syncMarkerSortHeaders();
             const locale = getI18n()?.getLocale() || 'de';
             document.querySelectorAll('[data-locale]').forEach((btn) => {
                 btn.classList.toggle('btn--active', btn.dataset.locale === locale);
@@ -3250,15 +3322,18 @@
         function rangeLabel() {
             if (selectionMode === 'count') {
                 if (range.mode === 'all') {
-                    return 'Alle Anfragen';
+                    return t('rangeAllRequests');
                 }
                 if (range.mode === 'countRange') {
-                    return `Anfragen #${range.countFrom}–#${range.countTo} (neueste zuerst)`;
+                    return tf('rangeCountRange', {
+                        from: range.countFrom,
+                        to: range.countTo,
+                    });
                 }
-                return `Letzte ${range.count} Anfragen`;
+                return tf('rangeLastN', { count: range.count });
             }
             if (range.mode === 'all') {
-                return 'Alle';
+                return t('all');
             }
             if (range.mode === 'custom') {
                 const fromDate = parseDateTimeLocalValue(range.customFrom);
@@ -3272,17 +3347,19 @@
                     const fmt = hasTime ? dateTimeFmt : dateFmt;
                     return `${fmt.format(startDate)} – ${fmt.format(endDate)}`;
                 }
-                return 'Custom';
+                return t('rangeCustom');
             }
             const presetLabels = {
-                1: '1 Std',
-                6: '6 Std',
-                12: '12 Std',
-                24: '1 Tag',
-                168: '7 Tage',
-                720: '30 Tage',
+                1: t('preset1h'),
+                2: t('preset2h'),
+                3: t('preset3h'),
+                6: t('preset6h'),
+                12: t('preset12h'),
+                24: t('preset1d'),
+                168: t('preset7d'),
+                720: t('preset30d'),
             };
-            return presetLabels[range.hours] || `${range.hours} h`;
+            return presetLabels[range.hours] || tf('presetHours', { hours: range.hours });
         }
 
         function applyPresetRange(hours, activeButton) {
@@ -3357,7 +3434,7 @@
             const countTo = Math.max(countFrom, Math.floor(Number(toEl?.value) || countFrom));
 
             if (!fromEl?.value || !toEl?.value) {
-                setStatus('Bitte Von- und Bis-Anfrage wählen.', true);
+                setStatus(t('statusSelectCountRange'), true);
                 return;
             }
 
@@ -3447,7 +3524,7 @@
             const fromEl = document.getElementById('custom-from');
             const toEl = document.getElementById('custom-to');
             if (!fromEl?.value || !toEl?.value) {
-                setStatus('Bitte Von- und Bis-Zeitpunkt wählen.', true);
+                setStatus(t('statusSelectTimeRange'), true);
                 return;
             }
 
@@ -3482,34 +3559,34 @@
 
             document.getElementById('kpi-grid').innerHTML = `
                 <div class="kpi kpi--accent">
-                    <div class="kpi__label">Total Tokens</div>
+                    <div class="kpi__label">${t('kpiTotalTokens')}</div>
                     <div class="kpi__value">${numberFmt.format(kpis.totalTokens)}</div>
-                    <div class="kpi__sub">${numberFmt.format(kpis.totalCalls)} Events</div>
+                    <div class="kpi__sub">${tf('kpiEventsSub', { count: numberFmt.format(kpis.totalCalls) })}</div>
                 </div>
                 <div class="kpi">
-                    <div class="kpi__label">Kosten</div>
+                    <div class="kpi__label">${t('kpiCost')}</div>
                     <div class="kpi__value">${currencyFmt.format(kpis.costCents / 100)}</div>
-                    <div class="kpi__sub">${numberFmt.format(kpis.billableEvents)} kostenpflichtig</div>
+                    <div class="kpi__sub">${tf('kpiBillable', { count: numberFmt.format(kpis.billableEvents) })}</div>
                 </div>
                 <div class="kpi">
-                    <div class="kpi__label">Included</div>
+                    <div class="kpi__label">${t('kpiIncluded')}</div>
                     <div class="kpi__value">${numberFmt.format(kpis.includedEvents)}</div>
-                    <div class="kpi__sub">im Plan enthalten</div>
+                    <div class="kpi__sub">${t('kpiIncludedSub')}</div>
                 </div>
                 <div class="kpi">
-                    <div class="kpi__label">Tagesdurchschnitt</div>
+                    <div class="kpi__label">${t('kpiDailyAvg')}</div>
                     <div class="kpi__value">${currencyFmt.format(kpis.dailyAvgCents / 100)}</div>
-                    <div class="kpi__sub">pro Tag</div>
+                    <div class="kpi__sub">${t('kpiPerDay')}</div>
                 </div>
                 <div class="kpi kpi--warn">
-                    <div class="kpi__label">Prognose (30 Tage)</div>
+                    <div class="kpi__label">${t('kpiForecast')}</div>
                     <div class="kpi__value">${currencyFmt.format(kpis.projectedMonthlyCents / 100)}</div>
-                    <div class="kpi__sub">linear extrapoliert</div>
+                    <div class="kpi__sub">${t('kpiLinearExtrapolated')}</div>
                 </div>
                 <div class="kpi">
-                    <div class="kpi__label">Trend</div>
+                    <div class="kpi__label">${t('kpiTrend')}</div>
                     <div class="kpi__value ${trendClass}">${trendSign}${kpis.trendPercent.toFixed(1)} %</div>
-                    <div class="kpi__sub">${kpis.trendLabel}</div>
+                    <div class="kpi__sub">${trendLabelText(kpis.trendLabel)}</div>
                 </div>
             `;
 
@@ -3536,11 +3613,17 @@
                 pct >= 100 ? 'budget-bar__fill--over' : pct >= 80 ? 'budget-bar__fill--warn' : '';
 
             document.getElementById('budget-panel').innerHTML = `
-                <p class="card-meta">${pct.toFixed(1)} % des Budgets · ${currencyFmt.format(spentUsd)} von ${currencyFmt.format(budgetUsd)}</p>
+                <p class="card-meta">${tf('budgetSpent', {
+                    pct: pct.toFixed(1),
+                    spent: currencyFmt.format(spentUsd),
+                    budget: currencyFmt.format(budgetUsd),
+                })}</p>
                 <div class="budget-bar">
                     <div class="budget-bar__fill ${fillClass}" style="width: ${pct}%"></div>
                 </div>
-                <p class="hint-text">Verbleibend: ${currencyFmt.format(Math.max(0, budgetUsd - spentUsd))}</p>
+                <p class="hint-text">${tf('budgetRemaining', {
+                    amount: currencyFmt.format(Math.max(0, budgetUsd - spentUsd)),
+                })}</p>
             `;
         }
 
@@ -3598,7 +3681,7 @@
                 mode === 'marker' && group.marker
                     ? `<br><span class="usage-table__group-range">${formatEventGroupRange(group.marker, api, filterEndMs)}</span>`
                     : '';
-            const title = `<strong>${group.label}</strong>${rangeHtml} · ${numberFmt.format(group.stats.calls)} Anfragen`;
+            const title = `<strong>${group.label}</strong>${rangeHtml} · ${tf('requestsInGroup', { count: numberFmt.format(group.stats.calls) })}`;
             const collapsed = collapsedEventGroups.has(group.key);
             const collapsedClass = collapsed ? ' usage-table__group-header--collapsed' : '';
             const safeKey = String(group.key).replace(/"/g, '&quot;');
@@ -3634,7 +3717,7 @@
                 body.innerHTML =
                     `<tr><td class="usage-table__empty" colspan="11">${t('noEvents')}</td></tr>`;
                 if (statusEl) {
-                    statusEl.textContent = 'Keine Daten';
+                    statusEl.textContent = t('statusNoData');
                 }
                 if (statsEl) {
                     statsEl.hidden = true;
@@ -3694,18 +3777,27 @@
 
             if (statusEl) {
                 const filterHint =
-                    projectFilter !== 'all' ? ` · Projekt: ${projectFilter}` : '';
+                    projectFilter !== 'all'
+                        ? tf('filterHintProject', { project: projectFilter })
+                        : '';
                 const groupHint =
-                    eventsGroupMode === 'marker' ? ' · pro Marker' : ' · pro Aufgabe';
-                const countHint = `${numberFmt.format(sorted.length)} Anfragen · Seite ${eventsPageIndex + 1}/${totalPages}`;
-                statusEl.textContent = `${countHint} · ${numberFmt.format(groups.length)} Aufgaben · neueste zuerst${groupHint}${filterHint}`;
+                    eventsGroupMode === 'marker' ? t('groupHintMarker') : t('groupHintTask');
+                const countHint = `${tf('requestsCount', { count: numberFmt.format(sorted.length) })} · ${tf('pageOf', {
+                    page: eventsPageIndex + 1,
+                    total: totalPages,
+                })}`;
+                statusEl.textContent = `${countHint} · ${tf('tasksCount', { count: numberFmt.format(groups.length) })} · ${t('newestFirst')}${groupHint}${filterHint}`;
             }
             if (paginationEl) {
                 const showPagination = sorted.length > eventsPageSize;
                 paginationEl.hidden = !showPagination;
                 if (paginationInfo) {
                     paginationInfo.textContent = showPagination
-                        ? `${pageStart + 1}–${pageStart + displayedEvents.length} von ${sorted.length}`
+                        ? tf('paginationRange', {
+                              start: pageStart + 1,
+                              end: pageStart + displayedEvents.length,
+                              total: sorted.length,
+                          })
                         : '';
                 }
                 const prevBtn = document.getElementById('events-prev-btn');
@@ -3723,7 +3815,7 @@
             const body = document.getElementById('daily-table-body');
             if (!rows.length) {
                 body.innerHTML =
-                    '<tr><td class="usage-table__empty" colspan="6">Keine Daten im Zeitraum</td></tr>';
+                    `<tr><td class="usage-table__empty" colspan="6">${t('noDailyData')}</td></tr>`;
                 return;
             }
 
@@ -3745,7 +3837,7 @@
             const body = document.getElementById('expensive-table-body');
             if (!rows.length) {
                 body.innerHTML =
-                    '<tr><td class="usage-table__empty" colspan="5">Keine kostenpflichtigen Events</td></tr>';
+                    `<tr><td class="usage-table__empty" colspan="5">${t('noBillableEvents')}</td></tr>`;
                 return;
             }
 
@@ -3781,9 +3873,7 @@
                 renderEventsTable([]);
                 renderMarkerTable([]);
                 setStatus(
-                    selectionMode === 'count'
-                        ? 'Keine Events in der gewählten Anfrage-Auswahl.'
-                        : 'Keine Events im gewählten Zeitraum.'
+                    selectionMode === 'count' ? t('noEventsCount') : t('noEvents')
                 );
                 return;
             }
@@ -3835,9 +3925,9 @@
 
             const first = events[0].timestamp;
             const last = events[events.length - 1].timestamp;
-            const userLabel = userFilter === 'all' ? 'Gesamt' : userFilter;
+            const userLabel = userFilter === 'all' ? t('usersAll') : userFilter;
             setStatus(
-                `${rangeLabel()} · ${userLabel} · ${events.length} Events · ${dateTimeFmt.format(first)} – ${dateTimeFmt.format(last)}`
+                `${rangeLabel()} · ${userLabel} · ${events.length} ${t('events')} · ${dateTimeFmt.format(first)} – ${dateTimeFmt.format(last)}`
             );
 
             try {
@@ -3854,24 +3944,13 @@
                     selectionMode === 'count'
                         ? metrics.cumulativeByGranularity(events, 'event', bucketFormatters)
                         : cumulativeBuckets;
-                const overviewTitle =
-                    metrics.GRANULARITY_OVERVIEW_TITLES[chartGranularity] ||
-                    'Übersicht — Tokens & Kosten';
-                const cumulativeTitleByGranularity = {
-                    event: 'Kumulierte Ausgaben (pro Anfrage)',
-                    quarter: 'Kumulierte Ausgaben (15 Min.)',
-                    hour: 'Kumulierte Ausgaben (stündlich)',
-                    day: 'Kumulierte Ausgaben (täglich)',
-                    week: 'Kumulierte Ausgaben (wöchentlich)',
-                    month: 'Kumulierte Ausgaben (monatlich)',
-                };
+                const overviewTitle = overviewTitleFor(chartGranularity);
 
                 if (overviewTitleEl) {
                     overviewTitleEl.textContent = overviewTitle;
                 }
                 if (cumulativeTitleEl) {
-                    cumulativeTitleEl.textContent =
-                        cumulativeTitleByGranularity[chartGranularity] || 'Kumulierte Ausgaben';
+                    cumulativeTitleEl.textContent = cumulativeTitleFor(chartGranularity);
                 }
 
                 charts.renderOverviewBuckets(
@@ -3915,7 +3994,7 @@
                 resizeAllCharts();
             } catch (error) {
                 console.error(error);
-                setStatus(`Chart-Fehler: ${error.message}`, true);
+                setStatus(tf('chartError', { message: error.message }), true);
             }
         }
 
@@ -3967,11 +4046,16 @@
 
             document.getElementById('load-hint').textContent =
                 loadedLabels.length
-                    ? `CSV: ${loadedLabels.join(' + ')} · ${hintParts.join(' · ')}`
-                    : 'Keine Standard-CSV geladen — bitte manuell laden oder Server starten.';
+                    ? tf('loadHintCsv', {
+                          files: loadedLabels.join(' + '),
+                          counts: hintParts.join(' · '),
+                      })
+                    : t('loadHintNoDefault');
 
             if (failed.length) {
-                document.getElementById('load-hint').textContent += ` · Warnung: ${failed.join('; ')}`;
+                document.getElementById('load-hint').textContent += tf('loadHintWarning', {
+                    warnings: failed.join('; '),
+                });
             }
 
             updateCustomDateBounds();
@@ -3996,7 +4080,9 @@
                 }
             }
 
-            document.getElementById('load-hint').textContent = `Geladen: ${files.map((f) => f.name).join(', ')}`;
+            document.getElementById('load-hint').textContent = tf('loadHintLoaded', {
+                files: files.map((f) => f.name).join(', '),
+            });
             updateCustomDateBounds();
             renderAll();
         }
@@ -4033,7 +4119,7 @@
 
         function formatLiveFetchScope(bounds) {
             if (!bounds) {
-                return 'gesamter Verlauf';
+                return t('liveFullHistory');
             }
             return `${dateTimeFmt.format(new Date(bounds.startMs))} – ${dateTimeFmt.format(new Date(bounds.endMs))}`;
         }
@@ -4047,8 +4133,10 @@
             const ageMin = cached
                 ? Math.max(1, Math.round((Date.now() - liveFetchState.fetchedAt) / 60000))
                 : 0;
-            const prefix = cached ? `Live (Cache, ${ageMin} Min.)` : 'Live';
-            document.getElementById('load-hint').textContent = `${prefix}: ${counts} · ${scope}`;
+            const prefix = cached
+                ? tf('livePrefixCached', { minutes: ageMin })
+                : t('livePrefix');
+            document.getElementById('load-hint').textContent = tf('liveHint', { prefix, counts, scope });
         }
 
         async function applyRangeAndRender() {
@@ -4073,9 +4161,7 @@
             const usersToFetch = USER_ORDER.filter((userId) => userConfig[userId]);
 
             if (!usersToFetch.length) {
-                throw new Error(
-                    'Kein Live-Token konfiguriert — CURSOR_SESSION_TOKEN_<USER> in .env setzen (siehe config/users.json).'
-                );
+                throw new Error(t('liveTokenMissing'));
             }
 
             if (!force && liveCacheUsable(desiredBounds)) {
@@ -4098,7 +4184,7 @@
                 };
                 if (fetchBounds.startMs >= fetchBounds.endMs) {
                     updateLiveLoadHint(liveEventsByUser, { cached: true, scopeBounds: desiredBounds });
-                    setStatus('Live-Daten sind aktuell.');
+                    setStatus(t('liveUpToDate'));
                     renderAll();
                     return;
                 }
@@ -4113,7 +4199,7 @@
             const errors = [];
             const scopeLabel = formatLiveFetchScope(fetchBounds);
 
-            setLiveLoading(true, `Live-Daten werden geladen (${scopeLabel})…`);
+            setLiveLoading(true, tf('liveLoadingScope', { scope: scopeLabel }));
 
             try {
                 const results = await Promise.all(
@@ -4156,14 +4242,13 @@
                 };
 
                 if (errors.length && errors.length === usersToFetch.length) {
-                    throw new Error(
-                        `${errors.join(' · ')} — Server läuft? (python serve.py)`
-                    );
+                    throw new Error(tf('liveServerError', { errors: errors.join(' · ') }));
                 }
 
                 if (errors.length) {
-                    document.getElementById('load-hint').textContent =
-                        `Live teilweise: ${errors.join(' · ')}`;
+                    document.getElementById('load-hint').textContent = tf('livePartial', {
+                        errors: errors.join(' · '),
+                    });
                 } else {
                     updateLiveLoadHint(nextLive, { scopeBounds: liveFetchState.bounds });
                 }
@@ -4177,7 +4262,7 @@
 
         function exportJson() {
             if (!lastAggregated) {
-                setStatus('Nichts zum Exportieren — zuerst Daten laden.', true);
+                setStatus(t('exportEmpty'), true);
                 return;
             }
 
@@ -4238,7 +4323,7 @@
             card?.classList.toggle('chart-card--expanded', expanded);
             btn.classList.toggle('btn--active', expanded);
             btn.setAttribute('aria-pressed', expanded ? 'true' : 'false');
-            btn.textContent = expanded ? 'Standardhöhe' : '90 % Höhe';
+            btn.textContent = expanded ? t('chartHeightStandard') : t('stretch');
 
             const chart = chartInstances[key];
             if (!chart) {
@@ -4419,14 +4504,14 @@
                 try {
                     await loadCsvFiles(files);
                 } catch (error) {
-                    setStatus(`CSV-Fehler: ${error.message}`, true);
+                    setStatus(tf('csvError', { message: error.message }), true);
                 }
             });
 
             document.getElementById('live-refresh-btn')?.addEventListener('click', async () => {
                 try {
                     await fetchLiveEvents({ force: true, incremental: true });
-                    setStatus('Live-Daten aktualisiert.');
+                    setStatus(t('liveUpdated'));
                 } catch (error) {
                     setStatus(error.message, true);
                 }
@@ -4460,7 +4545,7 @@
                     try {
                         await loadCsvFiles(files);
                     } catch (error) {
-                        setStatus(`CSV-Fehler: ${error.message}`, true);
+                        setStatus(tf('csvError', { message: error.message }), true);
                     }
                 }
             });
@@ -4476,7 +4561,7 @@
         async function initWhenReady(attempt = 0) {
             if (typeof Chart === 'undefined') {
                 if (attempt > 200) {
-                    setStatus('Chart.js nicht geladen — Netzwerk/CDN prüfen.', true);
+                    setStatus(t('chartJsMissing'), true);
                     return;
                 }
                 window.setTimeout(() => initWhenReady(attempt + 1), 50);
@@ -4486,10 +4571,7 @@
             try {
                 await ensureModules();
             } catch (error) {
-                setStatus(
-                    `${error.message} — Server starten: python serve.py`,
-                    true
-                );
+                setStatus(tf('loadingDataServer', { message: error.message }), true);
                 return;
             }
 

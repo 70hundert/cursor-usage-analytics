@@ -528,8 +528,13 @@
         return buckets;
     }
 
+    function localizedDayNames() {
+        const labels = global.CursorAnalytics?.i18n?.getWeekdayLabels?.();
+        return labels?.length === 7 ? labels : DAY_NAMES;
+    }
+
     function aggregateByDayOfWeek(events) {
-        const buckets = DAY_NAMES.map((label, day) => ({
+        const buckets = localizedDayNames().map((label, day) => ({
             day,
             label,
             calls: 0,

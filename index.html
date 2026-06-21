@@ -51,6 +51,35 @@
             line-height: 1.5;
         }
 
+        .locale-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .locale-toolbar__label {
+            font-size: 0.78rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .locale-btn {
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text);
+            border-radius: 6px;
+            padding: 0.28rem 0.55rem;
+            font-size: 0.78rem;
+            cursor: pointer;
+        }
+
+        .locale-btn--active {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
         ul {
             list-style: none;
             margin: 0;
@@ -90,16 +119,53 @@
 <body>
     <main>
         <h1>Cursor Usage Dashboard</h1>
-        <p>Lokale Analyse der Cursor-Nutzung — CSV-Exporte und optional Live-Daten.</p>
+        <div class="locale-toolbar">
+            <span class="locale-toolbar__label" data-i18n="locale">Sprache</span>
+            <button type="button" class="locale-btn locale-btn--active" data-locale="de">DE</button>
+            <button type="button" class="locale-btn" data-locale="en">EN</button>
+        </div>
+        <p data-i18n="hubSubtitle">Lokale Analyse der Cursor-Nutzung — CSV-Exporte und optional Live-Daten.</p>
         <ul>
             <li>
                 <a href="cursor-usage-analytics.html">
                     <strong>Analytics</strong>
-                    <span>Kosten, Modelle, Muster und Budget</span>
+                    <span data-i18n="hubAnalyticsDesc">Kosten, Modelle, Muster und Budget</span>
                 </a>
             </li>
         </ul>
     </main>
+    <script src="static/cursor-analytics/i18n.js"></script>
+    <script>
+        function getI18n() {
+            return window.CursorAnalytics?.i18n;
+        }
+
+        function t(key) {
+            return getI18n()?.t(key) ?? key;
+        }
+
+        function applyI18nLabels() {
+            document.querySelectorAll('[data-i18n]').forEach((el) => {
+                const key = el.getAttribute('data-i18n');
+                if (key) {
+                    el.textContent = t(key);
+                }
+            });
+            const locale = getI18n()?.getLocale() || 'de';
+            document.querySelectorAll('[data-locale]').forEach((btn) => {
+                btn.classList.toggle('locale-btn--active', btn.dataset.locale === locale);
+            });
+        }
+
+        document.querySelectorAll('[data-locale]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                getI18n()?.switchLocale(btn.dataset.locale);
+                applyI18nLabels();
+            });
+        });
+
+        applyI18nLabels();
+    </script>
 </body>
 
 </html>

@@ -27,6 +27,22 @@
 
     const CHART_VISIBILITY_STORAGE_KEY = 'cursor-analytics-chart-visibility';
 
+    function t(key) {
+        return global.CursorAnalytics?.i18n?.t(key) ?? key;
+    }
+
+    function tf(key, params) {
+        return global.CursorAnalytics?.i18n?.tf(key, params) ?? t(key);
+    }
+
+    function datasetLegendKey(dataset) {
+        return dataset.legendKey ?? dataset.label;
+    }
+
+    function sliceLegendKey(chart, index) {
+        return chart.data.legendKeys?.[index] ?? chart.data.labels[index];
+    }
+
     function loadVisibilityStore() {
         try {
             const raw = global.localStorage?.getItem(CHART_VISIBILITY_STORAGE_KEY);
@@ -62,13 +78,13 @@
         if (isSliceChart(chart)) {
             const meta = chart.getDatasetMeta(0);
             chart.data.labels.forEach((label, index) => {
-                chartState[label] = Boolean(meta.data[index]?.hidden);
+                chartState[sliceLegendKey(chart, index)] = Boolean(meta.data[index]?.hidden);
             });
             return chartState;
         }
 
         chart.data.datasets.forEach((dataset, index) => {
-            chartState[dataset.label] = !chart.isDatasetVisible(index);
+            chartState[datasetLegendKey(dataset)] = !chart.isDatasetVisible(index);
         });
         return chartState;
     }
@@ -82,8 +98,8 @@
         saveVisibilityStore(store);
     }
 
-    function isDatasetLabelHidden(chartKey, label) {
-        return Boolean(loadVisibilityStore()[chartKey]?.[label]);
+    function isDatasetLabelHidden(chartKey, legendKey) {
+        return Boolean(loadVisibilityStore()[chartKey]?.[legendKey]);
     }
 
     function applyStoredVisibility(chart, chartKey) {
@@ -95,7 +111,7 @@
         if (isSliceChart(chart)) {
             const meta = chart.getDatasetMeta(0);
             chart.data.labels.forEach((label, index) => {
-                if (chartState[label]) {
+                if (chartState[sliceLegendKey(chart, index)]) {
                     meta.data[index].hidden = true;
                 }
             });
@@ -103,7 +119,7 @@
         }
 
         chart.data.datasets.forEach((dataset, index) => {
-            if (chartState[dataset.label]) {
+            if (chartState[datasetLegendKey(dataset)]) {
                 chart.setDatasetVisibility(index, false);
             }
         });
@@ -226,9 +242,9 @@
         if (!marker) {
             return [];
         }
-        const lines = [`Projekt: ${marker.project}`];
+        const lines = [tf('chartTooltipProject', { project: marker.project })];
         if (marker.task) {
-            lines.push(`Aufgabe: ${marker.task}`);
+            lines.push(tf('chartTooltipTask', { task: marker.task }));
         }
         return lines;
     }
@@ -331,7 +347,7 @@
         chart.update('none');
     }
 
-    function renderHorizontalBar(canvas, instances, key, labels, values, label, color, fmt) {
+    function renderHorizontalBar(canvas, instances, key, labels, values, datasetLabel, color, fmt, legendKey) {
         destroyChart(instances, key);
         if (!canvas || !labels.length) {
             return;
@@ -346,12 +362,13 @@
                     labels,
                     datasets: [
                         {
-                            label,
+                            label: datasetLabel,
+                            legendKey: legendKey || datasetLabel,
                             data: values,
                             backgroundColor: `${color}99`,
                             borderColor: color,
                             borderWidth: 1,
-                            hidden: isDatasetLabelHidden(key, label),
+                            hidden: isDatasetLabelHidden(key, legendKey || datasetLabel),
                         },
                     ],
                 },
@@ -360,11 +377,14 @@
         );
     }
 
-    function renderDoughnut(canvas, instances, key, labels, values, title) {
+    function renderDoughnut(canvas, instances, key, slices, values, title) {
         destroyChart(instances, key);
-        if (!canvas || !labels.length) {
+        if (!canvas || !slices.length) {
             return;
         }
+
+        const labels = slices.map((slice) => slice.label);
+        const legendKeys = slices.map((slice) => slice.legendKey);
 
         registerChart(
             instances,
@@ -373,6 +393,7 @@
                 type: 'doughnut',
                 data: {
                     labels,
+                    legendKeys,
                     datasets: [
                         {
                             data: values,
@@ -414,7 +435,7 @@
                     labels,
                     datasets: datasets.map((dataset) => ({
                         ...dataset,
-                        hidden: isDatasetLabelHidden(key, dataset.label),
+                        hidden: isDatasetLabelHidden(key, datasetLegendKey(dataset)),
                     })),
                 },
                 options: baseOptions(title, yFmt, key),
@@ -437,7 +458,7 @@
                     labels,
                     datasets: datasets.map((dataset) => ({
                         ...dataset,
-                        hidden: isDatasetLabelHidden(key, dataset.label),
+                        hidden: isDatasetLabelHidden(key, datasetLegendKey(dataset)),
                     })),
                 },
                 options: baseOptions(title, yFmt, key),
@@ -467,9 +488,10 @@
             'topCost',
             models.byCost.map((m) => m.model),
             models.byCost.map((m) => m.costCents / 100),
-            'Kosten ($)',
+            t('chartCostUsd'),
             COLORS.accent,
-            safeCurrencyTick
+            safeCurrencyTick,
+            'chartCostUsd'
         );
 
         renderHorizontalBar(
@@ -478,16 +500,22 @@
             'topTokens',
             models.byTokens.map((m) => m.model),
             models.byTokens.map((m) => m.tokens),
-            'Tokens',
+            t('tokens'),
             COLORS.blue,
-            safeNumberTick
+            safeNumberTick,
+            'tokens'
         );
 
         renderDoughnut(
             data.canvases.tokenTypes,
             instances,
             'tokenTypes',
-            ['Input (ohne Cache Write)', 'Cache Write', 'Cache Read', 'Output'],
+            [
+                { legendKey: 'inputNoCache', label: t('chartTokenInputNoCache') },
+                { legendKey: 'cacheWrite', label: t('chartCacheWrite') },
+                { legendKey: 'cacheRead', label: t('cacheRead') },
+                { legendKey: 'output', label: t('output') },
+            ],
             [
                 tokenTypes.inputNoCache,
                 tokenTypes.inputWithCacheWrite,
@@ -504,7 +532,8 @@
             families.map((f) => f.family),
             [
                 {
-                    label: 'Kosten ($)',
+                    label: t('chartCostUsd'),
+                    legendKey: 'chartCostUsd',
                     data: families.map((f) => f.costCents / 100),
                     backgroundColor: `${COLORS.gold}99`,
                     borderColor: COLORS.gold,
@@ -521,7 +550,8 @@
             byHour.map((b) => `${String(b.hour).padStart(2, '0')}:00`),
             [
                 {
-                    label: 'Calls',
+                    label: t('chartCalls'),
+                    legendKey: 'calls',
                     data: byHour.map((b) => b.calls),
                     backgroundColor: `${COLORS.blue}88`,
                     borderColor: COLORS.blue,
@@ -549,7 +579,8 @@
                 cumulative.map((d) => dateFmt.format(new Date(`${d.dayKey}T12:00:00Z`))),
                 [
                     {
-                        label: 'Kumulierte Kosten ($)',
+                        label: t('chartCumulativeCostUsd'),
+                        legendKey: 'chartCumulativeCostUsd',
                         data: cumulative.map((d) => d.cumulativeCost / 100),
                         borderColor: COLORS.accent,
                         backgroundColor: `${COLORS.accent}22`,
@@ -566,10 +597,11 @@
             data.canvases.inputOutput,
             instances,
             'inputOutput',
-            ['Input', 'Output', 'Cache Read'],
+            [t('chartInput'), t('output'), t('cacheRead')],
             [
                 {
-                    label: 'Tokens',
+                    label: t('tokens'),
+                    legendKey: 'tokens',
                     data: [
                         tokenTypes.inputNoCache + tokenTypes.inputWithCacheWrite,
                         tokenTypes.outputTokens,
@@ -589,9 +621,12 @@
             data.canvases.cacheEfficiency,
             instances,
             'cacheEfficiency',
-            ['Cache Read', 'Anderer Input'],
+            [
+                { legendKey: 'cacheRead', label: t('cacheRead') },
+                { legendKey: 'otherInput', label: t('chartOtherInput') },
+            ],
             [cache.cacheRead, Math.max(0, cache.totalInput - cache.cacheRead)],
-            `Cache-Hit ${cache.hitRate.toFixed(1)} %`
+            tf('chartCacheHit', { pct: cache.hitRate.toFixed(1) })
         );
 
         renderBar(
@@ -601,7 +636,8 @@
             byDayOfWeek.map((b) => b.label),
             [
                 {
-                    label: 'Tokens',
+                    label: t('tokens'),
+                    legendKey: 'tokens',
                     data: byDayOfWeek.map((b) => b.tokens),
                     backgroundColor: `${COLORS.purple}88`,
                     borderColor: COLORS.purple,
@@ -612,11 +648,13 @@
         );
     }
 
-    const OVERVIEW_TOKEN_SERIES = [
-        { key: 'inputNoCache', label: 'Input (w/o Cache Write)', color: COLORS.blue },
-        { key: 'inputWithCacheWrite', label: 'Input (w/ Cache Write)', color: COLORS.purple },
-        { key: 'cacheRead', label: 'Cache Read', color: COLORS.gold },
-    ];
+    function overviewTokenSeries() {
+        return [
+            { key: 'inputNoCache', legendKey: 'inputNoCache', label: t('inputNoCacheWrite'), color: COLORS.blue },
+            { key: 'inputWithCacheWrite', legendKey: 'inputWithCacheWrite', label: t('inputWithCacheWrite'), color: COLORS.purple },
+            { key: 'cacheRead', legendKey: 'cacheRead', label: t('cacheRead'), color: COLORS.gold },
+        ];
+    }
 
     function renderOverviewBuckets(
         canvas,
@@ -647,20 +685,22 @@
                 data: {
                     labels,
                     datasets: [
-                        ...OVERVIEW_TOKEN_SERIES.map(({ key: fieldKey, label, color }) => ({
+                        ...overviewTokenSeries().map(({ key: fieldKey, legendKey, label, color }) => ({
                             type: 'bar',
                             label,
+                            legendKey,
                             data: buckets.map((b) => b[fieldKey] ?? 0),
                             backgroundColor: `${color}77`,
                             borderColor: color,
                             borderWidth: 1,
                             yAxisID: 'y',
                             order: 2,
-                            hidden: isDatasetLabelHidden(key, label),
+                            hidden: isDatasetLabelHidden(key, legendKey),
                         })),
                         {
                             type: 'line',
-                            label: 'Output Tokens',
+                            label: `${t('output')} ${t('tokens')}`,
+                            legendKey: 'outputTokens',
                             data: buckets.map((b) => b.outputTokens ?? 0),
                             borderColor: COLORS.orange,
                             backgroundColor: 'transparent',
@@ -672,11 +712,12 @@
                             fill: false,
                             yAxisID: 'y',
                             order: 0,
-                            hidden: isDatasetLabelHidden(key, 'Output Tokens'),
+                            hidden: isDatasetLabelHidden(key, 'outputTokens'),
                         },
                         {
                             type: 'line',
-                            label: 'Total Tokens',
+                            label: t('totalTokens'),
+                            legendKey: 'totalTokens',
                             data: buckets.map((b) => b.tokens),
                             borderColor: COLORS.blue,
                             backgroundColor: 'transparent',
@@ -689,11 +730,12 @@
                             fill: false,
                             yAxisID: 'y',
                             order: 0,
-                            hidden: isDatasetLabelHidden(key, 'Total Tokens'),
+                            hidden: isDatasetLabelHidden(key, 'totalTokens'),
                         },
                         {
                             type: 'line',
-                            label: 'Kosten ($)',
+                            label: t('chartCostUsd'),
+                            legendKey: 'chartCostUsd',
                             data: buckets.map((b) => b.costCents / 100),
                             borderColor: COLORS.accent,
                             backgroundColor: `${COLORS.accent}18`,
@@ -705,7 +747,7 @@
                             fill: false,
                             yAxisID: 'y1',
                             order: 1,
-                            hidden: isDatasetLabelHidden(key, 'Kosten ($)'),
+                            hidden: isDatasetLabelHidden(key, 'chartCostUsd'),
                         },
                     ],
                 },
@@ -802,13 +844,14 @@
                     labels: buckets.map((b) => b.label),
                     datasets: [
                         {
-                            label: 'Kumulierte Kosten ($)',
+                            label: t('chartCumulativeCostUsd'),
+                            legendKey: 'chartCumulativeCostUsd',
                             data: buckets.map((b) => b.cumulativeCost / 100),
                             borderColor: COLORS.accent,
                             backgroundColor: `${COLORS.accent}22`,
                             fill: true,
                             tension: 0.2,
-                            hidden: isDatasetLabelHidden(key, 'Kumulierte Kosten ($)'),
+                            hidden: isDatasetLabelHidden(key, 'chartCumulativeCostUsd'),
                         },
                     ],
                 },
@@ -839,8 +882,9 @@
             }));
 
         const lineSeries = [
-            ...OVERVIEW_TOKEN_SERIES.map(({ key: fieldKey, label, color }) => ({
+            ...overviewTokenSeries().map(({ key: fieldKey, legendKey, label, color }) => ({
                 label,
+                legendKey,
                 data: point(fieldKey),
                 borderColor: color,
                 backgroundColor: `${color}22`,
@@ -849,10 +893,11 @@
                 pointHitRadius: 8,
                 spanGaps: true,
                 yAxisID: 'y',
-                hidden: isDatasetLabelHidden(key, label),
+                hidden: isDatasetLabelHidden(key, legendKey),
             })),
             {
-                label: 'Output Tokens',
+                label: `${t('output')} ${t('tokens')}`,
+                legendKey: 'outputTokens',
                 data: point('outputTokens'),
                 borderColor: COLORS.orange,
                 backgroundColor: `${COLORS.orange}22`,
@@ -861,10 +906,11 @@
                 pointHitRadius: 8,
                 spanGaps: true,
                 yAxisID: 'y',
-                hidden: isDatasetLabelHidden(key, 'Output Tokens'),
+                hidden: isDatasetLabelHidden(key, 'outputTokens'),
             },
             {
-                label: 'Total Tokens',
+                label: t('totalTokens'),
+                legendKey: 'totalTokens',
                 data: point('totalTokens'),
                 borderColor: COLORS.blue,
                 backgroundColor: 'transparent',
@@ -874,10 +920,11 @@
                 pointHitRadius: 8,
                 spanGaps: true,
                 yAxisID: 'y',
-                hidden: isDatasetLabelHidden(key, 'Total Tokens'),
+                hidden: isDatasetLabelHidden(key, 'totalTokens'),
             },
             {
-                label: 'Kosten ($)',
+                label: t('chartCostUsd'),
+                legendKey: 'chartCostUsd',
                 data: events.map((event) => ({
                     x: event.timestamp.getTime(),
                     y: event.costCents / 100,
@@ -889,7 +936,7 @@
                 pointHitRadius: 8,
                 spanGaps: true,
                 yAxisID: 'y1',
-                hidden: isDatasetLabelHidden(key, 'Kosten ($)'),
+                hidden: isDatasetLabelHidden(key, 'chartCostUsd'),
             },
         ];
 
@@ -986,7 +1033,8 @@
                 data: {
                     datasets: [
                         {
-                            label: 'Kumulierte Kosten ($)',
+                            label: t('chartCumulativeCostUsd'),
+                            legendKey: 'chartCumulativeCostUsd',
                             data,
                             borderColor: COLORS.accent,
                             backgroundColor: `${COLORS.accent}22`,
@@ -996,7 +1044,7 @@
                             spanGaps: true,
                             fill: true,
                             tension: 0.2,
-                            hidden: isDatasetLabelHidden(key, 'Kumulierte Kosten ($)'),
+                            hidden: isDatasetLabelHidden(key, 'chartCumulativeCostUsd'),
                         },
                     ],
                 },
@@ -1050,7 +1098,7 @@
             instances,
             key,
             buckets,
-            'Übersicht — Tokens & Kosten pro Tag',
+            t('overviewDay'),
             formatters
         );
     }
