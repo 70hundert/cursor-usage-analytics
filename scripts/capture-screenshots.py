@@ -3,10 +3,12 @@
 
 from __future__ import annotations
 
+import argparse
 import os
 import shutil
 import sys
 import time
+from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path
 
@@ -15,8 +17,59 @@ from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = ROOT / "docs" / "screenshots"
+MARKERS_PATH = ROOT / "data" / "project-markers.json"
+MARKERS_SAMPLE_PATH = ROOT / "samples" / "project-markers-demo.json"
+MARKERS_BACKUP_PATH = ROOT / "data" / "project-markers.json.screenshot-backup"
 BASE_URL = os.getenv("SCREENSHOT_BASE_URL", "http://127.0.0.1:8060")
 VIEWPORT = {"width": 1400, "height": 900}
+
+
+@dataclass
+class DemoMarkerSwap:
+    """Temporary demo markers for reproducible README shots; restore in finally."""
+
+    had_existing: bool
+
+
+def seed_markers_if_missing() -> None:
+    if MARKERS_PATH.is_file():
+        return
+    if not MARKERS_SAMPLE_PATH.is_file():
+        return
+    MARKERS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy(MARKERS_SAMPLE_PATH, MARKERS_PATH)
+    print("Seeded data/project-markers.json from samples (file was missing).")
+
+
+def enter_demo_markers() -> DemoMarkerSwap:
+    if not MARKERS_SAMPLE_PATH.is_file():
+        raise RuntimeError(f"Demo markers missing: {MARKERS_SAMPLE_PATH}")
+
+    had_existing = MARKERS_PATH.is_file()
+    MARKERS_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+    if had_existing:
+        shutil.copy(MARKERS_PATH, MARKERS_BACKUP_PATH)
+        print(f"Backed up {MARKERS_PATH.name} → {MARKERS_BACKUP_PATH.name}")
+
+    shutil.copy(MARKERS_SAMPLE_PATH, MARKERS_PATH)
+    print("Using demo markers for this run (--demo-markers).")
+    return DemoMarkerSwap(had_existing=had_existing)
+
+
+def exit_demo_markers(swap: DemoMarkerSwap | None) -> None:
+    if swap is None:
+        return
+
+    if swap.had_existing:
+        if not MARKERS_BACKUP_PATH.is_file():
+            raise RuntimeError(f"Marker backup missing: {MARKERS_BACKUP_PATH}")
+        shutil.copy(MARKERS_BACKUP_PATH, MARKERS_PATH)
+        MARKERS_BACKUP_PATH.unlink()
+        print(f"Restored {MARKERS_PATH.name} from backup.")
+    else:
+        MARKERS_PATH.unlink(missing_ok=True)
+        print("Removed temporary demo markers (no prior file existed).")
 
 
 def wait_for_server(page, attempts: int = 30) -> None:
@@ -42,15 +95,6 @@ def wait_for_dashboard(page) -> None:
         }""",
         timeout=30000,
     )
-
-
-def ensure_demo_markers() -> None:
-    """Use committed demo markers so screenshots match users.example.json (user: demo)."""
-    markers_path = ROOT / "data" / "project-markers.json"
-    sample_path = ROOT / "samples" / "project-markers-demo.json"
-    if sample_path.is_file():
-        markers_path.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy(sample_path, markers_path)
 
 
 def wait_for_chart_paint(page) -> None:
@@ -119,7 +163,7 @@ def screenshot_stacked(page, selectors: list[str], filename: str) -> None:
     print(f"  {filename}")
 
 
-def prepare_dashboard_view(page) -> None:
+def prepare_dashboard_view(page, *, expect_demo_markers: bool) -> None:
     all_btn = page.locator('button[data-all="true"]').first
     if all_btn.is_visible():
         all_btn.click()
@@ -140,48 +184,88 @@ def prepare_dashboard_view(page) -> None:
         time.sleep(0.3)
 
     wait_for_chart_paint(page)
-    page.wait_for_selector("#marker-table-body tr", timeout=30000)
+
+    if expect_demo_markers:
+        page.wait_for_selector("#marker-table-body tr", timeout=30000)
+    else:
+        try:
+            page.wait_for_selector("#marker-table-body tr", timeout=5000)
+        except Exception:
+            print("  (no marker rows in table — continuing)")
+
+
+def capture_screenshots(page, *, reload_after_marker_swap: bool) -> None:
+    wait_for_dashboard(page)
+    if reload_after_marker_swap:
+        page.reload(wait_until="networkidle")
+        wait_for_dashboard(page)
+
+    prepare_dashboard_view(page, expect_demo_markers=reload_after_marker_swap)
+
+    print("Capturing screenshots …")
+    screenshot_region(
+        page,
+        [".page-header", "#kpi-grid", "#overview-section"],
+        "analytics-overview.png",
+    )
+    screenshot_stacked(
+        page,
+        ["#overview-section", "#marker-card"],
+        "analytics-markers.png",
+    )
+
+    events_heading = page.locator("h2", has_text="Einzelne Anfragen")
+    if events_heading.count() == 0:
+        events_heading = page.locator("h2", has_text="Individual requests")
+    events_heading.scroll_into_view_if_needed()
+    page.wait_for_selector("#events-table-body tr", timeout=15000)
+    time.sleep(0.4)
+    events_section = events_heading.locator("xpath=ancestor::section[contains(@class,'card')]")
+    events_section.screenshot(path=str(OUT_DIR / "events-table.png"))
+    print("  events-table.png")
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Capture dashboard PNGs for docs/screenshots/.")
+    parser.add_argument(
+        "--demo-markers",
+        action="store_true",
+        help="Temporarily use samples/project-markers-demo.json (backup + restore). "
+        "For README shots with config/users.example.json (user: demo).",
+    )
+    return parser.parse_args()
 
 
 def main() -> int:
+    args = parse_args()
+    demo_markers = args.demo_markers or os.getenv("SCREENSHOT_USE_DEMO", "").lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    ensure_demo_markers()
 
-    with sync_playwright() as p:
-        browser = p.chromium.launch()
-        page = browser.new_page(viewport=VIEWPORT, device_scale_factor=1)
-        try:
-            print(f"Waiting for {BASE_URL} …")
-            wait_for_server(page)
-            print("Loading dashboard …")
-            wait_for_dashboard(page)
-            page.reload(wait_until="networkidle")
-            wait_for_dashboard(page)
-            prepare_dashboard_view(page)
+    marker_swap: DemoMarkerSwap | None = None
+    if demo_markers:
+        marker_swap = enter_demo_markers()
+    else:
+        seed_markers_if_missing()
+        print("Existing data/project-markers.json left unchanged (use --demo-markers for README demo).")
 
-            print("Capturing screenshots …")
-            screenshot_region(
-                page,
-                [".page-header", "#kpi-grid", "#overview-section"],
-                "analytics-overview.png",
-            )
-            screenshot_stacked(
-                page,
-                ["#overview-section", "#marker-card"],
-                "analytics-markers.png",
-            )
-
-            events_heading = page.locator("h2", has_text="Einzelne Anfragen")
-            if events_heading.count() == 0:
-                events_heading = page.locator("h2", has_text="Individual requests")
-            events_heading.scroll_into_view_if_needed()
-            page.wait_for_selector("#events-table-body tr", timeout=15000)
-            time.sleep(0.4)
-            events_section = events_heading.locator("xpath=ancestor::section[contains(@class,'card')]")
-            events_section.screenshot(path=str(OUT_DIR / "events-table.png"))
-            print("  events-table.png")
-        finally:
-            browser.close()
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page(viewport=VIEWPORT, device_scale_factor=1)
+            try:
+                print(f"Waiting for {BASE_URL} …")
+                wait_for_server(page)
+                print("Loading dashboard …")
+                capture_screenshots(page, reload_after_marker_swap=demo_markers)
+            finally:
+                browser.close()
+    finally:
+        exit_demo_markers(marker_swap)
 
     print(f"Done — {OUT_DIR}")
     return 0

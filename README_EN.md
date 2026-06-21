@@ -121,7 +121,7 @@ Demo data (user **Demo**), time range **All**:
 | --------------- | --------------- | ------------------- |
 | ![Analytics overview](docs/screenshots/analytics-overview.png) | ![Project markers](docs/screenshots/analytics-markers.png) | ![Events table](docs/screenshots/events-table.png) |
 
-Regenerate: `python scripts/capture-screenshots.py` (server running; in venv: `pip install playwright pillow` + `playwright install chromium`).
+Regenerate (README/demo): `python scripts/capture-screenshots.py --demo-markers` — temporarily swaps demo markers and restores your `data/project-markers.json` afterward. Without the flag, existing markers are left unchanged.
 
 ## Known limitations
 

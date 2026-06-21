@@ -123,7 +123,7 @@ Demo-Daten (User **Demo**), Zeitraum **Alle**:
 | ---------------- | -------------- | ----------------- |
 | ![Analytics-Übersicht](docs/screenshots/analytics-overview.png) | ![Projekt-Marker](docs/screenshots/analytics-markers.png) | ![Events-Tabelle](docs/screenshots/events-table.png) |
 
-Neu erzeugen: `python scripts/capture-screenshots.py` (Server muss laufen; im venv: `pip install playwright pillow` + `playwright install chromium`).
+Neu erzeugen (README/Demo): `python scripts/capture-screenshots.py --demo-markers` — sichert deine `data/project-markers.json` temporär und stellt sie danach wieder her. Ohne Flag bleiben bestehende Marker unangetastet.
 
 ## Bekannte Einschränkungen
 
