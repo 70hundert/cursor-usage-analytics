@@ -17,14 +17,23 @@ Im **privaten** Projektroot:
 
 Das Skript kopiert den Stand nach `C:\Projekte\Cursor-Usage-Dashboard-Public` (ohne `.git`, `data/`, `.env`, lokale Dev-Dateien) und erstellt einen **Initial-Commit**.
 
-## GitHub-Repo anlegen und pushen
+## GitHub-Repo
+
+**Public-Clone (saubere Historie):** https://github.com/70hundert/cursor-usage-analytics (derzeit **private**)
+
+Das alte Repo `Cursor-Usage-Dashboard` auf GitHub bleibt mit der bisherigen Historie — nicht weiter nutzen für neue Arbeit.
+
+## GitHub-Repo anlegen (falls neu klonen)
 
 ```powershell
 cd C:\Projekte\Cursor-Usage-Dashboard-Public
+git clone https://github.com/70hundert/cursor-usage-analytics.git .
+```
 
-# Repo auf GitHub (privat oder public — du entscheidest später)
-gh repo create cursor-usage-dashboard --private --source=. --remote=origin
+Oder nach `init-public-repo.ps1`:
 
+```powershell
+gh repo create <name> --private --source=. --remote=origin
 git push -u origin main
 ```
 
