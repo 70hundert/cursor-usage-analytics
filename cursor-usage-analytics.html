@@ -373,6 +373,37 @@
             content: ' ▸';
         }
 
+        .usage-table--markers th[data-sort-col] {
+            cursor: pointer;
+        }
+
+        .usage-table--markers th[data-sort-col]::after {
+            content: '';
+            opacity: 0.35;
+        }
+
+        .usage-table--markers th[data-sort-col].sort-active::after {
+            content: ' ▾';
+            opacity: 1;
+        }
+
+        .usage-table--markers th[data-sort-col].sort-active.sort-desc::after {
+            content: ' ▸';
+        }
+
+        .usage-table--markers .usage-table__row--group-member td:first-child {
+            padding-left: 0.35rem;
+        }
+
+        .usage-table__project-badge {
+            display: inline-block;
+            padding: 0.08rem 0.4rem;
+            border-radius: 4px;
+            border-left: 3px solid var(--project-color, var(--accent));
+            background: color-mix(in srgb, var(--project-color, var(--accent)) 18%, transparent);
+            font-weight: 600;
+        }
+
         .usage-table__row--clickable {
             cursor: pointer;
         }
@@ -1288,22 +1319,30 @@
 
         <section class="card" id="marker-card">
             <h2>Projekt-Marker</h2>
+            <div class="toolbar" style="margin-bottom: 0.5rem;">
+                <div class="toolbar-group">
+                    <span class="toolbar-label" data-i18n="projectFilter">Projekt-Filter</span>
+                    <select class="project-filter-select" id="marker-project-filter" aria-label="Marker-Projekt-Filter">
+                        <option value="all">Alle Projekte</option>
+                    </select>
+                </div>
+            </div>
             <p class="card-meta" id="marker-table-status">
                 Projekt- und Aufgaben-Marker — Intervall bis zum nächsten Marker oder Filter-Ende (*).
             </p>
             <div class="usage-table-wrap">
-                <table class="usage-table" id="marker-table">
+                <table class="usage-table usage-table--markers" id="marker-table">
                     <thead>
                         <tr>
-                            <th>Von</th>
-                            <th>Bis</th>
-                            <th>Benutzer</th>
-                            <th>Projekt</th>
-                            <th>Aufgabe</th>
-                            <th>Events</th>
-                            <th class="usage-table__total">Total Tokens</th>
-                            <th>Output</th>
-                            <th>Kosten</th>
+                            <th data-sort-col="start">Von</th>
+                            <th data-sort-col="end">Bis</th>
+                            <th data-sort-col="user">Benutzer</th>
+                            <th data-sort-col="project">Projekt</th>
+                            <th data-sort-col="task">Aufgabe</th>
+                            <th data-sort-col="events">Events</th>
+                            <th class="usage-table__total" data-sort-col="total">Total Tokens</th>
+                            <th data-sort-col="output">Output</th>
+                            <th data-sort-col="cost">Kosten</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -1561,6 +1600,7 @@
         let liveLoading = false;
         let eventsFilterKey = '';
         let projectFilter = 'all';
+        let markerTableProjectFilter = 'all';
         let markerChartDisplay = { showMarkers: true, showLabels: true, projectFilter: 'all' };
         let eventsGroupMode = localStorage.getItem('events-group-mode') || 'marker';
         const EVENTS_PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
@@ -1993,6 +2033,7 @@
             await persistMarkers();
             closeMarkerModal();
             updateProjectFilterOptions();
+            updateMarkerTableProjectFilterOptions();
             renderAll();
         }
 
@@ -2004,7 +2045,168 @@
             api.removeMarker(id);
             await persistMarkers();
             updateProjectFilterOptions();
+            updateMarkerTableProjectFilterOptions();
             renderAll();
+        }
+
+        function updateMarkerTableProjectFilterOptions() {
+            const select = document.getElementById('marker-project-filter');
+            const api = getMarkersApi();
+            if (!select || !api) {
+                return;
+            }
+            const projects = [...new Set(api.getStore().markers.map((m) => m.project).filter(Boolean))].sort();
+            const current = markerTableProjectFilter;
+            select.innerHTML =
+                '<option value="all">Alle Projekte</option>' +
+                projects
+                    .map(
+                        (project) =>
+                            `<option value="${project.replace(/"/g, '&quot;')}">${project}</option>`
+                    )
+                    .join('');
+            select.value = projects.includes(current) || current === 'all' ? current : 'all';
+            markerTableProjectFilter = select.value;
+        }
+
+        function sortMarkersForTable(rows) {
+            const dir = markerSortDir === 'asc' ? 1 : -1;
+            return [...rows].sort((a, b) => {
+                let av;
+                let bv;
+                switch (markerSortColumn) {
+                    case 'end':
+                        av = a.stats.endMs;
+                        bv = b.stats.endMs;
+                        break;
+                    case 'user':
+                        av = a.userId;
+                        bv = b.userId;
+                        break;
+                    case 'project':
+                        av = a.marker.project || '';
+                        bv = b.marker.project || '';
+                        break;
+                    case 'task':
+                        av = a.marker.task || '';
+                        bv = b.marker.task || '';
+                        break;
+                    case 'events':
+                        av = a.stats.calls;
+                        bv = b.stats.calls;
+                        break;
+                    case 'total':
+                        av = a.stats.totalTokens;
+                        bv = b.stats.totalTokens;
+                        break;
+                    case 'output':
+                        av = a.stats.outputTokens;
+                        bv = b.stats.outputTokens;
+                        break;
+                    case 'cost':
+                        av = a.stats.costCents;
+                        bv = b.stats.costCents;
+                        break;
+                    default:
+                        av = a.stats.startMs;
+                        bv = b.stats.startMs;
+                        break;
+                }
+                if (av < bv) {
+                    return -dir;
+                }
+                if (av > bv) {
+                    return dir;
+                }
+                return 0;
+            });
+        }
+
+        function buildMarkerProjectGroups(rows) {
+            const map = new Map();
+            for (const row of rows) {
+                const key = row.marker.project || '—';
+                if (!map.has(key)) {
+                    map.set(key, {
+                        key,
+                        label: key,
+                        stats: { calls: 0, totalTokens: 0, outputTokens: 0, costCents: 0, count: 0 },
+                    });
+                }
+                const group = map.get(key);
+                group.stats.calls += row.stats.calls;
+                group.stats.totalTokens += row.stats.totalTokens;
+                group.stats.outputTokens += row.stats.outputTokens;
+                group.stats.costCents += row.stats.costCents;
+                group.stats.count += 1;
+            }
+            return map;
+        }
+
+        function getMarkerSortHeaderTitle(col) {
+            if (col !== markerSortColumn) {
+                return t('sortClick');
+            }
+            return markerSortDir === 'asc' ? t('sortAsc') : t('sortDesc');
+        }
+
+        function syncMarkerSortHeaders() {
+            document.querySelectorAll('.usage-table--markers th[data-sort-col]').forEach((th) => {
+                const col = th.getAttribute('data-sort-col');
+                th.classList.toggle('sort-active', col === markerSortColumn);
+                th.classList.toggle('sort-desc', col === markerSortColumn && markerSortDir === 'desc');
+                th.title = getMarkerSortHeaderTitle(col);
+            });
+        }
+
+        function renderMarkerProjectBadge(project, colorMap) {
+            const api = getMarkersApi();
+            const color = api?.projectColor(project, colorMap) ?? '#f0b429';
+            const safeProject = String(project || '—').replace(/"/g, '&quot;');
+            return `<span class="usage-table__project-badge" style="--project-color: ${color}">${safeProject}</span>`;
+        }
+
+        function renderMarkerProjectGroupHeader(group, colorMap) {
+            const collapsed = collapsedMarkerGroups.has(group.key);
+            const collapsedClass = collapsed ? ' usage-table__group-header--collapsed' : '';
+            const safeKey = String(group.key).replace(/"/g, '&quot;');
+            const badge = renderMarkerProjectBadge(group.label, colorMap);
+            const markerLabel = group.stats.count === 1 ? 'Marker' : 'Marker';
+            return `<tr class="usage-table__group-header usage-table__group-header--toggle${collapsedClass}" data-marker-group-key="${safeKey}" role="button" tabindex="0">
+                    <td colspan="5"><span class="usage-table__group-chevron" aria-hidden="true"></span>${badge} · ${numberFmt.format(group.stats.count)} ${markerLabel}</td>
+                    <td>${numberFmt.format(group.stats.calls)}</td>
+                    <td class="usage-table__total">${numberFmt.format(group.stats.totalTokens)}</td>
+                    <td>${numberFmt.format(group.stats.outputTokens)}</td>
+                    <td>${currencyFmt.format(group.stats.costCents / 100)}</td>
+                    <td></td>
+                </tr>`;
+        }
+
+        function renderMarkerTableRow({ marker, stats, userId }, colorMap, groupKey) {
+            const api = getMarkersApi();
+            const color = api?.projectColor(marker.project, colorMap) ?? '#f0b429';
+            const endLabel = marker.end
+                ? dateTimeFmt.format(new Date(marker.end))
+                : `${dateTimeFmt.format(new Date(stats.endMs))} *`;
+            const collapsed = groupKey && collapsedMarkerGroups.has(groupKey);
+            const memberAttr = groupKey
+                ? ` data-marker-group-member="${String(groupKey).replace(/"/g, '&quot;')}"`
+                : '';
+            const hiddenAttr = collapsed ? ' hidden' : '';
+            return `<tr class="usage-table__row--clickable usage-table__row--group-member" data-marker-id="${marker.id}" style="--project-color: ${color}"${memberAttr}${hiddenAttr}>
+                        <td>${dateTimeFmt.format(new Date(marker.start))}</td>
+                        <td>${endLabel}</td>
+                        <td class="usage-table__user usage-table__user--${userId}">${userId}</td>
+                        <td>${renderMarkerProjectBadge(marker.project, colorMap)}</td>
+                        <td>${marker.task || '—'}</td>
+                        <td>${numberFmt.format(stats.calls)}</td>
+                        <td class="usage-table__total">${numberFmt.format(stats.totalTokens)}</td>
+                        <td>${numberFmt.format(stats.outputTokens)}</td>
+                        <td>${currencyFmt.format(stats.costCents / 100)}</td>
+                        <td class="usage-table__actions">
+                            <button type="button" class="usage-table__btn-delete" data-marker-delete="${marker.id}">×</button>
+                        </td>
+                    </tr>`;
         }
 
         function renderMarkerTable(events) {
@@ -2014,6 +2216,8 @@
             if (!bodyEl || !api) {
                 return;
             }
+
+            updateMarkerTableProjectFilterOptions();
 
             const filterEndMs = events.length
                 ? events[events.length - 1].timestamp.getTime()
@@ -2038,39 +2242,51 @@
                 }
             }
 
-            rows.sort((a, b) => a.stats.startMs - b.stats.startMs);
+            const filteredRows =
+                markerTableProjectFilter === 'all'
+                    ? rows
+                    : rows.filter((row) => row.marker.project === markerTableProjectFilter);
 
-            if (!rows.length) {
+            const sorted = sortMarkersForTable(filteredRows);
+            const colorMap = api.buildProjectColorMap(api.getStore().markers.map((m) => m.project));
+            const projectGroups = buildMarkerProjectGroups(sorted);
+
+            if (!sorted.length) {
                 bodyEl.innerHTML =
                     '<tr><td class="usage-table__empty" colspan="10">Noch keine Marker — „Marker setzen“ in der Übersicht</td></tr>';
+                if (statusEl) {
+                    statusEl.textContent =
+                        markerTableProjectFilter !== 'all'
+                            ? `Keine Marker für Projekt „${markerTableProjectFilter}“`
+                            : 'Noch keine Marker — „Marker setzen“ in der Übersicht';
+                }
+                syncMarkerSortHeaders();
                 return;
             }
 
-            bodyEl.innerHTML = rows
-                .map(({ marker, stats, userId }) => {
-                    const endLabel = marker.end
-                        ? dateTimeFmt.format(new Date(marker.end))
-                        : `${dateTimeFmt.format(new Date(stats.endMs))} *`;
-                    return `<tr class="usage-table__row--clickable" data-marker-id="${marker.id}">
-                        <td>${dateTimeFmt.format(new Date(marker.start))}</td>
-                        <td>${endLabel}</td>
-                        <td class="usage-table__user usage-table__user--${userId}">${userId}</td>
-                        <td>${marker.project}</td>
-                        <td>${marker.task || '—'}</td>
-                        <td>${numberFmt.format(stats.calls)}</td>
-                        <td class="usage-table__total">${numberFmt.format(stats.totalTokens)}</td>
-                        <td>${numberFmt.format(stats.outputTokens)}</td>
-                        <td>${currencyFmt.format(stats.costCents / 100)}</td>
-                        <td class="usage-table__actions">
-                            <button type="button" class="usage-table__btn-delete" data-marker-delete="${marker.id}">×</button>
-                        </td>
-                    </tr>`;
-                })
-                .join('');
+            let html = '';
+            let lastGroupKey = null;
+            for (const row of sorted) {
+                const groupKey = row.marker.project || '—';
+                if (groupKey !== lastGroupKey) {
+                    const group = projectGroups.get(groupKey);
+                    if (group) {
+                        html += renderMarkerProjectGroupHeader(group, colorMap);
+                    }
+                    lastGroupKey = groupKey;
+                }
+                html += renderMarkerTableRow(row, colorMap, groupKey);
+            }
+            bodyEl.innerHTML = html;
 
             if (statusEl) {
-                statusEl.textContent = `${numberFmt.format(rows.length)} Marker · * = implizites Intervall-Ende`;
+                const filterHint =
+                    markerTableProjectFilter !== 'all'
+                        ? ` · Projekt: ${markerTableProjectFilter}`
+                        : '';
+                statusEl.textContent = `${numberFmt.format(sorted.length)} Marker · * = implizites Intervall-Ende${filterHint}`;
             }
+            syncMarkerSortHeaders();
         }
 
         function initMarkerUi() {
@@ -2081,7 +2297,51 @@
             document.getElementById('marker-cancel-btn')?.addEventListener('click', closeMarkerModal);
             document.getElementById('marker-modal-backdrop')?.addEventListener('click', closeMarkerModal);
 
+            document.getElementById('marker-project-filter')?.addEventListener('change', (event) => {
+                markerTableProjectFilter = event.target.value;
+                renderMarkerTable(filteredEvents());
+            });
+
+            document.querySelectorAll('.usage-table--markers th[data-sort-col]').forEach((th) => {
+                th.addEventListener('click', () => {
+                    const col = th.getAttribute('data-sort-col');
+                    if (!col) {
+                        return;
+                    }
+                    if (markerSortColumn === col) {
+                        markerSortDir = markerSortDir === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        markerSortColumn = col;
+                        markerSortDir = 'asc';
+                    }
+                    renderMarkerTable(filteredEvents());
+                });
+            });
+
+            syncMarkerSortHeaders();
+
             document.getElementById('marker-table-body')?.addEventListener('click', (event) => {
+                const groupRow = event.target.closest('[data-marker-group-key]');
+                if (groupRow) {
+                    const key = groupRow.getAttribute('data-marker-group-key');
+                    if (!key) {
+                        return;
+                    }
+                    if (collapsedMarkerGroups.has(key)) {
+                        collapsedMarkerGroups.delete(key);
+                        groupRow.classList.remove('usage-table__group-header--collapsed');
+                    } else {
+                        collapsedMarkerGroups.add(key);
+                        groupRow.classList.add('usage-table__group-header--collapsed');
+                    }
+                    document
+                        .querySelectorAll(`[data-marker-group-member="${CSS.escape(key)}"]`)
+                        .forEach((member) => {
+                            member.hidden = collapsedMarkerGroups.has(key);
+                        });
+                    return;
+                }
+
                 const deleteBtn = event.target.closest('[data-marker-delete]');
                 if (deleteBtn) {
                     event.stopPropagation();
@@ -2130,6 +2390,7 @@
                     api.importStore(payload, true);
                     await persistMarkers();
                     updateProjectFilterOptions();
+                    updateMarkerTableProjectFilterOptions();
                     renderAll();
                 } catch (error) {
                     document.getElementById('marker-table-status').textContent =
@@ -2622,6 +2883,9 @@
         let eventsIncludedOnly = false;
         let eventsSortColumn = 'time';
         let eventsSortDir = 'desc';
+        const collapsedMarkerGroups = new Set();
+        let markerSortColumn = 'start';
+        let markerSortDir = 'asc';
 
         function allCsvEvents() {
             const { USER_ORDER } = getParser();
