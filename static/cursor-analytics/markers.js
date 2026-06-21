@@ -696,9 +696,8 @@
 
     const CHART_LABEL_MAX_LEN = 28;
     const CHART_LABEL_LANE_HEIGHT = 22;
-    const CHART_LABEL_GAP = 8;
     const CHART_LABEL_OFFSET_LEFT = 6;
-    const CHART_LABEL_OFFSET_TOP = -9;
+    const CHART_LABEL_OFFSET_TOP = 4;
     const CHART_LABEL_COLLISION_GAP = 0.12;
 
     function compactChartLabelText(marker) {
@@ -815,21 +814,12 @@
     }
 
     function chartMarkerLabelTopPadding(markers, chartContext = {}) {
-        if (chartContext.showMarkers === false || chartContext.showLabels === false) {
-            return 0;
-        }
-        const visible = filterChartMarkers(markers, chartContext);
-        const placements = collectMarkerLabelPlacements(visible, chartContext);
-        const { maxLane } = computeCollisionLabelLanes(placements);
-        if (maxLane < 0) {
-            return 0;
-        }
-        return CHART_LABEL_OFFSET_TOP + CHART_LABEL_GAP + (maxLane + 1) * CHART_LABEL_LANE_HEIGHT + 4;
+        return 0;
     }
 
     function chartAnnotationLabelOptions(content, laneIndex, color, variant = 'box') {
         const text = labelTextFromContent(content);
-        const laneOffset = CHART_LABEL_OFFSET_TOP + CHART_LABEL_GAP + laneIndex * CHART_LABEL_LANE_HEIGHT;
+        const laneOffset = CHART_LABEL_OFFSET_TOP + laneIndex * CHART_LABEL_LANE_HEIGHT;
         const base = {
             display: Boolean(text),
             content: text,
@@ -850,7 +840,7 @@
                 ...base,
                 position: { x: 'start', y: 'start' },
                 xAdjust: CHART_LABEL_OFFSET_LEFT,
-                yAdjust: -laneOffset,
+                yAdjust: laneOffset,
             };
         }
 
@@ -858,7 +848,7 @@
             ...base,
             position: 'end',
             xAdjust: CHART_LABEL_OFFSET_LEFT,
-            yAdjust: -laneOffset,
+            yAdjust: laneOffset,
         };
     }
 

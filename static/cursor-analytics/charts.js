@@ -205,12 +205,11 @@
             showLabels: markerContext.showLabels !== false,
             projectFilter: markerContext.projectFilter || 'all',
         };
-        const topPadding = markersApi.chartMarkerLabelTopPadding(markerContext.markers, chartContext);
         return {
             plugins: {
                 annotation: markersApi.annotationPluginOptions(markerContext.markers, chartContext),
             },
-            layout: topPadding > 0 ? { padding: { top: topPadding } } : {},
+            layout: {},
         };
     }
 

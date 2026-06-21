@@ -1218,6 +1218,9 @@
                         <tr>
                             <th data-i18n="time">Zeit</th>
                             <th data-i18n="users">Benutzer</th>
+                            <th data-i18n="project">Projekt</th>
+                            <th data-i18n="task">Aufgabe</th>
+                            <th data-i18n="colTimeRange">Zeitraum</th>
                             <th data-i18n="modelFilter">Modell</th>
                             <th data-i18n="tokens">Tokens</th>
                             <th data-i18n="cost">Kosten</th>
@@ -3833,24 +3836,44 @@
                 .join('');
         }
 
-        function renderExpensiveTable(rows) {
+        function renderExpensiveTable(rows, filterEvents = []) {
             const body = document.getElementById('expensive-table-body');
+            const colspan = 8;
             if (!rows.length) {
                 body.innerHTML =
-                    `<tr><td class="usage-table__empty" colspan="5">${t('noBillableEvents')}</td></tr>`;
+                    `<tr><td class="usage-table__empty" colspan="${colspan}">${t('noBillableEvents')}</td></tr>`;
                 return;
             }
 
+            const api = getMarkersApi();
+            const markers = api?.getStore().markers ?? [];
+            const colorMap = api?.buildProjectColorMap(markers.map((m) => m.project)) ?? {};
+            const filterEndMs = filterEvents.length
+                ? filterEvents[filterEvents.length - 1].timestamp.getTime()
+                : rows[rows.length - 1].timestamp.getTime();
+
             body.innerHTML = rows
-                .map(
-                    (row) => `<tr class="${userRowClass(row.userLabel)}">
+                .map((row) => {
+                    const marker = api?.getMarkerForEvent(row, markers);
+                    const markedClass = marker ? ' usage-table__row--marked' : '';
+                    const projectCell = marker
+                        ? renderMarkerProjectBadge(marker.project, colorMap)
+                        : '—';
+                    const taskCell = marker?.task || '—';
+                    const rangeCell = marker
+                        ? `<span class="usage-table__group-range">${formatEventGroupRange(marker, api, filterEndMs)}</span>`
+                        : '—';
+                    return `<tr class="${userRowClass(row.userLabel)}${markedClass}">
                     <td>${dateTimeFmt.format(row.timestamp)}</td>
                     <td class="usage-table__user usage-table__user--${row.userLabel}">${row.userLabel}</td>
+                    <td>${projectCell}</td>
+                    <td>${taskCell}</td>
+                    <td>${rangeCell}</td>
                     <td>${row.model}</td>
                     <td>${numberFmt.format(row.totalTokens)}</td>
                     <td>${currencyFmt.format(row.costCents / 100)}</td>
-                </tr>`
-                )
+                </tr>`;
+                })
                 .join('');
         }
 
@@ -3917,7 +3940,7 @@
 
             renderKpis(kpis, events);
             renderDailyTable(dailyRows);
-            renderExpensiveTable(expensive);
+            renderExpensiveTable(expensive, events);
             renderEventsTable(eventsForTable());
             renderMarkerTable(events);
             updateProjectFilterOptions();
