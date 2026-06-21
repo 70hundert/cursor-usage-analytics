@@ -140,6 +140,6 @@ Frühe Version (v0.1) — ein persönliches Side-Project. Issues, Bugreports und
 
 [MIT](LICENSE)
 
-## Zwei Repos (privat + public)
+## Lokales Setup
 
-Persönliche Planung und AI-Vorlagen bleiben lokal gitignored. Für ein öffentliches Repo mit sauberer Historie: [docs/PUBLIC_REPO.md](docs/PUBLIC_REPO.md).
+Klonen, gitignored Dateien und Releases: [docs/PUBLIC_REPO.md](docs/PUBLIC_REPO.md).

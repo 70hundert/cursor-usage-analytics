@@ -1,6 +1,6 @@
 > Letzte Verifikation: 2026-06-21
 > Geprüfte Dateien: 12
-> Projektstand: uncommitted (Projekt-Marker Feature)
+> Projektstand: v0.1.0 (committed)
 > Cursor Rule: `.cursor/rules/cursor-usage-dashboard.mdc`
 
 # Cursor Usage Dashboard — Feature-Referenz
