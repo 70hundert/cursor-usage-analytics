@@ -1,0 +1,4189 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cursor Usage — Analytics</title>
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.2.0/dist/chartjs-plugin-zoom.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.1.0/dist/chartjs-plugin-annotation.min.js"
+        defer></script>
+    <style>
+        :root {
+            --bg: #0f1419;
+            --surface: #1a222d;
+            --surface-2: #243040;
+            --text: #e8eef4;
+            --muted: #8b9aab;
+            --accent: #3ecf8e;
+            --warn: #f0b429;
+            --danger: #ef6461;
+            --border: #2d3a4a;
+            --radius: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: "Segoe UI", system-ui, sans-serif;
+            background: radial-gradient(circle at top, #17202b 0%, var(--bg) 55%);
+            color: var(--text);
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 1.5rem 2rem 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .page-header h1 {
+            margin: 0 0 0.25rem;
+            font-size: 1.75rem;
+        }
+
+        .subtitle {
+            margin: 0;
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+
+        .header-links {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .header-links a {
+            color: var(--accent);
+            text-decoration: none;
+            font-size: 0.85rem;
+        }
+
+        .header-links a:hover {
+            text-decoration: underline;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            gap: 0.75rem;
+            padding: 1rem 2rem 2rem;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1rem 1.1rem;
+        }
+
+        .card h2 {
+            margin: 0 0 0.5rem;
+            font-size: 1.05rem;
+        }
+
+        .card-meta {
+            margin: 0 0 0.75rem;
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .toolbar-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem;
+            align-items: center;
+        }
+
+        .toolbar-label {
+            font-size: 0.78rem;
+            color: var(--muted);
+            margin-right: 0.25rem;
+        }
+
+        .btn {
+            border: 1px solid var(--border);
+            background: var(--surface-2);
+            color: var(--text);
+            border-radius: 999px;
+            padding: 0.3rem 0.65rem;
+            font-size: 0.78rem;
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            border-color: #4a6078;
+        }
+
+        .btn--active {
+            background: #2a4a3a;
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .btn--primary {
+            background: #1f4a38;
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .file-input-label {
+            border: 1px dashed var(--border);
+            background: transparent;
+            color: var(--muted);
+            border-radius: var(--radius);
+            padding: 0.45rem 0.75rem;
+            font-size: 0.78rem;
+            cursor: pointer;
+        }
+
+        .file-input-label input {
+            display: none;
+        }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.65rem;
+        }
+
+        .kpi {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0.75rem;
+        }
+
+        .kpi__label {
+            font-size: 0.72rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .kpi__value {
+            font-size: 1.35rem;
+            font-weight: 700;
+            margin: 0.2rem 0;
+        }
+
+        .kpi__sub {
+            font-size: 0.75rem;
+            color: var(--muted);
+        }
+
+        .kpi--accent .kpi__value {
+            color: var(--accent);
+        }
+
+        .kpi--warn .kpi__value {
+            color: var(--warn);
+        }
+
+        .trend-up {
+            color: var(--danger);
+        }
+
+        .trend-down {
+            color: var(--accent);
+        }
+
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .chart-card {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0.75rem;
+        }
+
+        .chart-card__header {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.35rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .chart-card h3 {
+            margin: 0;
+            font-size: 0.88rem;
+            color: var(--muted);
+        }
+
+        .chart-card__actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem;
+        }
+
+        .overview-section__header {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.35rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .overview-section__toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .chart-card__header-actions {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .overview-section__title {
+            margin: 0;
+            font-size: 0.88rem;
+            color: var(--muted);
+        }
+
+        .chart-zoom-hint {
+            margin: 0 0 0.75rem;
+            font-size: 0.78rem;
+            color: var(--muted);
+        }
+
+        .chart-wrap {
+            position: relative;
+            height: 220px;
+            transition: height 0.2s ease;
+        }
+
+        .chart-wrap>div {
+            height: 100% !important;
+            width: 100% !important;
+        }
+
+        .chart-wrap--expanded {
+            height: calc(90vh - 4rem) !important;
+            min-height: 220px;
+        }
+
+        .usage-table-wrap {
+            overflow-x: auto;
+        }
+
+        .usage-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.82rem;
+        }
+
+        .usage-table th,
+        .usage-table td {
+            padding: 0.45rem 0.55rem;
+            border-bottom: 1px solid var(--border);
+            text-align: right;
+        }
+
+        .usage-table th:first-child,
+        .usage-table td:first-child,
+        .usage-table th:nth-child(2),
+        .usage-table td:nth-child(2) {
+            text-align: left;
+        }
+
+        .usage-table thead th {
+            color: var(--muted);
+            font-weight: 600;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+        }
+
+        .usage-table__row--marked {
+            box-shadow: inset 3px 0 0 var(--warn);
+        }
+
+        .usage-table__group-header--toggle {
+            cursor: pointer;
+        }
+
+        .usage-table__group-header--toggle::before {
+            content: '▾ ';
+            color: var(--muted);
+        }
+
+        .usage-table__group-header--collapsed::before {
+            content: '▸ ';
+        }
+
+        .usage-table__row--group-member[hidden] {
+            display: none;
+        }
+
+        .usage-table--events th[data-sort-col] {
+            cursor: pointer;
+        }
+
+        .usage-table--events th[data-sort-col]::after {
+            content: '';
+            opacity: 0.35;
+        }
+
+        .usage-table--events th[data-sort-col].sort-active::after {
+            content: ' ▾';
+            opacity: 1;
+        }
+
+        .usage-table--events th[data-sort-col].sort-active.sort-desc::after {
+            content: ' ▸';
+        }
+
+        .usage-table__row--clickable {
+            cursor: pointer;
+        }
+
+        .usage-table__actions {
+            text-align: center;
+        }
+
+        .usage-table__btn-delete {
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--danger);
+            border-radius: 6px;
+            padding: 0.15rem 0.45rem;
+            font-size: 0.72rem;
+            cursor: pointer;
+        }
+
+        .marker-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .marker-modal[hidden] {
+            display: none;
+        }
+
+        .marker-modal__backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.55);
+        }
+
+        .marker-modal__panel {
+            position: relative;
+            width: min(420px, 100%);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.1rem;
+            z-index: 1;
+        }
+
+        .marker-modal__panel h3 {
+            margin: 0 0 0.75rem;
+            font-size: 1rem;
+        }
+
+        .marker-form label {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            font-size: 0.78rem;
+            color: var(--muted);
+            margin-bottom: 0.55rem;
+        }
+
+        .marker-form input,
+        .marker-form textarea,
+        .marker-form select {
+            border: 1px solid var(--border);
+            background: var(--surface-2);
+            color: var(--text);
+            border-radius: 8px;
+            padding: 0.4rem 0.55rem;
+            font-size: 0.85rem;
+            color-scheme: dark;
+        }
+
+        .marker-form textarea {
+            min-height: 3rem;
+            resize: vertical;
+        }
+
+        .marker-form__actions {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-end;
+            margin-top: 0.75rem;
+        }
+
+        .project-filter-select {
+            min-width: 10rem;
+        }
+
+        .marker-chart-display-control {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .marker-chart-display-control .btn[disabled] {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .events-stats {
+            margin-bottom: 0.75rem;
+        }
+
+        .events-stats__totals {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+            gap: 0.5rem;
+            margin-bottom: 0.65rem;
+        }
+
+        .events-stat {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.5rem 0.65rem;
+        }
+
+        .events-stat__label {
+            display: block;
+            font-size: 0.68rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .events-stat__value {
+            display: block;
+            font-size: 1.05rem;
+            font-weight: 700;
+            margin-top: 0.15rem;
+        }
+
+        .events-stat__scope {
+            font-size: 0.95rem;
+            font-weight: 700;
+        }
+
+        .events-stats__hint {
+            margin: 0 0 0.5rem;
+        }
+
+        .usage-table--groups-summary {
+            font-size: 0.78rem;
+        }
+
+        .usage-table--groups-summary th,
+        .usage-table--groups-summary td {
+            padding: 0.35rem 0.5rem;
+        }
+
+        .usage-table__group-header td {
+            background: var(--surface-2);
+            font-weight: 600;
+            border-top: 2px solid var(--border);
+            text-align: right;
+        }
+
+        .usage-table__group-header td:first-child {
+            text-align: left;
+        }
+
+        .usage-table__group-range {
+            font-size: 0.72rem;
+            font-weight: 400;
+            color: var(--muted);
+        }
+
+        .usage-table__user {
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+
+        .usage-table__empty {
+            text-align: center;
+            color: var(--muted);
+            padding: 1.5rem;
+        }
+
+        .hint-text {
+            margin: 0.5rem 0 0;
+            font-size: 0.78rem;
+            color: var(--muted);
+        }
+
+        .status-error {
+            color: var(--danger);
+        }
+
+        .budget-bar {
+            height: 8px;
+            background: var(--surface-2);
+            border-radius: 999px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .budget-bar__fill {
+            height: 100%;
+            background: var(--accent);
+            border-radius: 999px;
+            transition: width 0.3s;
+        }
+
+        .budget-bar__fill--warn {
+            background: var(--warn);
+        }
+
+        .budget-bar__fill--over {
+            background: var(--danger);
+        }
+
+        .budget-input {
+            width: 5rem;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 6px;
+            padding: 0.25rem 0.4rem;
+            font-size: 0.78rem;
+        }
+
+        .drop-zone {
+            border: 2px dashed var(--border);
+            border-radius: var(--radius);
+            padding: 1rem;
+            text-align: center;
+            color: var(--muted);
+            font-size: 0.85rem;
+            transition: border-color 0.2s, background 0.2s;
+        }
+
+        .drop-zone--active {
+            border-color: var(--accent);
+            background: #1f4a3822;
+        }
+
+        .drop-zone--compact {
+            padding: 0.45rem 0.75rem;
+            margin-top: 0.5rem;
+            font-size: 0.78rem;
+        }
+
+        .drop-zone--hidden {
+            display: none;
+        }
+
+        .overview-section {
+            margin-top: 1rem;
+        }
+
+        .chart-wrap--overview {
+            height: 320px;
+        }
+
+        .chart-wrap--overview.chart-wrap--expanded {
+            height: calc(90vh - 4rem) !important;
+            min-height: 320px;
+        }
+
+        .chart-card--expanded {
+            grid-column: 1 / -1;
+        }
+
+        .events-pagination {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.65rem;
+        }
+
+        .events-pagination__info {
+            font-size: 0.78rem;
+            color: var(--muted);
+            margin-right: auto;
+        }
+
+        .usage-table--events th:nth-child(1),
+        .usage-table--events td:nth-child(1),
+        .usage-table--events th:nth-child(2),
+        .usage-table--events td:nth-child(2),
+        .usage-table--events th:nth-child(3),
+        .usage-table--events td:nth-child(3),
+        .usage-table--events th:nth-child(4),
+        .usage-table--events td:nth-child(4) {
+            text-align: left;
+        }
+
+        .date-range-panel {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.65rem;
+            margin-top: 0.65rem;
+            padding: 0.65rem 0.75rem;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+        }
+
+        .date-range-panel .toolbar-label {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-right: 0.15rem;
+        }
+
+        .date-range-custom {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.45rem;
+        }
+
+        .date-range-custom label {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.78rem;
+            color: var(--muted);
+        }
+
+        .date-input {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 6px;
+            padding: 0.28rem 0.45rem;
+            font-size: 0.78rem;
+            font-family: inherit;
+        }
+
+        .date-range-sep {
+            font-size: 0.78rem;
+            color: var(--muted);
+        }
+
+        .granularity-control {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            min-width: 140px;
+        }
+
+        .granularity-control .toolbar-label {
+            font-size: 0.72rem;
+            font-weight: 500;
+            color: var(--muted);
+            text-transform: none;
+            letter-spacing: 0;
+        }
+
+        .granularity-select {
+            appearance: none;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 999px;
+            padding: 0.35rem 2rem 0.35rem 0.85rem;
+            font-size: 0.82rem;
+            font-family: inherit;
+            cursor: pointer;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238b9aab' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.65rem center;
+        }
+
+        .btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .btn--loading {
+            position: relative;
+            color: transparent;
+        }
+
+        .btn--loading::after {
+            content: '';
+            position: absolute;
+            inset: calc(50% - 7px) auto auto calc(50% - 7px);
+            width: 14px;
+            height: 14px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .card--main {
+            position: relative;
+        }
+
+        .live-loading {
+            position: absolute;
+            inset: 0;
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            background: rgba(15, 20, 25, 0.82);
+            border-radius: var(--radius);
+            backdrop-filter: blur(2px);
+        }
+
+        .live-loading[hidden] {
+            display: none;
+        }
+
+        .live-loading__spinner {
+            width: 36px;
+            height: 36px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        .live-loading__text {
+            margin: 0;
+            font-size: 0.88rem;
+            color: var(--muted);
+        }
+
+        .date-input--wide {
+            min-width: 11.5rem;
+        }
+
+        .preset-range-group {
+            flex-wrap: wrap;
+        }
+
+        .granularity-select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 1px var(--accent);
+        }
+
+        .selection-mode-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        #count-range-group[hidden],
+        #time-range-group[hidden] {
+            display: none;
+        }
+
+        .count-range-buttons {
+            flex-wrap: wrap;
+        }
+
+        .count-range-custom {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            gap: 0.5rem 0.75rem;
+        }
+
+        .count-range-custom label {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            font-size: 0.78rem;
+            color: var(--muted);
+        }
+
+        .count-input {
+            width: 5.5rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 8px;
+            padding: 0.35rem 0.55rem;
+            font-size: 0.82rem;
+            font-family: inherit;
+        }
+
+        .count-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 1px var(--accent);
+        }
+    </style>
+</head>
+
+<body>
+    <header class="page-header">
+        <div>
+            <h1>Cursor Usage Analytics</h1>
+            <p class="subtitle">Kosten, Modelle und Nutzungsmuster</p>
+        </div>
+        <nav class="header-links">
+            <a href="usage-events-chart.html">Event-Verlauf (Zoom)</a>
+        </nav>
+    </header>
+
+    <main class="dashboard-grid">
+        <section class="card card--main">
+            <div class="toolbar" id="main-toolbar">
+                <div class="toolbar-group">
+                    <span class="toolbar-label">Datenquelle</span>
+                    <button type="button" class="btn btn--active" data-source="csv">CSV</button>
+                    <button type="button" class="btn" data-source="live">Live (Proxy)</button>
+                    <button type="button" class="btn" data-source="merge">Beides</button>
+                </div>
+                <div class="toolbar-group" id="user-filter-toolbar">
+                    <span class="toolbar-label" data-i18n="users">Benutzer</span>
+                    <button type="button" class="btn btn--active" data-user="all" data-i18n="usersAll">Gesamt</button>
+                </div>
+                <div class="toolbar-group" id="locale-toolbar">
+                    <span class="toolbar-label" data-i18n="locale">Sprache</span>
+                    <button type="button" class="btn" data-locale="de">DE</button>
+                    <button type="button" class="btn" data-locale="en">EN</button>
+                </div>
+                <div class="toolbar-group">
+                    <label class="file-input-label">
+                        CSV laden
+                        <input type="file" id="csv-file-input" accept=".csv,text/csv" multiple>
+                    </label>
+                    <button type="button" class="btn btn--primary" id="live-refresh-btn">Live aktualisieren</button>
+                    <button type="button" class="btn" id="export-json-btn">Export JSON</button>
+                    <button type="button" class="btn" id="marker-export-btn">Marker exportieren</button>
+                    <label class="file-input-label">
+                        Marker importieren
+                        <input type="file" id="marker-import-input" accept=".json,application/json">
+                    </label>
+                </div>
+            </div>
+            <div class="date-range-panel" id="date-range-panel">
+                <div class="selection-mode-group">
+                    <span class="toolbar-label">Ansicht</span>
+                    <div class="toolbar-group">
+                        <button type="button" class="btn btn--active" data-selection-mode="time">Zeitraum</button>
+                        <button type="button" class="btn" data-selection-mode="count">Anfragen</button>
+                    </div>
+                </div>
+                <div id="time-range-group">
+                    <span class="toolbar-label">Zeitraum</span>
+                    <div class="toolbar-group preset-range-group">
+                        <button type="button" class="btn" data-hours="1">1&nbsp;Std</button>
+                        <button type="button" class="btn" data-hours="2">2&nbsp;Std</button>
+                        <button type="button" class="btn" data-hours="3">3&nbsp;Std</button>
+                        <button type="button" class="btn" data-hours="6">6&nbsp;Std</button>
+                        <button type="button" class="btn" data-hours="12">12&nbsp;Std</button>
+                        <button type="button" class="btn btn--active" data-hours="24">1&nbsp;Tag</button>
+                        <button type="button" class="btn" data-hours="168">7&nbsp;Tage</button>
+                        <button type="button" class="btn" data-hours="720">30&nbsp;Tage</button>
+                        <button type="button" class="btn" data-all="true">Alle</button>
+                    </div>
+                    <div class="date-range-custom">
+                        <label>Von
+                            <input type="datetime-local" class="date-input date-input--wide" id="custom-from"
+                                aria-label="Von Datum und Uhrzeit">
+                        </label>
+                        <span class="date-range-sep">bis</span>
+                        <label>Bis
+                            <input type="datetime-local" class="date-input date-input--wide" id="custom-to"
+                                aria-label="Bis Datum und Uhrzeit">
+                        </label>
+                        <button type="button" class="btn" id="custom-apply">Anwenden</button>
+                        <button type="button" class="btn" id="custom-reset">Zurücksetzen</button>
+                    </div>
+                    <div class="granularity-control" id="granularity-control">
+                        <select class="granularity-select" id="granularity-select" aria-label="Granularität">
+                            <option value="event">Pro Anfrage</option>
+                            <option value="quarter">15 Minuten</option>
+                            <option value="hour">Stündlich</option>
+                            <option value="day">Täglich</option>
+                            <option value="week">Wöchentlich</option>
+                            <option value="month">Monatlich</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="count-range-group" hidden>
+                    <span class="toolbar-label">Letzte Anfragen</span>
+                    <div class="toolbar-group count-range-buttons">
+                        <button type="button" class="btn" data-count="10">10</button>
+                        <button type="button" class="btn" data-count="25">25</button>
+                        <button type="button" class="btn btn--active" data-count="50">50</button>
+                        <button type="button" class="btn" data-count="100">100</button>
+                        <button type="button" class="btn" data-count="250">250</button>
+                        <button type="button" class="btn" data-count="500">500</button>
+                        <button type="button" class="btn" data-count="1000">1000</button>
+                        <button type="button" class="btn" data-count-all="true">Alle</button>
+                    </div>
+                    <div class="count-range-custom">
+                        <label>Von (neueste #)
+                            <input type="number" class="count-input" id="count-from" min="1" step="1" value="1"
+                                aria-label="Von Anfrage (1 = neueste)">
+                        </label>
+                        <span class="date-range-sep">bis</span>
+                        <label>Bis (neueste #)
+                            <input type="number" class="count-input" id="count-to" min="1" step="1" value="50"
+                                aria-label="Bis Anfrage">
+                        </label>
+                        <button type="button" class="btn" id="count-custom-apply">Anwenden</button>
+                    </div>
+                </div>
+            </div>
+            <div class="live-loading" id="live-loading" hidden aria-live="polite" aria-busy="false">
+                <div class="live-loading__spinner" aria-hidden="true"></div>
+                <p class="live-loading__text" id="live-loading-text">Live-Daten werden geladen…</p>
+            </div>
+            <div class="drop-zone" id="drop-zone">
+                CSV hier ablegen oder „CSV laden“ wählen
+            </div>
+            <div class="kpi-grid" id="kpi-grid" style="margin-top: 0.75rem;"></div>
+            <div class="overview-section" id="overview-section" hidden>
+                <div class="overview-section__header">
+                    <h3 class="overview-section__title" id="overview-section-title">Übersicht — Tokens &amp; Kosten</h3>
+                    <div class="overview-section__toolbar">
+                        <div class="marker-chart-display-control" data-marker-display-host
+                            aria-label="Marker-Sichtbarkeit"></div>
+                        <div class="chart-card__actions">
+                            <button type="button" class="btn btn-chart-height" data-chart-key="overview"
+                                aria-pressed="false">90&nbsp;% Höhe</button>
+                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="overview">Zoom
+                                zurücksetzen</button>
+                            <button type="button" class="btn" id="marker-add-overview">Marker setzen</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-wrap chart-wrap--overview">
+                    <canvas id="chart-overview-daily" aria-label="Tagesübersicht Tokens und Kosten"></canvas>
+                </div>
+            </div>
+            <p class="card-meta" id="status-line">Lade Daten…</p>
+            <p class="hint-text" id="load-hint"></p>
+        </section>
+
+        <section class="card">
+            <h2>Visualisierungen</h2>
+            <p class="chart-zoom-hint">Mausrad: Zoomen · Strg + Ziehen: Verschieben · Pinch auf Touch</p>
+            <div class="chart-grid">
+                <div class="chart-card">
+                    <div class="chart-card__header">
+                        <h3>Top 5 Modelle nach Kosten</h3>
+                        <div class="chart-card__actions">
+                            <button type="button" class="btn btn-chart-height" data-chart-key="topCost"
+                                aria-pressed="false">90&nbsp;% Höhe</button>
+                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="topCost">Zoom
+                                zurücksetzen</button>
+                        </div>
+                    </div>
+                    <div class="chart-wrap"><canvas id="chart-top-cost"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-card__header">
+                        <h3>Top 5 Modelle nach Tokens</h3>
+                        <div class="chart-card__actions">
+                            <button type="button" class="btn btn-chart-height" data-chart-key="topTokens"
+                                aria-pressed="false">90&nbsp;% Höhe</button>
+                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="topTokens">Zoom
+                                zurücksetzen</button>
+                        </div>
+                    </div>
+                    <div class="chart-wrap"><canvas id="chart-top-tokens"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-card__header">
+                        <h3>Token-Typ-Verteilung</h3>
+                        <div class="chart-card__actions">
+                            <button type="button" class="btn btn-chart-height" data-chart-key="tokenTypes"
+                                aria-pressed="false">90&nbsp;% Höhe</button>
+                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="tokenTypes" disabled
+                                hidden>Zoom zurücksetzen</button>
+                        </div>
+                    </div>
+                    <div class="chart-wrap"><canvas id="chart-token-types"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-card__header">
+                        <h3>Modell-Familien</h3>
+                        <div class="chart-card__actions">
+                            <button type="button" class="btn btn-chart-height" data-chart-key="modelFamily"
+                                aria-pressed="false">90&nbsp;% Höhe</button>
+                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="modelFamily">Zoom
+                                zurücksetzen</button>
+                        </div>
+                    </div>
+                    <div class="chart-wrap"><canvas id="chart-model-family"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-card__header">
+                        <h3>Nutzung nach Stunde</h3>
+                        <div class="chart-card__actions">
+                            <button type="button" class="btn btn-chart-height" data-chart-key="byHour"
+                                aria-pressed="false">90&nbsp;% Höhe</button>
+                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="byHour">Zoom
+                                zurücksetzen</button>
+                        </div>
+                    </div>
+                    <div class="chart-wrap"><canvas id="chart-by-hour"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-card__header">
+                        <h3 id="chart-cumulative-title">Kumulierte Ausgaben</h3>
+                        <div class="chart-card__header-actions">
+                            <div class="marker-chart-display-control" data-marker-display-host
+                                aria-label="Marker-Sichtbarkeit"></div>
+                            <div class="chart-card__actions">
+                                <button type="button" class="btn btn-chart-height" data-chart-key="cumulative"
+                                    aria-pressed="false">90&nbsp;% Höhe</button>
+                                <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="cumulative">Zoom
+                                    zurücksetzen</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chart-wrap"><canvas id="chart-cumulative"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-card__header">
+                        <h3>Input vs. Output</h3>
+                        <div class="chart-card__actions">
+                            <button type="button" class="btn btn-chart-height" data-chart-key="inputOutput"
+                                aria-pressed="false">90&nbsp;% Höhe</button>
+                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="inputOutput">Zoom
+                                zurücksetzen</button>
+                        </div>
+                    </div>
+                    <div class="chart-wrap"><canvas id="chart-input-output"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-card__header">
+                        <h3>Cache-Effizienz</h3>
+                        <div class="chart-card__actions">
+                            <button type="button" class="btn btn-chart-height" data-chart-key="cacheEfficiency"
+                                aria-pressed="false">90&nbsp;% Höhe</button>
+                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="cacheEfficiency"
+                                disabled hidden>Zoom zurücksetzen</button>
+                        </div>
+                    </div>
+                    <div class="chart-wrap"><canvas id="chart-cache"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-card__header">
+                        <h3>Nutzung nach Wochentag</h3>
+                        <div class="chart-card__actions">
+                            <button type="button" class="btn btn-chart-height" data-chart-key="byWeekday"
+                                aria-pressed="false">90&nbsp;% Höhe</button>
+                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="byWeekday">Zoom
+                                zurücksetzen</button>
+                        </div>
+                    </div>
+                    <div class="chart-wrap"><canvas id="chart-weekday"></canvas></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>Tokens je Tag</h2>
+            <div class="usage-table-wrap">
+                <table class="usage-table">
+                    <thead>
+                        <tr>
+                            <th>Datum</th>
+                            <th>Benutzer</th>
+                            <th>Events</th>
+                            <th>Total Tokens</th>
+                            <th>Kosten</th>
+                            <th>Top-Modell</th>
+                        </tr>
+                    </thead>
+                    <tbody id="daily-table-body"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>Teuerste Events</h2>
+            <div class="usage-table-wrap">
+                <table class="usage-table">
+                    <thead>
+                        <tr>
+                            <th>Zeit</th>
+                            <th>Benutzer</th>
+                            <th>Modell</th>
+                            <th>Tokens</th>
+                            <th>Kosten</th>
+                        </tr>
+                    </thead>
+                    <tbody id="expensive-table-body"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2 data-i18n="individualRequests">Einzelne Anfragen</h2>
+            <div class="toolbar" style="margin-bottom: 0.5rem;">
+                <div class="toolbar-group">
+                    <span class="toolbar-label" data-i18n="modelFilter">Modell</span>
+                    <select class="project-filter-select" id="events-model-filter" aria-label="Modell-Filter">
+                        <option value="all" data-i18n="allModels">Alle Modelle</option>
+                    </select>
+                </div>
+                <div class="toolbar-group">
+                    <span class="toolbar-label" data-i18n="kindFilter">Kind</span>
+                    <select class="project-filter-select" id="events-kind-filter" aria-label="Kind-Filter">
+                        <option value="all" data-i18n="allKinds">Alle Kinds</option>
+                    </select>
+                </div>
+                <div class="toolbar-group">
+                    <label class="toolbar-label" data-i18n="minCost">Min. Kosten ($)
+                        <input type="number" class="budget-input" id="events-min-cost" min="0" step="0.01" value="0" style="width:5rem;">
+                    </label>
+                </div>
+                <div class="toolbar-group">
+                    <label class="toolbar-label">
+                        <input type="checkbox" id="events-included-only">
+                        <span data-i18n="includedOnly">Nur Included</span>
+                    </label>
+                </div>
+                <div class="toolbar-group">
+                    <button type="button" class="btn" id="events-export-csv-btn" data-i18n="exportCsv">Events CSV</button>
+                    <button type="button" class="btn" id="events-export-json-btn" data-i18n="exportEventsJson">Events JSON</button>
+                </div>
+                <div class="toolbar-group">
+                    <span class="toolbar-label" data-i18n="projectFilter">Projekt-Filter</span>
+                    <select class="project-filter-select" id="project-filter" aria-label="Projekt-Filter">
+                        <option value="all">Alle Projekte</option>
+                    </select>
+                </div>
+                <div class="toolbar-group">
+                    <span class="toolbar-label">Gruppierung</span>
+                    <div class="toolbar-group">
+                        <button type="button" class="btn" data-events-group="marker">Pro Marker</button>
+                        <button type="button" class="btn" data-events-group="task">Pro Aufgabe</button>
+                    </div>
+                </div>
+                <div class="toolbar-group">
+                    <span class="toolbar-label">Pro Seite</span>
+                    <div class="toolbar-group">
+                        <button type="button" class="btn" data-events-page-size="10">10</button>
+                        <button type="button" class="btn" data-events-page-size="25">25</button>
+                        <button type="button" class="btn" data-events-page-size="50">50</button>
+                        <button type="button" class="btn" data-events-page-size="100">100</button>
+                    </div>
+                </div>
+            </div>
+            <div class="events-stats" id="events-stats" hidden>
+                <div class="events-stats__totals" id="events-stats-totals"></div>
+                <p class="events-stats__hint card-meta" id="events-stats-hint" hidden></p>
+                <div class="usage-table-wrap" id="events-groups-table-wrap">
+                    <table class="usage-table usage-table--groups-summary" id="events-groups-table">
+                        <thead id="events-groups-table-head"></thead>
+                        <tbody id="events-groups-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+            <p class="card-meta" id="events-table-status">—</p>
+            <div class="usage-table-wrap">
+                <table class="usage-table usage-table--events">
+                    <thead>
+                        <tr>
+                            <th data-sort-col="time">Zeit</th>
+                            <th data-sort-col="user">Benutzer</th>
+                            <th>Projekt</th>
+                            <th data-sort-col="model">Modell</th>
+                            <th data-sort-col="kind">Kind</th>
+                            <th>Input (w/ Cache Write)</th>
+                            <th>Input (w/o Cache Write)</th>
+                            <th>Cache Read</th>
+                            <th data-sort-col="output">Output</th>
+                            <th data-sort-col="total">Total</th>
+                            <th data-sort-col="cost">Kosten</th>
+                        </tr>
+                    </thead>
+                    <tbody id="events-table-body"></tbody>
+                </table>
+            </div>
+            <div class="events-pagination" id="events-pagination" hidden>
+                <span class="events-pagination__info" id="events-pagination-info"></span>
+                <button type="button" class="btn" id="events-prev-btn" data-i18n="prevPage">Zurück</button>
+                <button type="button" class="btn" id="events-next-btn" data-i18n="nextPage">Weiter</button>
+            </div>
+        </section>
+
+        <section class="card" id="marker-card">
+            <h2>Projekt-Marker</h2>
+            <p class="card-meta" id="marker-table-status">
+                Projekt- und Aufgaben-Marker — Intervall bis zum nächsten Marker oder Filter-Ende (*).
+            </p>
+            <div class="usage-table-wrap">
+                <table class="usage-table" id="marker-table">
+                    <thead>
+                        <tr>
+                            <th>Von</th>
+                            <th>Bis</th>
+                            <th>Benutzer</th>
+                            <th>Projekt</th>
+                            <th>Aufgabe</th>
+                            <th>Events</th>
+                            <th class="usage-table__total">Total Tokens</th>
+                            <th>Output</th>
+                            <th>Kosten</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="marker-table-body"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>Budget (aktueller Monat)</h2>
+            <div class="toolbar" style="margin-bottom: 0.75rem;">
+                <label>Monatsbudget ($)
+                    <input type="number" class="budget-input" id="budget-input" min="0" step="1" value="70">
+                </label>
+                <button type="button" class="btn" id="budget-save-btn">Speichern</button>
+            </div>
+            <div id="budget-panel"></div>
+        </section>
+    </main>
+
+    <div class="marker-modal" id="marker-modal" hidden>
+        <div class="marker-modal__backdrop" id="marker-modal-backdrop"></div>
+        <div class="marker-modal__panel" role="dialog" aria-labelledby="marker-modal-title">
+            <h3 id="marker-modal-title">Projekt-Marker</h3>
+            <form class="marker-form" id="marker-form">
+                <input type="hidden" id="marker-id">
+                <label>Benutzer
+                    <select id="marker-user" aria-label="Benutzer"></select>
+                </label>
+                <label>Von
+                    <input type="datetime-local" id="marker-start" required>
+                </label>
+                <label>Bis (optional)
+                    <input type="datetime-local" id="marker-end">
+                </label>
+                <label>Projekt
+                    <input type="text" id="marker-project" required maxlength="120">
+                </label>
+                <label>Aufgabe (optional)
+                    <input type="text" id="marker-task" maxlength="120">
+                </label>
+                <label>Notiz (optional)
+                    <textarea id="marker-note" maxlength="500"></textarea>
+                </label>
+                <div class="marker-form__actions">
+                    <button type="button" class="btn" id="marker-cancel-btn">Abbrechen</button>
+                    <button type="submit" class="btn btn--primary">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const PROXY_BASE = '';
+        const BUDGET_STORAGE_KEY = 'cursor-analytics-monthly-budget-usd';
+        const MODULE_FILES = [
+            'static/cursor-analytics/users-config.js',
+            'static/cursor-analytics/i18n.js',
+            'static/cursor-analytics/parser.js',
+            'static/cursor-analytics/metrics.js',
+            'static/cursor-analytics/markers.js',
+            'static/cursor-analytics/charts.js',
+        ];
+
+        function resolveToolPath(relativePath) {
+            const cleaned = String(relativePath).replace(/^\.\//, '');
+            return new URL(cleaned, new URL('.', window.location.href)).href;
+        }
+
+        function loadScript(url) {
+            return new Promise((resolve, reject) => {
+                const existing = document.querySelector(`script[data-src="${url}"]`);
+                if (existing) {
+                    existing.addEventListener('load', () => resolve(), { once: true });
+                    existing.addEventListener('error', () => reject(new Error(url)), { once: true });
+                    return;
+                }
+                const script = document.createElement('script');
+                script.src = url;
+                script.dataset.src = url;
+                script.onload = () => resolve();
+                script.onerror = () => reject(new Error(`Skript nicht gefunden: ${url}`));
+                document.head.appendChild(script);
+            });
+        }
+
+        async function ensureModules() {
+            if (
+                window.CursorAnalytics?.parser &&
+                window.CursorAnalytics?.metrics &&
+                window.CursorAnalytics?.markers &&
+                window.CursorAnalytics?.charts &&
+                window.CursorAnalytics?.usersConfig &&
+                window.CursorAnalytics?.i18n
+            ) {
+                return;
+            }
+            const base = new URL('.', window.location.href);
+            for (const file of MODULE_FILES) {
+                await loadScript(new URL(`${file}?v=15`, base).href);
+            }
+        }
+
+        let numberFmt;
+        let currencyFmt;
+        let dateFmt;
+        let dateTimeFmt;
+        let monthFmt;
+
+        function rebuildFormatters() {
+            const intlLocale = window.CursorAnalytics?.i18n?.getIntlLocale() || 'de-DE';
+            numberFmt = new Intl.NumberFormat(intlLocale);
+            currencyFmt = new Intl.NumberFormat(intlLocale, {
+                style: 'currency',
+                currency: 'USD',
+            });
+            dateFmt = new Intl.DateTimeFormat(intlLocale, {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+            });
+            dateTimeFmt = new Intl.DateTimeFormat(intlLocale, {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+            });
+            monthFmt = new Intl.DateTimeFormat(intlLocale, {
+                month: 'short',
+                year: 'numeric',
+            });
+        }
+
+        rebuildFormatters();
+
+        const GRANULARITY_STORAGE_KEY = 'cursor-analytics-granularity';
+        const SELECTION_MODE_STORAGE_KEY = 'cursor-analytics-selection-mode';
+        const COUNT_STORAGE_KEY = 'cursor-analytics-count';
+        const CUSTOM_RANGE_STORAGE_KEY = 'cursor-analytics-custom-range';
+        const TIME_RANGE_STORAGE_KEY = 'cursor-analytics-time-range';
+        const DATA_SOURCE_STORAGE_KEY = 'cursor-analytics-data-source';
+        const USER_FILTER_STORAGE_KEY = 'cursor-analytics-user-filter';
+        const VALID_DATA_SOURCES = ['csv', 'live', 'merge'];
+        const DEFAULT_TIME_RANGE_HOURS = 24;
+        const LIVE_CACHE_TTL_MS = 5 * 60 * 1000;
+        const LIVE_INCREMENTAL_OVERLAP_MS = 5 * 60 * 1000;
+
+        let eventsByUser = {};
+        let liveEventsByUser = {};
+        let liveFetchState = { fetchedAt: 0, bounds: null };
+        let dataSource = VALID_DATA_SOURCES.includes(localStorage.getItem(DATA_SOURCE_STORAGE_KEY))
+            ? localStorage.getItem(DATA_SOURCE_STORAGE_KEY)
+            : 'csv';
+        let userFilter = localStorage.getItem(USER_FILTER_STORAGE_KEY) || 'all';
+        let granularity = localStorage.getItem(GRANULARITY_STORAGE_KEY) || 'hour';
+        let selectionMode = localStorage.getItem(SELECTION_MODE_STORAGE_KEY) || 'time';
+        const storedCount = Number.parseInt(localStorage.getItem(COUNT_STORAGE_KEY) || '50', 10);
+
+        function loadStoredTimeRange() {
+            try {
+                const raw = localStorage.getItem(TIME_RANGE_STORAGE_KEY);
+                if (!raw) {
+                    return null;
+                }
+                const parsed = JSON.parse(raw);
+                if (parsed?.mode === 'all') {
+                    return {
+                        mode: 'all',
+                        hours: DEFAULT_TIME_RANGE_HOURS,
+                        customFrom: '',
+                        customTo: '',
+                    };
+                }
+                if (parsed?.mode === 'custom' && parsed.customFrom && parsed.customTo) {
+                    return {
+                        mode: 'custom',
+                        hours: DEFAULT_TIME_RANGE_HOURS,
+                        customFrom: parsed.customFrom,
+                        customTo: parsed.customTo,
+                    };
+                }
+                if (parsed?.mode === 'hours') {
+                    const hours = Number(parsed.hours);
+                    if (Number.isFinite(hours) && hours > 0) {
+                        return {
+                            mode: 'hours',
+                            hours,
+                            customFrom: '',
+                            customTo: '',
+                        };
+                    }
+                }
+            } catch {
+                return null;
+            }
+            return null;
+        }
+
+        function getInitialTimeRange() {
+            return (
+                loadStoredTimeRange() ?? {
+                    mode: 'hours',
+                    hours: DEFAULT_TIME_RANGE_HOURS,
+                    customFrom: '',
+                    customTo: '',
+                }
+            );
+        }
+
+        function saveStoredTimeRange(timeRange) {
+            localStorage.setItem(
+                TIME_RANGE_STORAGE_KEY,
+                JSON.stringify({
+                    mode: timeRange.mode,
+                    hours: timeRange.hours,
+                    customFrom: timeRange.customFrom || '',
+                    customTo: timeRange.customTo || '',
+                })
+            );
+        }
+
+        const initialTimeRange = getInitialTimeRange();
+        let range = {
+            mode: initialTimeRange.mode,
+            hours: initialTimeRange.hours,
+            customFrom: initialTimeRange.customFrom,
+            customTo: initialTimeRange.customTo,
+            count: Number.isFinite(storedCount) && storedCount > 0 ? storedCount : 50,
+            countFrom: 1,
+            countTo: Number.isFinite(storedCount) && storedCount > 0 ? storedCount : 50,
+        };
+        let suppressCustomRangePersist = false;
+        let savedTimeRange = { ...initialTimeRange };
+        let savedCountRange = {
+            mode: 'count',
+            count: Number.isFinite(storedCount) && storedCount > 0 ? storedCount : 50,
+            countFrom: 1,
+            countTo: Number.isFinite(storedCount) && storedCount > 0 ? storedCount : 50,
+        };
+        let chartInstances = {};
+        const CHART_CANVAS_IDS = {
+            overview: 'chart-overview-daily',
+            topCost: 'chart-top-cost',
+            topTokens: 'chart-top-tokens',
+            tokenTypes: 'chart-token-types',
+            modelFamily: 'chart-model-family',
+            byHour: 'chart-by-hour',
+            cumulative: 'chart-cumulative',
+            inputOutput: 'chart-input-output',
+            cacheEfficiency: 'chart-cache',
+            byWeekday: 'chart-weekday',
+        };
+        let lastAggregated = null;
+        let liveLoading = false;
+        let eventsFilterKey = '';
+        let projectFilter = 'all';
+        let markerChartDisplay = { showMarkers: true, showLabels: true, projectFilter: 'all' };
+        let eventsGroupMode = localStorage.getItem('events-group-mode') || 'marker';
+        const EVENTS_PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+        const EVENTS_PAGE_SIZE_STORAGE_KEY = 'events-page-size';
+        let eventsPageSize = (() => {
+            const stored = Number.parseInt(localStorage.getItem(EVENTS_PAGE_SIZE_STORAGE_KEY), 10);
+            return EVENTS_PAGE_SIZE_OPTIONS.includes(stored) ? stored : 25;
+        })();
+        const EVENTS_UNMARKED_KEY = '__unmarked__';
+
+        function getMarkersApi() {
+            return window.CursorAnalytics?.markers;
+        }
+
+        async function persistMarkers() {
+            const api = getMarkersApi();
+            if (!api) {
+                return;
+            }
+            await api.saveStore(api.getStore(), PROXY_BASE);
+        }
+
+        let liveUsersConfigured = null;
+
+        async function fetchLiveUserConfig(force = false) {
+            if (liveUsersConfigured && !force) {
+                return liveUsersConfigured;
+            }
+            try {
+                const response = await fetch(`${PROXY_BASE}/health`, { cache: 'no-store' });
+                if (!response.ok) {
+                    return Object.fromEntries(getParser().USER_ORDER.map((id) => [id, false]));
+                }
+                const payload = await response.json();
+                liveUsersConfigured = payload.users || {};
+                return liveUsersConfigured;
+            } catch {
+                return Object.fromEntries(getParser().USER_ORDER.map((id) => [id, false]));
+            }
+        }
+
+        function buildMarkerContext(events) {
+            const api = getMarkersApi();
+            if (!api) {
+                return null;
+            }
+            const filterEndMs = events.length
+                ? events[events.length - 1].timestamp.getTime()
+                : Date.now();
+            return {
+                markers: api.getStore().markers,
+                user: userFilter,
+                filterEndMs,
+                events,
+                mode: 'category',
+                formatters: { dateTimeFmt, numberFmt, currencyFmt },
+                showPopover: true,
+                onEditMarker: (marker) => openMarkerModal({ marker }),
+                showMarkers: markerChartDisplay.showMarkers,
+                showLabels: markerChartDisplay.showLabels,
+                projectFilter: markerChartDisplay.projectFilter,
+            };
+        }
+
+        function persistMarkerChartDisplay() {
+            getMarkersApi()?.saveMarkerChartDisplay(markerChartDisplay);
+        }
+
+        function mountMarkerChartDisplayControls() {
+            const template = `
+                <span class="toolbar-label">Chart-Marker</span>
+                <button type="button" class="btn btn--active" data-marker-chart-visible aria-pressed="true">Anzeigen</button>
+                <button type="button" class="btn btn--active" data-marker-labels-visible aria-pressed="true">Beschriftungen</button>
+                <select class="project-filter-select" data-marker-project-filter aria-label="Marker nach Projekt filtern">
+                    <option value="all">Alle Projekte</option>
+                </select>
+            `;
+            document.querySelectorAll('[data-marker-display-host]').forEach((host) => {
+                host.innerHTML = template;
+            });
+        }
+
+        function syncMarkerChartDisplayUi() {
+            document.querySelectorAll('[data-marker-chart-visible]').forEach((markersBtn) => {
+                markersBtn.classList.toggle('btn--active', markerChartDisplay.showMarkers);
+                markersBtn.setAttribute('aria-pressed', markerChartDisplay.showMarkers ? 'true' : 'false');
+            });
+            document.querySelectorAll('[data-marker-labels-visible]').forEach((labelsBtn) => {
+                labelsBtn.classList.toggle('btn--active', markerChartDisplay.showLabels);
+                labelsBtn.setAttribute('aria-pressed', markerChartDisplay.showLabels ? 'true' : 'false');
+                labelsBtn.disabled = !markerChartDisplay.showMarkers;
+            });
+            document.querySelectorAll('[data-marker-project-filter]').forEach((projectSelect) => {
+                projectSelect.disabled = !markerChartDisplay.showMarkers;
+                projectSelect.value =
+                    [...projectSelect.options].some(
+                        (option) => option.value === markerChartDisplay.projectFilter
+                    )
+                        ? markerChartDisplay.projectFilter
+                        : 'all';
+            });
+        }
+
+        function updateMarkerChartProjectFilterOptions() {
+            const api = getMarkersApi();
+            if (!api) {
+                return;
+            }
+            const projects = [...new Set(api.getStore().markers.map((m) => m.project).filter(Boolean))].sort();
+            const current = markerChartDisplay.projectFilter;
+            const optionsHtml =
+                '<option value="all">Alle Projekte</option>' +
+                projects
+                    .map(
+                        (project) =>
+                            `<option value="${project.replace(/"/g, '&quot;')}">${project}</option>`
+                    )
+                    .join('');
+            markerChartDisplay.projectFilter =
+                projects.includes(current) || current === 'all' ? current : 'all';
+            document.querySelectorAll('[data-marker-project-filter]').forEach((select) => {
+                select.innerHTML = optionsHtml;
+            });
+            syncMarkerChartDisplayUi();
+        }
+
+        function initMarkerChartDisplayUi() {
+            const api = getMarkersApi();
+            if (api?.loadMarkerChartDisplay) {
+                markerChartDisplay = api.loadMarkerChartDisplay();
+            }
+
+            mountMarkerChartDisplayControls();
+
+            document.querySelectorAll('[data-marker-chart-visible]').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    markerChartDisplay.showMarkers = !markerChartDisplay.showMarkers;
+                    persistMarkerChartDisplay();
+                    syncMarkerChartDisplayUi();
+                    renderAll();
+                });
+            });
+
+            document.querySelectorAll('[data-marker-labels-visible]').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    if (!markerChartDisplay.showMarkers) {
+                        return;
+                    }
+                    markerChartDisplay.showLabels = !markerChartDisplay.showLabels;
+                    persistMarkerChartDisplay();
+                    syncMarkerChartDisplayUi();
+                    renderAll();
+                });
+            });
+
+            document.querySelectorAll('[data-marker-project-filter]').forEach((select) => {
+                select.addEventListener('change', (event) => {
+                    markerChartDisplay.projectFilter = event.target.value;
+                    persistMarkerChartDisplay();
+                    syncMarkerChartDisplayUi();
+                    renderAll();
+                });
+            });
+
+            updateMarkerChartProjectFilterOptions();
+        }
+
+        function updateProjectFilterOptions() {
+            const select = document.getElementById('project-filter');
+            const api = getMarkersApi();
+            if (!select || !api) {
+                return;
+            }
+            const projects = [...new Set(api.getStore().markers.map((m) => m.project).filter(Boolean))].sort();
+            const current = projectFilter;
+            select.innerHTML =
+                '<option value="all">Alle Projekte</option>' +
+                projects
+                    .map(
+                        (project) =>
+                            `<option value="${project.replace(/"/g, '&quot;')}">${project}</option>`
+                    )
+                    .join('');
+            select.value = projects.includes(current) || current === 'all' ? current : 'all';
+            projectFilter = select.value;
+        }
+
+        function eventsForTable() {
+            let events = filteredEvents();
+            if (projectFilter !== 'all') {
+                const api = getMarkersApi();
+                if (api) {
+                    events = events.filter((event) => {
+                        const marker = api.getMarkerForEvent(event, api.getStore().markers);
+                        return marker?.project === projectFilter;
+                    });
+                }
+            }
+            if (eventsModelFilter !== 'all') {
+                events = events.filter((event) => event.model === eventsModelFilter);
+            }
+            if (eventsKindFilter !== 'all') {
+                events = events.filter((event) => event.kind === eventsKindFilter);
+            }
+            if (eventsIncludedOnly) {
+                events = events.filter((event) => event.isIncluded);
+            }
+            const minCents = Math.round(eventsMinCostUsd * 100);
+            if (minCents > 0) {
+                events = events.filter((event) => event.costCents >= minCents);
+            }
+            return events;
+        }
+
+        function updateEventsFilterOptions(events) {
+            const modelSelect = document.getElementById('events-model-filter');
+            const kindSelect = document.getElementById('events-kind-filter');
+            if (!modelSelect || !kindSelect) {
+                return;
+            }
+            const models = [...new Set(events.map((e) => e.model).filter(Boolean))].sort();
+            const kinds = [...new Set(events.map((e) => e.kind).filter(Boolean))].sort();
+            const currentModel = eventsModelFilter;
+            const currentKind = eventsKindFilter;
+            modelSelect.innerHTML =
+                `<option value="all">${t('allModels')}</option>` +
+                models.map((m) => `<option value="${m.replace(/"/g, '&quot;')}">${m}</option>`).join('');
+            kindSelect.innerHTML =
+                `<option value="all">${t('allKinds')}</option>` +
+                kinds.map((k) => `<option value="${k.replace(/"/g, '&quot;')}">${k}</option>`).join('');
+            modelSelect.value = models.includes(currentModel) || currentModel === 'all' ? currentModel : 'all';
+            kindSelect.value = kinds.includes(currentKind) || currentKind === 'all' ? currentKind : 'all';
+            eventsModelFilter = modelSelect.value;
+            eventsKindFilter = kindSelect.value;
+        }
+
+        function sortEventsForTable(events) {
+            const dir = eventsSortDir === 'asc' ? 1 : -1;
+            return [...events].sort((a, b) => {
+                let av;
+                let bv;
+                switch (eventsSortColumn) {
+                    case 'user':
+                        av = a.userLabel;
+                        bv = b.userLabel;
+                        break;
+                    case 'model':
+                        av = a.model;
+                        bv = b.model;
+                        break;
+                    case 'kind':
+                        av = a.kind;
+                        bv = b.kind;
+                        break;
+                    case 'output':
+                        av = a.outputTokens;
+                        bv = b.outputTokens;
+                        break;
+                    case 'total':
+                        av = a.totalTokens;
+                        bv = b.totalTokens;
+                        break;
+                    case 'cost':
+                        av = a.costCents;
+                        bv = b.costCents;
+                        break;
+                    default:
+                        av = a.timestamp.getTime();
+                        bv = b.timestamp.getTime();
+                        break;
+                }
+                if (av < bv) {
+                    return -dir;
+                }
+                if (av > bv) {
+                    return dir;
+                }
+                return 0;
+            });
+        }
+
+        function csvEscape(value) {
+            const str = String(value ?? '');
+            if (/[",\n]/.test(str)) {
+                return `"${str.replace(/"/g, '""')}"`;
+            }
+            return str;
+        }
+
+        function downloadText(filename, text, mime) {
+            const blob = new Blob([text], { type: mime });
+            const anchor = document.createElement('a');
+            anchor.href = URL.createObjectURL(blob);
+            anchor.download = filename;
+            anchor.click();
+            URL.revokeObjectURL(anchor.href);
+        }
+
+        function exportFilteredEventsCsv() {
+            const events = sortEventsForTable(eventsForTable());
+            const header = [
+                'Date',
+                'User',
+                'Model',
+                'Kind',
+                'Input w Cache Write',
+                'Input w/o Cache',
+                'Cache Read',
+                'Output',
+                'Total',
+                'Cost',
+            ];
+            const lines = [header.join(',')];
+            for (const event of events) {
+                lines.push(
+                    [
+                        event.timestamp.toISOString(),
+                        event.userLabel,
+                        event.model,
+                        event.kind,
+                        event.inputWithCacheWrite,
+                        event.inputNoCache,
+                        event.cacheRead,
+                        event.outputTokens,
+                        event.totalTokens,
+                        formatEventCost(event),
+                    ]
+                        .map(csvEscape)
+                        .join(',')
+                );
+            }
+            downloadText(
+                `cursor-events-${new Date().toISOString().slice(0, 10)}.csv`,
+                lines.join('\n'),
+                'text/csv;charset=utf-8'
+            );
+        }
+
+        function exportFilteredEventsJson() {
+            const events = sortEventsForTable(eventsForTable());
+            downloadText(
+                `cursor-events-${new Date().toISOString().slice(0, 10)}.json`,
+                JSON.stringify(events, null, 2),
+                'application/json'
+            );
+        }
+
+        function syncEventsSortHeaders() {
+            document.querySelectorAll('.usage-table--events th[data-sort-col]').forEach((th) => {
+                const col = th.getAttribute('data-sort-col');
+                th.classList.toggle('sort-active', col === eventsSortColumn);
+                th.classList.toggle('sort-desc', col === eventsSortColumn && eventsSortDir === 'desc');
+            });
+        }
+
+        function openMarkerModal(preset = {}) {
+            const modal = document.getElementById('marker-modal');
+            const api = getMarkersApi();
+            if (!modal || !api) {
+                return;
+            }
+
+            api.hideChartPopover(true);
+            const marker = preset.marker;
+            document.getElementById('marker-id').value = marker?.id || '';
+            document.getElementById('marker-user').value =
+                marker?.user || preset.user || (userFilter === 'all' ? getDefaultUserId() : userFilter);
+            document.getElementById('marker-project').value = marker?.project || '';
+            document.getElementById('marker-task').value = marker?.task || '';
+            document.getElementById('marker-note').value = marker?.note || '';
+
+            let startIso = marker?.start;
+            if (!startIso) {
+                startIso = new Date().toISOString();
+            }
+            document.getElementById('marker-start').value = api.toDatetimeLocalValue(startIso);
+            document.getElementById('marker-end').value = marker?.end
+                ? api.toDatetimeLocalValue(marker.end)
+                : '';
+
+            document.getElementById('marker-modal-title').textContent = marker
+                ? 'Marker bearbeiten'
+                : 'Projekt-Marker setzen';
+            modal.hidden = false;
+        }
+
+        function closeMarkerModal() {
+            const modal = document.getElementById('marker-modal');
+            if (modal) {
+                modal.hidden = true;
+            }
+        }
+
+        async function handleMarkerFormSubmit(event) {
+            event.preventDefault();
+            const api = getMarkersApi();
+            if (!api) {
+                return;
+            }
+
+            const id = document.getElementById('marker-id').value.trim();
+            const user = document.getElementById('marker-user').value.trim() || getDefaultUserId();
+            const start = api.fromDatetimeLocalValue(document.getElementById('marker-start').value);
+            const endRaw = document.getElementById('marker-end').value;
+            const end = endRaw ? api.fromDatetimeLocalValue(endRaw) : null;
+            if (!start) {
+                return;
+            }
+
+            const existing = id ? api.getStore().markers.find((m) => m.id === id) : null;
+            api.upsertMarker({
+                id: id || undefined,
+                user,
+                start,
+                end,
+                project: document.getElementById('marker-project').value,
+                task: document.getElementById('marker-task').value,
+                note: document.getElementById('marker-note').value,
+                createdAt: existing?.createdAt,
+            });
+
+            await persistMarkers();
+            closeMarkerModal();
+            updateProjectFilterOptions();
+            renderAll();
+        }
+
+        async function deleteMarkerById(id) {
+            const api = getMarkersApi();
+            if (!api || !id) {
+                return;
+            }
+            api.removeMarker(id);
+            await persistMarkers();
+            updateProjectFilterOptions();
+            renderAll();
+        }
+
+        function renderMarkerTable(events) {
+            const bodyEl = document.getElementById('marker-table-body');
+            const statusEl = document.getElementById('marker-table-status');
+            const api = getMarkersApi();
+            if (!bodyEl || !api) {
+                return;
+            }
+
+            const filterEndMs = events.length
+                ? events[events.length - 1].timestamp.getTime()
+                : Date.now();
+            const users =
+                userFilter === 'all' ? getParser().USER_ORDER : [userFilter];
+            const rows = [];
+
+            for (const userId of users) {
+                const userEvents =
+                    userFilter === 'all'
+                        ? events.filter((e) => e.userLabel === userId)
+                        : events;
+                const intervals = api.computeIntervalRows(
+                    userEvents,
+                    api.getStore().markers,
+                    userId,
+                    filterEndMs
+                );
+                for (const entry of intervals) {
+                    rows.push({ ...entry, userId });
+                }
+            }
+
+            rows.sort((a, b) => a.stats.startMs - b.stats.startMs);
+
+            if (!rows.length) {
+                bodyEl.innerHTML =
+                    '<tr><td class="usage-table__empty" colspan="10">Noch keine Marker — „Marker setzen“ in der Übersicht</td></tr>';
+                return;
+            }
+
+            bodyEl.innerHTML = rows
+                .map(({ marker, stats, userId }) => {
+                    const endLabel = marker.end
+                        ? dateTimeFmt.format(new Date(marker.end))
+                        : `${dateTimeFmt.format(new Date(stats.endMs))} *`;
+                    return `<tr class="usage-table__row--clickable" data-marker-id="${marker.id}">
+                        <td>${dateTimeFmt.format(new Date(marker.start))}</td>
+                        <td>${endLabel}</td>
+                        <td class="usage-table__user usage-table__user--${userId}">${userId}</td>
+                        <td>${marker.project}</td>
+                        <td>${marker.task || '—'}</td>
+                        <td>${numberFmt.format(stats.calls)}</td>
+                        <td class="usage-table__total">${numberFmt.format(stats.totalTokens)}</td>
+                        <td>${numberFmt.format(stats.outputTokens)}</td>
+                        <td>${currencyFmt.format(stats.costCents / 100)}</td>
+                        <td class="usage-table__actions">
+                            <button type="button" class="usage-table__btn-delete" data-marker-delete="${marker.id}">×</button>
+                        </td>
+                    </tr>`;
+                })
+                .join('');
+
+            if (statusEl) {
+                statusEl.textContent = `${numberFmt.format(rows.length)} Marker · * = implizites Intervall-Ende`;
+            }
+        }
+
+        function initMarkerUi() {
+            document.getElementById('marker-add-overview')?.addEventListener('click', () => {
+                openMarkerModal();
+            });
+            document.getElementById('marker-form')?.addEventListener('submit', handleMarkerFormSubmit);
+            document.getElementById('marker-cancel-btn')?.addEventListener('click', closeMarkerModal);
+            document.getElementById('marker-modal-backdrop')?.addEventListener('click', closeMarkerModal);
+
+            document.getElementById('marker-table-body')?.addEventListener('click', (event) => {
+                const deleteBtn = event.target.closest('[data-marker-delete]');
+                if (deleteBtn) {
+                    event.stopPropagation();
+                    deleteMarkerById(deleteBtn.dataset.markerDelete);
+                    return;
+                }
+                const row = event.target.closest('[data-marker-id]');
+                if (!row) {
+                    return;
+                }
+                const api = getMarkersApi();
+                const marker = api?.getStore().markers.find((m) => m.id === row.dataset.markerId);
+                if (marker) {
+                    openMarkerModal({ marker });
+                }
+            });
+
+            document.getElementById('marker-export-btn')?.addEventListener('click', () => {
+                const api = getMarkersApi();
+                if (!api) {
+                    return;
+                }
+                const blob = new Blob([JSON.stringify(api.exportStore(), null, 2)], {
+                    type: 'application/json',
+                });
+                const url = URL.createObjectURL(blob);
+                const anchor = document.createElement('a');
+                anchor.href = url;
+                anchor.download = `cursor-markers-${new Date().toISOString().slice(0, 10)}.json`;
+                anchor.click();
+                URL.revokeObjectURL(url);
+            });
+
+            document.getElementById('marker-import-input')?.addEventListener('change', async (event) => {
+                const file = event.target.files?.[0];
+                event.target.value = '';
+                if (!file) {
+                    return;
+                }
+                const api = getMarkersApi();
+                if (!api) {
+                    return;
+                }
+                try {
+                    const payload = JSON.parse(await file.text());
+                    api.importStore(payload, true);
+                    await persistMarkers();
+                    updateProjectFilterOptions();
+                    renderAll();
+                } catch (error) {
+                    document.getElementById('marker-table-status').textContent =
+                        `Import fehlgeschlagen: ${error.message}`;
+                }
+            });
+        }
+
+        function getEventsPageSizeFromButton(btn) {
+            return Number.parseInt(btn.getAttribute('data-events-page-size'), 10);
+        }
+
+        function initEventsSectionUi() {
+            document.getElementById('project-filter')?.addEventListener('change', (event) => {
+                projectFilter = event.target.value;
+                eventsPageIndex = 0;
+                renderEventsTable(eventsForTable());
+            });
+
+            document.getElementById('events-model-filter')?.addEventListener('change', (event) => {
+                eventsModelFilter = event.target.value;
+                eventsPageIndex = 0;
+                renderEventsTable(eventsForTable());
+            });
+
+            document.getElementById('events-kind-filter')?.addEventListener('change', (event) => {
+                eventsKindFilter = event.target.value;
+                eventsPageIndex = 0;
+                renderEventsTable(eventsForTable());
+            });
+
+            document.getElementById('events-min-cost')?.addEventListener('change', (event) => {
+                eventsMinCostUsd = Number.parseFloat(event.target.value) || 0;
+                eventsPageIndex = 0;
+                renderEventsTable(eventsForTable());
+            });
+
+            document.getElementById('events-included-only')?.addEventListener('change', (event) => {
+                eventsIncludedOnly = event.target.checked;
+                eventsPageIndex = 0;
+                renderEventsTable(eventsForTable());
+            });
+
+            document.getElementById('events-export-csv-btn')?.addEventListener('click', () => {
+                exportFilteredEventsCsv();
+            });
+
+            document.getElementById('events-export-json-btn')?.addEventListener('click', () => {
+                exportFilteredEventsJson();
+            });
+
+            document.querySelectorAll('[data-events-group]').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    eventsGroupMode = btn.dataset.eventsGroup;
+                    localStorage.setItem('events-group-mode', eventsGroupMode);
+                    syncEventsGroupModeButtons();
+                    collapsedEventGroups.clear();
+                    renderEventsTable(eventsForTable());
+                });
+            });
+            syncEventsGroupModeButtons();
+
+            document.querySelectorAll('[data-events-page-size]').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    const size = getEventsPageSizeFromButton(btn);
+                    if (!EVENTS_PAGE_SIZE_OPTIONS.includes(size)) {
+                        return;
+                    }
+                    eventsPageSize = size;
+                    eventsPageIndex = 0;
+                    localStorage.setItem(EVENTS_PAGE_SIZE_STORAGE_KEY, String(size));
+                    syncEventsPageSizeButtons();
+                    renderEventsTable(eventsForTable());
+                });
+            });
+            syncEventsPageSizeButtons();
+
+            document.getElementById('events-prev-btn')?.addEventListener('click', () => {
+                if (eventsPageIndex > 0) {
+                    eventsPageIndex -= 1;
+                    renderEventsTable(eventsForTable());
+                }
+            });
+
+            document.getElementById('events-next-btn')?.addEventListener('click', () => {
+                eventsPageIndex += 1;
+                renderEventsTable(eventsForTable());
+            });
+
+            document.querySelectorAll('.usage-table--events th[data-sort-col]').forEach((th) => {
+                th.addEventListener('click', () => {
+                    const col = th.getAttribute('data-sort-col');
+                    if (!col) {
+                        return;
+                    }
+                    if (eventsSortColumn === col) {
+                        eventsSortDir = eventsSortDir === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        eventsSortColumn = col;
+                        eventsSortDir = col === 'time' ? 'desc' : 'asc';
+                    }
+                    eventsPageIndex = 0;
+                    renderEventsTable(eventsForTable());
+                });
+            });
+
+            document.getElementById('events-table-body')?.addEventListener('click', (event) => {
+                const row = event.target.closest('.usage-table__group-header--toggle');
+                if (!row) {
+                    return;
+                }
+                const key = row.getAttribute('data-group-key');
+                if (!key) {
+                    return;
+                }
+                if (collapsedEventGroups.has(key)) {
+                    collapsedEventGroups.delete(key);
+                    row.classList.remove('usage-table__group-header--collapsed');
+                } else {
+                    collapsedEventGroups.add(key);
+                    row.classList.add('usage-table__group-header--collapsed');
+                }
+                document
+                    .querySelectorAll(`tr[data-group-member="${CSS.escape(key)}"]`)
+                    .forEach((member) => {
+                        member.hidden = collapsedEventGroups.has(key);
+                    });
+            });
+        }
+
+        function syncEventsGroupModeButtons() {
+            document.querySelectorAll('[data-events-group]').forEach((btn) => {
+                btn.classList.toggle('btn--active', btn.dataset.eventsGroup === eventsGroupMode);
+            });
+        }
+
+        function syncEventsPageSizeButtons() {
+            document.querySelectorAll('[data-events-page-size]').forEach((btn) => {
+                btn.classList.toggle(
+                    'btn--active',
+                    getEventsPageSizeFromButton(btn) === eventsPageSize
+                );
+            });
+        }
+
+        function emptyEventGroupStats() {
+            return {
+                calls: 0,
+                totalTokens: 0,
+                outputTokens: 0,
+                inputNoCache: 0,
+                inputWithCacheWrite: 0,
+                cacheRead: 0,
+                costCents: 0,
+            };
+        }
+
+        function addEventToGroupStats(stats, event) {
+            stats.calls += 1;
+            stats.totalTokens += event.totalTokens ?? 0;
+            stats.outputTokens += event.outputTokens ?? 0;
+            stats.inputNoCache += event.inputNoCache ?? 0;
+            stats.inputWithCacheWrite += event.inputWithCacheWrite ?? 0;
+            stats.cacheRead += event.cacheRead ?? 0;
+            stats.costCents += event.costCents ?? 0;
+        }
+
+        function computeTotalEventStats(events) {
+            const stats = emptyEventGroupStats();
+            for (const event of events) {
+                addEventToGroupStats(stats, event);
+            }
+            return stats;
+        }
+
+        function getEventGroupKey(event, mode, api, markers) {
+            const marker = api?.getMarkerForEvent(event, markers);
+            if (mode === 'marker') {
+                return marker ? marker.id : EVENTS_UNMARKED_KEY;
+            }
+            if (!marker) {
+                return EVENTS_UNMARKED_KEY;
+            }
+            return `${marker.project}|${marker.task || ''}`;
+        }
+
+        function buildEventGroupLabel(marker, mode) {
+            if (!marker) {
+                return 'Ohne Marker';
+            }
+            if (marker.task) {
+                return `${marker.project} — ${marker.task}`;
+            }
+            return marker.project;
+        }
+
+        function formatEventGroupRange(marker, api, filterEndMs) {
+            if (!marker || !api) {
+                return '';
+            }
+            const endMs = marker.end
+                ? new Date(marker.end).getTime()
+                : api.resolveIntervalEndMs(marker, api.getStore().markers, filterEndMs);
+            const endLabel = marker.end
+                ? dateTimeFmt.format(new Date(marker.end))
+                : `${dateTimeFmt.format(new Date(endMs))} *`;
+            return `${dateTimeFmt.format(new Date(marker.start))} – ${endLabel}`;
+        }
+
+        function formatEventGroupCost(stats) {
+            return currencyFmt.format(stats.costCents / 100);
+        }
+
+        function buildEventGroups(events, mode, api) {
+            const markers = api?.getStore().markers ?? [];
+            const map = new Map();
+
+            for (const event of events) {
+                const marker = api?.getMarkerForEvent(event, markers);
+                const key = getEventGroupKey(event, mode, api, markers);
+                if (!map.has(key)) {
+                    map.set(key, {
+                        key,
+                        label: buildEventGroupLabel(marker, mode),
+                        marker: mode === 'marker' ? marker : null,
+                        events: [],
+                        stats: emptyEventGroupStats(),
+                        latestMs: 0,
+                    });
+                }
+                const group = map.get(key);
+                group.events.push(event);
+                addEventToGroupStats(group.stats, event);
+                const eventMs = event.timestamp.getTime();
+                if (eventMs > group.latestMs) {
+                    group.latestMs = eventMs;
+                }
+            }
+
+            const groups = [...map.values()];
+            for (const group of groups) {
+                group.events.sort((a, b) => b.timestamp - a.timestamp);
+            }
+            groups.sort((a, b) => b.latestMs - a.latestMs);
+            return groups;
+        }
+
+        function renderEventsStatsHeader(groups, totalStats, mode, api, filterEndMs, displayMeta) {
+            const statsEl = document.getElementById('events-stats');
+            const totalsEl = document.getElementById('events-stats-totals');
+            const hintEl = document.getElementById('events-stats-hint');
+            const headEl = document.getElementById('events-groups-table-head');
+            const bodyEl = document.getElementById('events-groups-table-body');
+            if (!statsEl || !totalsEl || !bodyEl) {
+                return;
+            }
+
+            statsEl.hidden = false;
+            const scopeHint =
+                displayMeta.shown < displayMeta.total
+                    ? `<span class="events-stat__scope">${numberFmt.format(displayMeta.shown)} von ${numberFmt.format(displayMeta.total)} Anfragen</span>`
+                    : `<span class="events-stat__scope">${numberFmt.format(displayMeta.shown)} Anfragen</span>`;
+            totalsEl.innerHTML = `
+                <div class="events-stat events-stat--scope">
+                    <span class="events-stat__label">Angezeigt</span>
+                    <span class="events-stat__value">${scopeHint}</span>
+                </div>
+                <div class="events-stat">
+                    <span class="events-stat__label">Total Tokens</span>
+                    <span class="events-stat__value">${numberFmt.format(totalStats.totalTokens)}</span>
+                </div>
+                <div class="events-stat">
+                    <span class="events-stat__label">Output</span>
+                    <span class="events-stat__value">${numberFmt.format(totalStats.outputTokens)}</span>
+                </div>
+                <div class="events-stat">
+                    <span class="events-stat__label">Cache Read</span>
+                    <span class="events-stat__value">${numberFmt.format(totalStats.cacheRead)}</span>
+                </div>
+                <div class="events-stat">
+                    <span class="events-stat__label">Kosten</span>
+                    <span class="events-stat__value">${formatEventGroupCost(totalStats)}</span>
+                </div>
+            `;
+
+            const markedGroups = groups.filter((group) => group.key !== EVENTS_UNMARKED_KEY);
+            if (hintEl) {
+                if (groups.length && !markedGroups.length) {
+                    hintEl.hidden = false;
+                    hintEl.textContent = 'Keine markierten Aufgaben im Zeitraum';
+                } else {
+                    hintEl.hidden = true;
+                    hintEl.textContent = '';
+                }
+            }
+
+            const showRange = mode === 'marker';
+            if (headEl) {
+                headEl.innerHTML = `<tr>
+                    <th>Aufgabe</th>
+                    ${showRange ? '<th>Zeitraum</th>' : ''}
+                    <th>Anfragen</th>
+                    <th class="usage-table__total">Total</th>
+                    <th>Output</th>
+                    <th>Cache Read</th>
+                    <th>Kosten</th>
+                </tr>`;
+            }
+
+            const summaryGroups = [...groups].sort(
+                (a, b) => b.stats.totalTokens - a.stats.totalTokens
+            );
+            bodyEl.innerHTML = summaryGroups
+                .map((group) => {
+                    const rangeCell =
+                        showRange && group.marker
+                            ? `<td>${formatEventGroupRange(group.marker, api, filterEndMs)}</td>`
+                            : showRange
+                              ? '<td>—</td>'
+                              : '';
+                    return `<tr>
+                        <td>${group.label}</td>
+                        ${rangeCell}
+                        <td>${numberFmt.format(group.stats.calls)}</td>
+                        <td class="usage-table__total">${numberFmt.format(group.stats.totalTokens)}</td>
+                        <td>${numberFmt.format(group.stats.outputTokens)}</td>
+                        <td>${numberFmt.format(group.stats.cacheRead)}</td>
+                        <td>${formatEventGroupCost(group.stats)}</td>
+                    </tr>`;
+                })
+                .join('');
+        }
+
+        function setLiveLoading(loading, message = 'Live-Daten werden geladen…') {
+            liveLoading = loading;
+            const overlay = document.getElementById('live-loading');
+            const text = document.getElementById('live-loading-text');
+            const refreshBtn = document.getElementById('live-refresh-btn');
+
+            if (overlay) {
+                overlay.hidden = !loading;
+                overlay.setAttribute('aria-busy', loading ? 'true' : 'false');
+            }
+            if (text) {
+                text.textContent = message;
+            }
+
+            document.querySelectorAll('[data-source]').forEach((btn) => {
+                btn.disabled = loading;
+            });
+            if (refreshBtn) {
+                refreshBtn.disabled = loading;
+                refreshBtn.classList.toggle('btn--loading', loading);
+                refreshBtn.setAttribute('aria-busy', loading ? 'true' : 'false');
+            }
+        }
+
+        function getParser() {
+            return window.CursorAnalytics.parser;
+        }
+
+        function getMetrics() {
+            return window.CursorAnalytics.metrics;
+        }
+
+        function getCharts() {
+            return window.CursorAnalytics.charts;
+        }
+
+        function getUsersConfig() {
+            return window.CursorAnalytics?.usersConfig;
+        }
+
+        function getI18n() {
+            return window.CursorAnalytics?.i18n;
+        }
+
+        function t(key) {
+            return getI18n()?.t(key) ?? key;
+        }
+
+        function getValidUserFilters() {
+            return getUsersConfig()?.getValidUserFilters() || ['all', 'primary', 'secondary'];
+        }
+
+        function getDefaultUserId() {
+            return getUsersConfig()?.getDefaultUserId() || 'primary';
+        }
+
+        function emptyEventsByUser() {
+            return getUsersConfig()?.emptyEventsByUser() || { primary: [], secondary: [] };
+        }
+
+        function normalizeUserFilter() {
+            const valid = getValidUserFilters();
+            if (!valid.includes(userFilter)) {
+                userFilter = 'all';
+                localStorage.setItem(USER_FILTER_STORAGE_KEY, userFilter);
+            }
+        }
+
+        function buildUserFilterToolbar() {
+            const host = document.getElementById('user-filter-toolbar');
+            if (!host) {
+                return;
+            }
+            const label = host.querySelector('.toolbar-label');
+            const allBtn = host.querySelector('[data-user="all"]');
+            host.querySelectorAll('[data-user]:not([data-user="all"])').forEach((el) => el.remove());
+            const { USER_ORDER, USERS } = getParser();
+            for (const userId of USER_ORDER) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn';
+                btn.dataset.user = userId;
+                btn.textContent = USERS[userId]?.label || userId;
+                host.appendChild(btn);
+            }
+            if (label) {
+                label.textContent = t('users');
+            }
+            if (allBtn) {
+                allBtn.textContent = t('usersAll');
+            }
+            const storedUserBtn = document.querySelector(`[data-user="${userFilter}"]`);
+            if (storedUserBtn) {
+                setActiveButtons('[data-user]', storedUserBtn);
+            }
+            host.querySelectorAll('[data-user]').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    userFilter = btn.dataset.user;
+                    localStorage.setItem(USER_FILTER_STORAGE_KEY, userFilter);
+                    setActiveButtons('[data-user]', btn);
+                    renderAll();
+                });
+            });
+        }
+
+        function buildMarkerUserSelect() {
+            const select = document.getElementById('marker-user');
+            if (!select) {
+                return;
+            }
+            const { USER_ORDER, USERS } = getParser();
+            select.innerHTML =
+                USER_ORDER.map(
+                    (userId) =>
+                        `<option value="${userId}">${USERS[userId]?.label || userId}</option>`
+                ).join('') + `<option value="all">${t('usersAll')}</option>`;
+        }
+
+        function applyI18nLabels() {
+            document.querySelectorAll('[data-i18n]').forEach((el) => {
+                const key = el.getAttribute('data-i18n');
+                if (key) {
+                    el.textContent = t(key);
+                }
+            });
+            const locale = getI18n()?.getLocale() || 'de';
+            document.querySelectorAll('[data-locale]').forEach((btn) => {
+                btn.classList.toggle('btn--active', btn.dataset.locale === locale);
+            });
+        }
+
+        function initLocaleSwitcher() {
+            document.querySelectorAll('[data-locale]').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    getI18n()?.switchLocale(btn.dataset.locale);
+                    rebuildFormatters();
+                    applyI18nLabels();
+                    buildUserFilterToolbar();
+                    buildMarkerUserSelect();
+                    renderAll();
+                });
+            });
+            getI18n()?.onLocaleChange(() => {
+                rebuildFormatters();
+                applyI18nLabels();
+            });
+            applyI18nLabels();
+        }
+
+        let eventsPageIndex = 0;
+        const collapsedEventGroups = new Set();
+        let eventsModelFilter = 'all';
+        let eventsKindFilter = 'all';
+        let eventsMinCostUsd = 0;
+        let eventsIncludedOnly = false;
+        let eventsSortColumn = 'time';
+        let eventsSortDir = 'desc';
+
+        function allCsvEvents() {
+            const { USER_ORDER } = getParser();
+            return USER_ORDER.flatMap((userId) => eventsByUser[userId] || []);
+        }
+
+        function allLiveEvents() {
+            const { USER_ORDER } = getParser();
+            return USER_ORDER.flatMap((userId) => liveEventsByUser[userId] || []);
+        }
+
+        function activeEvents() {
+            const { mergeEvents } = getParser();
+            if (dataSource === 'csv') {
+                return allCsvEvents();
+            }
+            if (dataSource === 'live') {
+                return allLiveEvents();
+            }
+            return mergeEvents([allCsvEvents(), allLiveEvents()]).events;
+        }
+
+        function filteredEvents() {
+            const metrics = getMetrics();
+            let events = activeEvents();
+            if (selectionMode === 'count') {
+                events = metrics.filterEventsByCount(events, range);
+            } else {
+                events = metrics.filterEvents(events, range);
+            }
+            events = metrics.filterByUser(events, userFilter);
+            return events;
+        }
+
+        function setStatus(text, isError = false) {
+            const el = document.getElementById('status-line');
+            el.textContent = text;
+            el.classList.toggle('status-error', isError);
+        }
+
+        function setActiveButtons(selector, activeBtn) {
+            document.querySelectorAll(selector).forEach((btn) => {
+                btn.classList.toggle('btn--active', btn === activeBtn);
+            });
+        }
+
+        function toDateInputValue(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function toDateTimeLocalValue(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${year}-${month}-${day}T${hours}:${minutes}`;
+        }
+
+        function startOfLocalDay(date) {
+            return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
+        }
+
+        function getDefaultCustomFrom() {
+            const from = startOfLocalDay(new Date());
+            from.setDate(from.getDate() - 2);
+            return toDateTimeLocalValue(from);
+        }
+
+        function getDefaultCustomTo() {
+            return toDateTimeLocalValue(new Date());
+        }
+
+        function loadStoredCustomRange() {
+            try {
+                const raw = localStorage.getItem(CUSTOM_RANGE_STORAGE_KEY);
+                if (!raw) {
+                    return null;
+                }
+                const parsed = JSON.parse(raw);
+                if (parsed?.customFrom && parsed?.customTo) {
+                    return { customFrom: parsed.customFrom, customTo: parsed.customTo };
+                }
+            } catch {
+                return null;
+            }
+            return null;
+        }
+
+        function saveStoredCustomRange(from, to) {
+            if (suppressCustomRangePersist || !from || !to) {
+                return;
+            }
+            localStorage.setItem(
+                CUSTOM_RANGE_STORAGE_KEY,
+                JSON.stringify({ customFrom: from, customTo: to })
+            );
+        }
+
+        function clearStoredCustomRange() {
+            localStorage.removeItem(CUSTOM_RANGE_STORAGE_KEY);
+        }
+
+        function clampDateTimeLocalValue(value, minValue, maxValue) {
+            if (!value) {
+                return value;
+            }
+            if (minValue && value < minValue) {
+                return minValue;
+            }
+            if (maxValue && value > maxValue) {
+                return maxValue;
+            }
+            return value;
+        }
+
+        function resolveCustomRangeValues(minValue, maxValue) {
+            const stored = loadStoredCustomRange();
+            let customFrom = stored?.customFrom ?? getDefaultCustomFrom();
+            let customTo = stored?.customTo ?? getDefaultCustomTo();
+            if (minValue && maxValue) {
+                customFrom = clampDateTimeLocalValue(customFrom, minValue, maxValue);
+                customTo = clampDateTimeLocalValue(customTo, minValue, maxValue);
+                if (customFrom > customTo) {
+                    return { customFrom: customTo, customTo: customFrom };
+                }
+            }
+            return { customFrom, customTo };
+        }
+
+        function setCustomRangeInputs(from, to) {
+            const fromEl = document.getElementById('custom-from');
+            const toEl = document.getElementById('custom-to');
+            if (!fromEl || !toEl) {
+                return;
+            }
+            suppressCustomRangePersist = true;
+            fromEl.value = from;
+            toEl.value = to;
+            suppressCustomRangePersist = false;
+        }
+
+        function parseDateInputValue(value) {
+            if (!value) {
+                return null;
+            }
+            const [year, month, day] = value.split('-').map(Number);
+            if (!year || !month || !day) {
+                return null;
+            }
+            return new Date(year, month - 1, day);
+        }
+
+        function parseDateTimeLocalValue(value) {
+            if (!value) {
+                return null;
+            }
+            if (String(value).includes('T')) {
+                const date = new Date(value);
+                return Number.isNaN(date.getTime()) ? null : date;
+            }
+            return parseDateInputValue(value);
+        }
+
+        function getAllLoadedEvents() {
+            const { mergeEvents } = getParser();
+            return mergeEvents([allCsvEvents(), allLiveEvents()]).events;
+        }
+
+        function eventDateBounds(events) {
+            if (!events.length) {
+                return null;
+            }
+            let minMs = events[0].timestamp.getTime();
+            let maxMs = minMs;
+            for (const event of events) {
+                const ms = event.timestamp.getTime();
+                if (ms < minMs) {
+                    minMs = ms;
+                }
+                if (ms > maxMs) {
+                    maxMs = ms;
+                }
+            }
+            return {
+                minValue: toDateTimeLocalValue(new Date(minMs)),
+                maxValue: toDateTimeLocalValue(new Date(maxMs)),
+            };
+        }
+
+        function updateCustomDateBounds() {
+            const fromEl = document.getElementById('custom-from');
+            const toEl = document.getElementById('custom-to');
+            if (!fromEl || !toEl) {
+                return;
+            }
+
+            const events = getAllLoadedEvents();
+            let minValue = null;
+            let maxValue = null;
+
+            if (events.length) {
+                const bounds = eventDateBounds(events);
+                if (bounds) {
+                    minValue = bounds.minValue;
+                    maxValue = bounds.maxValue;
+                    fromEl.min = minValue;
+                    fromEl.max = maxValue;
+                    toEl.min = minValue;
+                    toEl.max = maxValue;
+                }
+            }
+
+            let { customFrom, customTo } = resolveCustomRangeValues(minValue, maxValue);
+
+            if (range.mode === 'custom') {
+                if (range.customFrom) {
+                    customFrom =
+                        minValue && maxValue
+                            ? clampDateTimeLocalValue(range.customFrom, minValue, maxValue)
+                            : range.customFrom;
+                }
+                if (range.customTo) {
+                    customTo =
+                        minValue && maxValue
+                            ? clampDateTimeLocalValue(range.customTo, minValue, maxValue)
+                            : range.customTo;
+                }
+            }
+
+            setCustomRangeInputs(customFrom, customTo);
+        }
+
+        function resetCustomRange() {
+            clearStoredCustomRange();
+
+            const events = getAllLoadedEvents();
+            let minValue = null;
+            let maxValue = null;
+            if (events.length) {
+                const bounds = eventDateBounds(events);
+                if (bounds) {
+                    minValue = bounds.minValue;
+                    maxValue = bounds.maxValue;
+                }
+            }
+
+            const { customFrom, customTo } = resolveCustomRangeValues(minValue, maxValue);
+            setCustomRangeInputs(customFrom, customTo);
+
+            if (range.mode === 'custom') {
+                applyCustomRange();
+            }
+        }
+
+        function clearRangeButtons() {
+            document
+                .querySelectorAll(
+                    '#time-range-group [data-hours], #time-range-group [data-all], #custom-apply'
+                )
+                .forEach((button) => {
+                    button.classList.remove('btn--active');
+                });
+        }
+
+        function clearCountButtons() {
+            document
+                .querySelectorAll(
+                    '#count-range-group [data-count], #count-range-group [data-count-all], #count-custom-apply'
+                )
+                .forEach((button) => {
+                    button.classList.remove('btn--active');
+                });
+        }
+
+        function updateSelectionModeUi() {
+            const timeGroup = document.getElementById('time-range-group');
+            const countGroup = document.getElementById('count-range-group');
+            if (timeGroup) {
+                timeGroup.hidden = selectionMode !== 'time';
+            }
+            if (countGroup) {
+                countGroup.hidden = selectionMode !== 'count';
+            }
+            document.querySelectorAll('[data-selection-mode]').forEach((btn) => {
+                btn.classList.toggle('btn--active', btn.dataset.selectionMode === selectionMode);
+            });
+        }
+
+        function syncTimeRangeButtons() {
+            clearRangeButtons();
+            if (range.mode === 'custom') {
+                document.getElementById('custom-apply')?.classList.add('btn--active');
+                return;
+            }
+            if (range.mode === 'all') {
+                document.querySelector('#time-range-group [data-all]')?.classList.add('btn--active');
+                return;
+            }
+            const activeBtn = document.querySelector(
+                `#time-range-group [data-hours="${range.hours}"]`
+            );
+            if (activeBtn) {
+                activeBtn.classList.add('btn--active');
+            } else {
+                document
+                    .querySelector(`#time-range-group [data-hours="${DEFAULT_TIME_RANGE_HOURS}"]`)
+                    ?.classList.add('btn--active');
+            }
+        }
+
+        function syncCountRangeButtons() {
+            clearCountButtons();
+            const customApply = document.getElementById('count-custom-apply');
+            if (range.mode === 'countRange') {
+                customApply?.classList.add('btn--active');
+                syncCountCustomInputs();
+                return;
+            }
+            if (range.mode === 'all') {
+                document
+                    .querySelector('#count-range-group [data-count-all]')
+                    ?.classList.add('btn--active');
+                return;
+            }
+            const activeBtn = document.querySelector(
+                `#count-range-group [data-count="${range.count}"]`
+            );
+            if (activeBtn) {
+                activeBtn.classList.add('btn--active');
+            } else {
+                document
+                    .querySelector('#count-range-group [data-count="50"]')
+                    ?.classList.add('btn--active');
+            }
+            syncCountCustomInputs();
+        }
+
+        function syncCountCustomInputs() {
+            const fromEl = document.getElementById('count-from');
+            const toEl = document.getElementById('count-to');
+            if (!fromEl || !toEl) {
+                return;
+            }
+            if (range.mode === 'countRange') {
+                fromEl.value = String(range.countFrom ?? 1);
+                toEl.value = String(range.countTo ?? 50);
+                return;
+            }
+            if (range.mode === 'count') {
+                fromEl.value = '1';
+                toEl.value = String(range.count ?? 50);
+                return;
+            }
+            fromEl.value = '1';
+            toEl.value = String(range.countTo ?? range.count ?? 50);
+        }
+
+        function rangeLabel() {
+            if (selectionMode === 'count') {
+                if (range.mode === 'all') {
+                    return 'Alle Anfragen';
+                }
+                if (range.mode === 'countRange') {
+                    return `Anfragen #${range.countFrom}–#${range.countTo} (neueste zuerst)`;
+                }
+                return `Letzte ${range.count} Anfragen`;
+            }
+            if (range.mode === 'all') {
+                return 'Alle';
+            }
+            if (range.mode === 'custom') {
+                const fromDate = parseDateTimeLocalValue(range.customFrom);
+                const toDate = parseDateTimeLocalValue(range.customTo);
+                if (fromDate && toDate) {
+                    const [startDate, endDate] =
+                        fromDate <= toDate ? [fromDate, toDate] : [toDate, fromDate];
+                    const hasTime =
+                        String(range.customFrom).includes('T') ||
+                        String(range.customTo).includes('T');
+                    const fmt = hasTime ? dateTimeFmt : dateFmt;
+                    return `${fmt.format(startDate)} – ${fmt.format(endDate)}`;
+                }
+                return 'Custom';
+            }
+            const presetLabels = {
+                1: '1 Std',
+                6: '6 Std',
+                12: '12 Std',
+                24: '1 Tag',
+                168: '7 Tage',
+                720: '30 Tage',
+            };
+            return presetLabels[range.hours] || `${range.hours} h`;
+        }
+
+        function applyPresetRange(hours, activeButton) {
+            range = {
+                mode: 'hours',
+                hours,
+                customFrom: '',
+                customTo: '',
+                count: range.count,
+            };
+            savedTimeRange = { mode: 'hours', hours, customFrom: '', customTo: '' };
+            saveStoredTimeRange(savedTimeRange);
+            clearRangeButtons();
+            if (activeButton) {
+                activeButton.classList.add('btn--active');
+            }
+            applyRangeAndRender();
+        }
+
+        function applyCountRange(count, activeButton) {
+            range = {
+                mode: 'count',
+                hours: 720,
+                customFrom: '',
+                customTo: '',
+                count,
+                countFrom: 1,
+                countTo: count,
+            };
+            savedCountRange = {
+                mode: 'count',
+                count,
+                countFrom: 1,
+                countTo: count,
+            };
+            localStorage.setItem(COUNT_STORAGE_KEY, String(count));
+            clearCountButtons();
+            if (activeButton) {
+                activeButton.classList.add('btn--active');
+            }
+            syncCountCustomInputs();
+            applyRangeAndRender();
+        }
+
+        function applyCountAll(activeButton) {
+            range = {
+                mode: 'all',
+                hours: 720,
+                customFrom: '',
+                customTo: '',
+                count: range.count,
+                countFrom: 1,
+                countTo: range.countTo ?? range.count ?? 50,
+            };
+            savedCountRange = {
+                mode: 'all',
+                count: range.count,
+                countFrom: 1,
+                countTo: range.countTo ?? range.count ?? 50,
+            };
+            clearCountButtons();
+            if (activeButton) {
+                activeButton.classList.add('btn--active');
+            }
+            applyRangeAndRender();
+        }
+
+        function applyCountCustomRange() {
+            const fromEl = document.getElementById('count-from');
+            const toEl = document.getElementById('count-to');
+            const countFrom = Math.max(1, Math.floor(Number(fromEl?.value) || 1));
+            const countTo = Math.max(countFrom, Math.floor(Number(toEl?.value) || countFrom));
+
+            if (!fromEl?.value || !toEl?.value) {
+                setStatus('Bitte Von- und Bis-Anfrage wählen.', true);
+                return;
+            }
+
+            range = {
+                mode: 'countRange',
+                hours: 720,
+                customFrom: '',
+                customTo: '',
+                count: countTo - countFrom + 1,
+                countFrom,
+                countTo,
+            };
+            savedCountRange = {
+                mode: 'countRange',
+                count: range.count,
+                countFrom,
+                countTo,
+            };
+            localStorage.setItem(COUNT_STORAGE_KEY, String(countTo));
+            clearCountButtons();
+            document.getElementById('count-custom-apply')?.classList.add('btn--active');
+            fromEl.value = String(countFrom);
+            toEl.value = String(countTo);
+            applyRangeAndRender();
+        }
+
+        function applySelectionMode(mode) {
+            if (mode === selectionMode) {
+                return;
+            }
+
+            const previousMode = selectionMode;
+
+            if (selectionMode === 'time') {
+                savedTimeRange = {
+                    mode: range.mode,
+                    hours: range.hours,
+                    customFrom: range.customFrom,
+                    customTo: range.customTo,
+                };
+                saveStoredTimeRange(savedTimeRange);
+            } else {
+                savedCountRange = {
+                    mode: range.mode,
+                    count: range.count,
+                    countFrom: range.countFrom,
+                    countTo: range.countTo,
+                };
+            }
+
+            selectionMode = mode;
+            localStorage.setItem(SELECTION_MODE_STORAGE_KEY, selectionMode);
+
+            if (selectionMode === 'count') {
+                const saved = savedCountRange;
+                range = {
+                    mode: saved.mode === 'all' ? 'all' : saved.mode === 'countRange' ? 'countRange' : 'count',
+                    hours: 720,
+                    customFrom: '',
+                    customTo: '',
+                    count: saved.count || 50,
+                    countFrom: saved.countFrom || 1,
+                    countTo: saved.countTo || saved.count || 50,
+                };
+            } else {
+                range = {
+                    ...savedTimeRange,
+                    count: range.count,
+                    countFrom: range.countFrom,
+                    countTo: range.countTo,
+                };
+                if (previousMode === 'count' && (dataSource === 'live' || dataSource === 'merge')) {
+                    liveFetchState = { fetchedAt: 0, bounds: null };
+                }
+            }
+
+            updateSelectionModeUi();
+            if (selectionMode === 'count') {
+                syncCountRangeButtons();
+            } else {
+                syncTimeRangeButtons();
+            }
+            applyRangeAndRender();
+        }
+
+        function applyCustomRange() {
+            const fromEl = document.getElementById('custom-from');
+            const toEl = document.getElementById('custom-to');
+            if (!fromEl?.value || !toEl?.value) {
+                setStatus('Bitte Von- und Bis-Zeitpunkt wählen.', true);
+                return;
+            }
+
+            range = {
+                mode: 'custom',
+                hours: DEFAULT_TIME_RANGE_HOURS,
+                customFrom: fromEl.value,
+                customTo: toEl.value,
+                count: range.count,
+            };
+            savedTimeRange = {
+                mode: 'custom',
+                hours: DEFAULT_TIME_RANGE_HOURS,
+                customFrom: fromEl.value,
+                customTo: toEl.value,
+            };
+            saveStoredCustomRange(fromEl.value, toEl.value);
+            saveStoredTimeRange(savedTimeRange);
+            clearRangeButtons();
+            document.getElementById('custom-apply')?.classList.add('btn--active');
+            applyRangeAndRender();
+        }
+
+        function renderKpis(kpis, events) {
+            const trendClass =
+                kpis.trendLabel === 'up'
+                    ? 'trend-up'
+                    : kpis.trendLabel === 'down'
+                        ? 'trend-down'
+                        : '';
+            const trendSign = kpis.trendPercent >= 0 ? '+' : '';
+
+            document.getElementById('kpi-grid').innerHTML = `
+                <div class="kpi kpi--accent">
+                    <div class="kpi__label">Total Tokens</div>
+                    <div class="kpi__value">${numberFmt.format(kpis.totalTokens)}</div>
+                    <div class="kpi__sub">${numberFmt.format(kpis.totalCalls)} Events</div>
+                </div>
+                <div class="kpi">
+                    <div class="kpi__label">Kosten</div>
+                    <div class="kpi__value">${currencyFmt.format(kpis.costCents / 100)}</div>
+                    <div class="kpi__sub">${numberFmt.format(kpis.billableEvents)} kostenpflichtig</div>
+                </div>
+                <div class="kpi">
+                    <div class="kpi__label">Included</div>
+                    <div class="kpi__value">${numberFmt.format(kpis.includedEvents)}</div>
+                    <div class="kpi__sub">im Plan enthalten</div>
+                </div>
+                <div class="kpi">
+                    <div class="kpi__label">Tagesdurchschnitt</div>
+                    <div class="kpi__value">${currencyFmt.format(kpis.dailyAvgCents / 100)}</div>
+                    <div class="kpi__sub">pro Tag</div>
+                </div>
+                <div class="kpi kpi--warn">
+                    <div class="kpi__label">Prognose (30 Tage)</div>
+                    <div class="kpi__value">${currencyFmt.format(kpis.projectedMonthlyCents / 100)}</div>
+                    <div class="kpi__sub">linear extrapoliert</div>
+                </div>
+                <div class="kpi">
+                    <div class="kpi__label">Trend</div>
+                    <div class="kpi__value ${trendClass}">${trendSign}${kpis.trendPercent.toFixed(1)} %</div>
+                    <div class="kpi__sub">${kpis.trendLabel}</div>
+                </div>
+            `;
+
+            renderBudget(kpis, events);
+        }
+
+        function getBudgetUsd() {
+            const stored = localStorage.getItem(BUDGET_STORAGE_KEY);
+            if (stored != null) {
+                return Number.parseFloat(stored);
+            }
+            return Number.parseFloat(document.getElementById('budget-input').value) || 70;
+        }
+
+        function renderBudget(kpis, events) {
+            const budgetUsd = getBudgetUsd();
+            const now = new Date();
+            const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+            const monthEvents = events.filter((e) => e.timestamp >= monthStart);
+            const spentCents = getMetrics().sumField(monthEvents, 'costCents');
+            const spentUsd = spentCents / 100;
+            const pct = budgetUsd > 0 ? Math.min(100, (spentUsd / budgetUsd) * 100) : 0;
+            const fillClass =
+                pct >= 100 ? 'budget-bar__fill--over' : pct >= 80 ? 'budget-bar__fill--warn' : '';
+
+            document.getElementById('budget-panel').innerHTML = `
+                <p class="card-meta">${pct.toFixed(1)} % des Budgets · ${currencyFmt.format(spentUsd)} von ${currencyFmt.format(budgetUsd)}</p>
+                <div class="budget-bar">
+                    <div class="budget-bar__fill ${fillClass}" style="width: ${pct}%"></div>
+                </div>
+                <p class="hint-text">Verbleibend: ${currencyFmt.format(Math.max(0, budgetUsd - spentUsd))}</p>
+            `;
+        }
+
+        function userRowClass(userLabel) {
+            const { USER_ORDER } = getParser();
+            if (USER_ORDER.includes(userLabel)) {
+                return `usage-table__row--${userLabel}`;
+            }
+            return '';
+        }
+
+        function getEventsFilterKey() {
+            return `${dataSource}|${userFilter}|${selectionMode}|${range.mode}|${range.hours}|${range.count}|${range.countFrom}|${range.countTo}|${range.customFrom}|${range.customTo}|${projectFilter}|${eventsGroupMode}|${eventsPageSize}|${eventsModelFilter}|${eventsKindFilter}|${eventsMinCostUsd}|${eventsIncludedOnly}|${eventsSortColumn}|${eventsSortDir}`;
+        }
+
+        function formatEventCost(event) {
+            if (event.isIncluded || String(event.costDisplay || '').toLowerCase() === 'included') {
+                return event.costDisplay || 'Included';
+            }
+            return currencyFmt.format(event.costCents / 100);
+        }
+
+        function renderEventTableRow(event, api, grouped, groupKey) {
+            const marker = api?.getMarkerForEvent(event, api.getStore().markers);
+            const projectLabel = grouped
+                ? marker?.task || marker?.project || '—'
+                : marker
+                  ? marker.task
+                      ? `${marker.project} — ${marker.task}`
+                      : marker.project
+                  : '—';
+            const markedClass = marker ? ' usage-table__row--marked' : '';
+            const collapsed = groupKey && collapsedEventGroups.has(groupKey);
+            const hiddenAttr = collapsed ? ' hidden' : '';
+            const memberAttr = groupKey
+                ? ` data-group-member="${String(groupKey).replace(/"/g, '&quot;')}"`
+                : '';
+            return `<tr class="${userRowClass(event.userLabel)}${markedClass} usage-table__row--group-member"${memberAttr}${hiddenAttr ? ' hidden' : ''}>
+                    <td>${dateTimeFmt.format(event.timestamp)}</td>
+                    <td class="usage-table__user usage-table__user--${event.userLabel}">${event.userLabel}</td>
+                    <td>${projectLabel}</td>
+                    <td>${event.model}</td>
+                    <td>${event.kind}</td>
+                    <td>${numberFmt.format(event.inputWithCacheWrite)}</td>
+                    <td>${numberFmt.format(event.inputNoCache)}</td>
+                    <td>${numberFmt.format(event.cacheRead)}</td>
+                    <td>${numberFmt.format(event.outputTokens)}</td>
+                    <td>${numberFmt.format(event.totalTokens)}</td>
+                    <td>${formatEventCost(event)}</td>
+                </tr>`;
+        }
+
+        function renderEventGroupHeaderRow(group, mode, api, filterEndMs) {
+            const rangeHtml =
+                mode === 'marker' && group.marker
+                    ? `<br><span class="usage-table__group-range">${formatEventGroupRange(group.marker, api, filterEndMs)}</span>`
+                    : '';
+            const title = `<strong>${group.label}</strong>${rangeHtml} · ${numberFmt.format(group.stats.calls)} Anfragen`;
+            const collapsed = collapsedEventGroups.has(group.key);
+            const collapsedClass = collapsed ? ' usage-table__group-header--collapsed' : '';
+            const safeKey = String(group.key).replace(/"/g, '&quot;');
+            return `<tr class="usage-table__group-header usage-table__group-header--toggle${collapsedClass}" data-group-key="${safeKey}" role="button" tabindex="0">
+                    <td colspan="5">${title}</td>
+                    <td>—</td>
+                    <td>—</td>
+                    <td>${numberFmt.format(group.stats.cacheRead)}</td>
+                    <td>${numberFmt.format(group.stats.outputTokens)}</td>
+                    <td class="usage-table__total">${numberFmt.format(group.stats.totalTokens)}</td>
+                    <td>${formatEventGroupCost(group.stats)}</td>
+                </tr>`;
+        }
+
+        function renderEventsTable(events) {
+            const body = document.getElementById('events-table-body');
+            const statusEl = document.getElementById('events-table-status');
+            const statsEl = document.getElementById('events-stats');
+            const paginationEl = document.getElementById('events-pagination');
+            const paginationInfo = document.getElementById('events-pagination-info');
+            const api = getMarkersApi();
+            const markers = api?.getStore().markers ?? [];
+
+            updateEventsFilterOptions(events);
+
+            const filterKey = getEventsFilterKey();
+            if (filterKey !== eventsFilterKey) {
+                eventsFilterKey = filterKey;
+                eventsPageIndex = 0;
+            }
+
+            if (!events.length) {
+                body.innerHTML =
+                    `<tr><td class="usage-table__empty" colspan="11">${t('noEvents')}</td></tr>`;
+                if (statusEl) {
+                    statusEl.textContent = 'Keine Daten';
+                }
+                if (statsEl) {
+                    statsEl.hidden = true;
+                }
+                if (paginationEl) {
+                    paginationEl.hidden = true;
+                }
+                syncEventsSortHeaders();
+                return;
+            }
+
+            const sorted = sortEventsForTable(events);
+            const totalPages = Math.max(1, Math.ceil(sorted.length / eventsPageSize));
+            if (eventsPageIndex >= totalPages) {
+                eventsPageIndex = totalPages - 1;
+            }
+            if (eventsPageIndex < 0) {
+                eventsPageIndex = 0;
+            }
+            const pageStart = eventsPageIndex * eventsPageSize;
+            const displayedEvents = sorted.slice(pageStart, pageStart + eventsPageSize);
+            const groups = buildEventGroups(displayedEvents, eventsGroupMode, api);
+            const totalStats = computeTotalEventStats(displayedEvents);
+            const filterEndMs = sorted[0].timestamp.getTime();
+            const displayMeta = { shown: displayedEvents.length, total: sorted.length };
+            renderEventsStatsHeader(
+                groups,
+                totalStats,
+                eventsGroupMode,
+                api,
+                filterEndMs,
+                displayMeta
+            );
+
+            const groupByKey = new Map(groups.map((group) => [group.key, group]));
+
+            let html = '';
+            let lastGroupKey = null;
+            for (const event of displayedEvents) {
+                const groupKey = getEventGroupKey(event, eventsGroupMode, api, markers);
+                if (groupKey !== lastGroupKey) {
+                    const group = groupByKey.get(groupKey);
+                    if (group) {
+                        html += renderEventGroupHeaderRow(
+                            group,
+                            eventsGroupMode,
+                            api,
+                            filterEndMs
+                        );
+                    }
+                    lastGroupKey = groupKey;
+                }
+                html += renderEventTableRow(event, api, true, groupKey);
+            }
+            body.innerHTML = html;
+            syncEventsSortHeaders();
+
+            if (statusEl) {
+                const filterHint =
+                    projectFilter !== 'all' ? ` · Projekt: ${projectFilter}` : '';
+                const groupHint =
+                    eventsGroupMode === 'marker' ? ' · pro Marker' : ' · pro Aufgabe';
+                const countHint = `${numberFmt.format(sorted.length)} Anfragen · Seite ${eventsPageIndex + 1}/${totalPages}`;
+                statusEl.textContent = `${countHint} · ${numberFmt.format(groups.length)} Aufgaben · neueste zuerst${groupHint}${filterHint}`;
+            }
+            if (paginationEl) {
+                const showPagination = sorted.length > eventsPageSize;
+                paginationEl.hidden = !showPagination;
+                if (paginationInfo) {
+                    paginationInfo.textContent = showPagination
+                        ? `${pageStart + 1}–${pageStart + displayedEvents.length} von ${sorted.length}`
+                        : '';
+                }
+                const prevBtn = document.getElementById('events-prev-btn');
+                const nextBtn = document.getElementById('events-next-btn');
+                if (prevBtn) {
+                    prevBtn.disabled = eventsPageIndex <= 0;
+                }
+                if (nextBtn) {
+                    nextBtn.disabled = eventsPageIndex >= totalPages - 1;
+                }
+            }
+        }
+
+        function renderDailyTable(rows) {
+            const body = document.getElementById('daily-table-body');
+            if (!rows.length) {
+                body.innerHTML =
+                    '<tr><td class="usage-table__empty" colspan="6">Keine Daten im Zeitraum</td></tr>';
+                return;
+            }
+
+            body.innerHTML = rows
+                .map(
+                    (row) => `<tr class="${userRowClass(row.userLabel)}">
+                    <td>${dateFmt.format(new Date(`${row.dayKey}T12:00:00Z`))}</td>
+                    <td class="usage-table__user usage-table__user--${row.userLabel}">${row.userLabel}</td>
+                    <td>${numberFmt.format(row.events)}</td>
+                    <td>${numberFmt.format(row.totalTokens)}</td>
+                    <td>${currencyFmt.format(row.costCents / 100)}</td>
+                    <td>${row.topModel}</td>
+                </tr>`
+                )
+                .join('');
+        }
+
+        function renderExpensiveTable(rows) {
+            const body = document.getElementById('expensive-table-body');
+            if (!rows.length) {
+                body.innerHTML =
+                    '<tr><td class="usage-table__empty" colspan="5">Keine kostenpflichtigen Events</td></tr>';
+                return;
+            }
+
+            body.innerHTML = rows
+                .map(
+                    (row) => `<tr class="${userRowClass(row.userLabel)}">
+                    <td>${dateTimeFmt.format(row.timestamp)}</td>
+                    <td class="usage-table__user usage-table__user--${row.userLabel}">${row.userLabel}</td>
+                    <td>${row.model}</td>
+                    <td>${numberFmt.format(row.totalTokens)}</td>
+                    <td>${currencyFmt.format(row.costCents / 100)}</td>
+                </tr>`
+                )
+                .join('');
+        }
+
+        function renderAll() {
+            if (typeof Chart === 'undefined' || !window.CursorAnalytics) {
+                return;
+            }
+
+            const metrics = getMetrics();
+            const charts = getCharts();
+            const events = filteredEvents();
+
+            if (!events.length) {
+                charts.destroyAll(chartInstances);
+                document.getElementById('kpi-grid').innerHTML = '';
+                document.getElementById('overview-section').hidden = true;
+                document.getElementById('drop-zone').classList.remove('drop-zone--hidden', 'drop-zone--compact');
+                renderDailyTable([]);
+                renderExpensiveTable([]);
+                renderEventsTable([]);
+                renderMarkerTable([]);
+                setStatus(
+                    selectionMode === 'count'
+                        ? 'Keine Events in der gewählten Anfrage-Auswahl.'
+                        : 'Keine Events im gewählten Zeitraum.'
+                );
+                return;
+            }
+
+            document.getElementById('drop-zone').classList.add('drop-zone--compact', 'drop-zone--hidden');
+            document.getElementById('overview-section').hidden = false;
+
+            const kpis = metrics.computeKpis(events, range);
+            const models = metrics.aggregateByModel(events);
+            const tokenTypes = metrics.aggregateTokenTypes(events);
+            const byHour = metrics.aggregateByHour(events);
+            const byDayOfWeek = metrics.aggregateByDayOfWeek(events);
+            const bucketFormatters = { dateFmt, dateTimeFmt, monthFmt };
+            const timeBuckets = metrics.aggregateByGranularity(events, granularity, bucketFormatters);
+            const cumulativeBuckets = metrics.cumulativeByGranularity(
+                events,
+                granularity,
+                bucketFormatters
+            );
+            const cumulative = metrics.cumulativeCostByDay(events);
+            const families = metrics.aggregateByModelFamily(events);
+            const cache = metrics.cacheEfficiency(events);
+            const dailyRows = metrics.aggregateDailyTable(events);
+            const expensive = metrics.topExpensiveEvents(events);
+
+            lastAggregated = {
+                kpis,
+                models,
+                tokenTypes,
+                byHour,
+                byDayOfWeek,
+                timeBuckets,
+                cumulativeBuckets,
+                cumulative,
+                families,
+                cache,
+                dailyRows,
+                expensive,
+                eventCount: events.length,
+            };
+
+            renderKpis(kpis, events);
+            renderDailyTable(dailyRows);
+            renderExpensiveTable(expensive);
+            renderEventsTable(eventsForTable());
+            renderMarkerTable(events);
+            updateProjectFilterOptions();
+            updateMarkerChartProjectFilterOptions();
+
+            const first = events[0].timestamp;
+            const last = events[events.length - 1].timestamp;
+            const userLabel = userFilter === 'all' ? 'Gesamt' : userFilter;
+            setStatus(
+                `${rangeLabel()} · ${userLabel} · ${events.length} Events · ${dateTimeFmt.format(first)} – ${dateTimeFmt.format(last)}`
+            );
+
+            try {
+                const formatters = { numberFmt, currencyFmt, dateFmt, dateTimeFmt, monthFmt };
+                const markerContext = buildMarkerContext(events);
+                const overviewTitleEl = document.getElementById('overview-section-title');
+                const cumulativeTitleEl = document.getElementById('chart-cumulative-title');
+                const chartGranularity = selectionMode === 'count' ? 'event' : granularity;
+                const overviewBuckets =
+                    selectionMode === 'count'
+                        ? metrics.aggregateByGranularity(events, 'event', bucketFormatters)
+                        : timeBuckets;
+                const chartCumulativeBuckets =
+                    selectionMode === 'count'
+                        ? metrics.cumulativeByGranularity(events, 'event', bucketFormatters)
+                        : cumulativeBuckets;
+                const overviewTitle =
+                    metrics.GRANULARITY_OVERVIEW_TITLES[chartGranularity] ||
+                    'Übersicht — Tokens & Kosten';
+                const cumulativeTitleByGranularity = {
+                    event: 'Kumulierte Ausgaben (pro Anfrage)',
+                    quarter: 'Kumulierte Ausgaben (15 Min.)',
+                    hour: 'Kumulierte Ausgaben (stündlich)',
+                    day: 'Kumulierte Ausgaben (täglich)',
+                    week: 'Kumulierte Ausgaben (wöchentlich)',
+                    month: 'Kumulierte Ausgaben (monatlich)',
+                };
+
+                if (overviewTitleEl) {
+                    overviewTitleEl.textContent = overviewTitle;
+                }
+                if (cumulativeTitleEl) {
+                    cumulativeTitleEl.textContent =
+                        cumulativeTitleByGranularity[chartGranularity] || 'Kumulierte Ausgaben';
+                }
+
+                charts.renderOverviewBuckets(
+                    document.getElementById('chart-overview-daily'),
+                    chartInstances,
+                    'overview',
+                    overviewBuckets,
+                    overviewTitle,
+                    formatters,
+                    chartGranularity,
+                    markerContext
+                );
+
+                charts.renderAll(
+                    chartInstances,
+                    {
+                        models,
+                        tokenTypes,
+                        byHour,
+                        byDayOfWeek,
+                        cumulative,
+                        cumulativeBuckets: chartCumulativeBuckets,
+                        granularity: chartGranularity,
+                        families,
+                        cache,
+                        markerContext,
+                        canvases: {
+                            topCost: document.getElementById('chart-top-cost'),
+                            topTokens: document.getElementById('chart-top-tokens'),
+                            tokenTypes: document.getElementById('chart-token-types'),
+                            modelFamily: document.getElementById('chart-model-family'),
+                            byHour: document.getElementById('chart-by-hour'),
+                            cumulative: document.getElementById('chart-cumulative'),
+                            inputOutput: document.getElementById('chart-input-output'),
+                            cacheEfficiency: document.getElementById('chart-cache'),
+                            byWeekday: document.getElementById('chart-weekday'),
+                        },
+                    },
+                    formatters
+                );
+            } catch (error) {
+                console.error(error);
+                setStatus(`Chart-Fehler: ${error.message}`, true);
+            }
+        }
+
+        async function fetchCsvText(path) {
+            const response = await fetch(`${resolveToolPath(path)}?v=${Date.now()}`, {
+                cache: 'no-store',
+            });
+            if (!response.ok) {
+                throw new Error(`${path}: HTTP ${response.status}`);
+            }
+            return response.text();
+        }
+
+        async function loadDefaultCsvs() {
+            const { USER_ORDER, USERS, parseUsageEventsCsv, mergeEvents } = getParser();
+            const nextEventsByUser = emptyEventsByUser();
+            const loadSummary = {};
+            const loadedLabels = [];
+            const failed = [];
+
+            for (const userId of USER_ORDER) {
+                const texts = [];
+                for (const path of USERS[userId].defaultPaths) {
+                    try {
+                        texts.push(await fetchCsvText(path));
+                        loadedLabels.push(path.replace('./data/', ''));
+                    } catch (error) {
+                        failed.push(String(error?.message || error));
+                    }
+                }
+                if (texts.length) {
+                    const mergeResult = mergeEvents(
+                        texts.map((text) => parseUsageEventsCsv(text, userId))
+                    );
+                    nextEventsByUser[userId] = mergeResult.events;
+                    loadSummary[userId] = mergeResult;
+                }
+            }
+
+            eventsByUser = nextEventsByUser;
+
+            const hintParts = USER_ORDER.map((userId) => {
+                const summary = loadSummary[userId];
+                if (!summary) {
+                    return null;
+                }
+                return `${userId}: ${numberFmt.format(summary.events.length)} Events`;
+            }).filter(Boolean);
+
+            document.getElementById('load-hint').textContent =
+                loadedLabels.length
+                    ? `CSV: ${loadedLabels.join(' + ')} · ${hintParts.join(' · ')}`
+                    : 'Keine Standard-CSV geladen — bitte manuell laden oder Server starten.';
+
+            if (failed.length) {
+                document.getElementById('load-hint').textContent += ` · Warnung: ${failed.join('; ')}`;
+            }
+
+            updateCustomDateBounds();
+            await applyRangeAndRender();
+        }
+
+        async function loadCsvFiles(files) {
+            const { USER_ORDER, parseUsageEventsCsv, mergeEvents, detectUserFromFilename } =
+                getParser();
+            const parsedByUser = emptyEventsByUser();
+
+            for (const file of files) {
+                const userId = detectUserFromFilename(file.name);
+                const text = await file.text();
+                parsedByUser[userId].push(parseUsageEventsCsv(text, userId));
+            }
+
+            for (const userId of USER_ORDER) {
+                if (parsedByUser[userId].length) {
+                    const mergeResult = mergeEvents(parsedByUser[userId]);
+                    eventsByUser[userId] = mergeResult.events;
+                }
+            }
+
+            document.getElementById('load-hint').textContent = `Geladen: ${files.map((f) => f.name).join(', ')}`;
+            updateCustomDateBounds();
+            renderAll();
+        }
+
+        function hasLiveData() {
+            const { USER_ORDER } = getParser();
+            return USER_ORDER.some((userId) => (liveEventsByUser[userId] || []).length > 0);
+        }
+
+        function desiredLiveBounds() {
+            return getMetrics().liveFetchBoundsMs(range, Date.now(), selectionMode);
+        }
+
+        function liveCacheUsable(desiredBounds) {
+            if (!hasLiveData()) {
+                return false;
+            }
+            if (Date.now() - liveFetchState.fetchedAt > LIVE_CACHE_TTL_MS) {
+                return false;
+            }
+            return getMetrics().liveBoundsContains(liveFetchState.bounds, desiredBounds);
+        }
+
+        function liveBoundsQuery(bounds) {
+            if (!bounds) {
+                return '';
+            }
+            const params = new URLSearchParams({
+                startDate: String(bounds.startMs),
+                endDate: String(bounds.endMs),
+            });
+            return `&${params.toString()}`;
+        }
+
+        function formatLiveFetchScope(bounds) {
+            if (!bounds) {
+                return 'gesamter Verlauf';
+            }
+            return `${dateTimeFmt.format(new Date(bounds.startMs))} – ${dateTimeFmt.format(new Date(bounds.endMs))}`;
+        }
+
+        function updateLiveLoadHint(nextLive, { cached = false, scopeBounds = null } = {}) {
+            const { USER_ORDER } = getParser();
+            const counts = USER_ORDER.map(
+                (id) => `${id}: ${numberFmt.format((nextLive[id] || []).length)}`
+            ).join(' · ');
+            const scope = formatLiveFetchScope(scopeBounds ?? liveFetchState.bounds);
+            const ageMin = cached
+                ? Math.max(1, Math.round((Date.now() - liveFetchState.fetchedAt) / 60000))
+                : 0;
+            const prefix = cached ? `Live (Cache, ${ageMin} Min.)` : 'Live';
+            document.getElementById('load-hint').textContent = `${prefix}: ${counts} · ${scope}`;
+        }
+
+        async function applyRangeAndRender() {
+            updateCustomDateBounds();
+            if (dataSource === 'live' || dataSource === 'merge') {
+                try {
+                    await fetchLiveEvents();
+                } catch (error) {
+                    setStatus(error.message, true);
+                    renderAll();
+                }
+                return;
+            }
+            renderAll();
+        }
+
+        async function fetchLiveEvents({ force = false, incremental = false } = {}) {
+            const { USER_ORDER, normalizeApiEvent, mergeEvents } = getParser();
+            const metrics = getMetrics();
+            const desiredBounds = desiredLiveBounds();
+            const userConfig = await fetchLiveUserConfig(force);
+            const usersToFetch = USER_ORDER.filter((userId) => userConfig[userId]);
+
+            if (!usersToFetch.length) {
+                throw new Error(
+                    'Kein Live-Token konfiguriert — CURSOR_SESSION_TOKEN_<USER> in .env setzen (siehe config/users.json).'
+                );
+            }
+
+            if (!force && liveCacheUsable(desiredBounds)) {
+                updateLiveLoadHint(liveEventsByUser, { cached: true, scopeBounds: desiredBounds });
+                renderAll();
+                return;
+            }
+
+            let fetchBounds = desiredBounds;
+            if (incremental && hasLiveData() && desiredBounds) {
+                const newestMs = Math.max(
+                    ...allLiveEvents().map((event) => event.timestamp.getTime())
+                );
+                fetchBounds = {
+                    startMs: Math.max(
+                        desiredBounds.startMs,
+                        newestMs - LIVE_INCREMENTAL_OVERLAP_MS
+                    ),
+                    endMs: desiredBounds.endMs,
+                };
+                if (fetchBounds.startMs >= fetchBounds.endMs) {
+                    updateLiveLoadHint(liveEventsByUser, { cached: true, scopeBounds: desiredBounds });
+                    setStatus('Live-Daten sind aktuell.');
+                    renderAll();
+                    return;
+                }
+            }
+
+            const nextLive = emptyEventsByUser();
+            for (const userId of USER_ORDER) {
+                if (!usersToFetch.includes(userId)) {
+                    nextLive[userId] = liveEventsByUser[userId] || [];
+                }
+            }
+            const errors = [];
+            const scopeLabel = formatLiveFetchScope(fetchBounds);
+
+            setLiveLoading(true, `Live-Daten werden geladen (${scopeLabel})…`);
+
+            try {
+                const results = await Promise.all(
+                    usersToFetch.map(async (userId) => {
+                        try {
+                            const response = await fetch(
+                                `${PROXY_BASE}/api/events?user=${encodeURIComponent(userId)}${liveBoundsQuery(fetchBounds)}`,
+                                { cache: 'no-store' }
+                            );
+                            if (!response.ok) {
+                                const body = await response.json().catch(() => ({}));
+                                throw new Error(body.error || `HTTP ${response.status}`);
+                            }
+                            const payload = await response.json();
+                            const fetched = (payload.events || [])
+                                .map((raw) => normalizeApiEvent(raw, userId))
+                                .sort((a, b) => a.timestamp - b.timestamp);
+                            const existing = liveEventsByUser[userId] || [];
+                            const merged =
+                                incremental || existing.length
+                                    ? mergeEvents([existing, fetched]).events
+                                    : fetched;
+                            return { userId, events: merged };
+                        } catch (error) {
+                            errors.push(`${userId}: ${error.message}`);
+                            const existing = liveEventsByUser[userId] || [];
+                            return { userId, events: existing };
+                        }
+                    })
+                );
+
+                for (const { userId, events } of results) {
+                    nextLive[userId] = events;
+                }
+
+                liveEventsByUser = nextLive;
+                liveFetchState = {
+                    fetchedAt: Date.now(),
+                    bounds: metrics.mergeLiveBounds(liveFetchState.bounds, fetchBounds),
+                };
+
+                if (errors.length && errors.length === usersToFetch.length) {
+                    throw new Error(
+                        `${errors.join(' · ')} — Server läuft? (python serve.py)`
+                    );
+                }
+
+                if (errors.length) {
+                    document.getElementById('load-hint').textContent =
+                        `Live teilweise: ${errors.join(' · ')}`;
+                } else {
+                    updateLiveLoadHint(nextLive, { scopeBounds: liveFetchState.bounds });
+                }
+
+                updateCustomDateBounds();
+                renderAll();
+            } finally {
+                setLiveLoading(false);
+            }
+        }
+
+        function exportJson() {
+            if (!lastAggregated) {
+                setStatus('Nichts zum Exportieren — zuerst Daten laden.', true);
+                return;
+            }
+
+            const payload = {
+                ...lastAggregated,
+                markers: getMarkersApi()?.exportStore() ?? null,
+            };
+            const blob = new Blob([JSON.stringify(payload, null, 2)], {
+                type: 'application/json',
+            });
+            const url = URL.createObjectURL(blob);
+            const anchor = document.createElement('a');
+            anchor.href = url;
+            anchor.download = `cursor-analytics-${new Date().toISOString().slice(0, 10)}.json`;
+            anchor.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function getChartWrap(key) {
+            const canvas = document.getElementById(CHART_CANVAS_IDS[key]);
+            return canvas?.closest('.chart-wrap') ?? null;
+        }
+
+        function setChartExpanded(key, expanded) {
+            const wrap = getChartWrap(key);
+            const btn = document.querySelector(`.btn-chart-height[data-chart-key="${key}"]`);
+            const card = wrap?.closest('.chart-card');
+            if (!wrap || !btn) {
+                return;
+            }
+
+            wrap.classList.toggle('chart-wrap--expanded', expanded);
+            card?.classList.toggle('chart-card--expanded', expanded);
+            btn.classList.toggle('btn--active', expanded);
+            btn.setAttribute('aria-pressed', expanded ? 'true' : 'false');
+            btn.textContent = expanded ? 'Standardhöhe' : '90 % Höhe';
+
+            const chart = chartInstances[key];
+            if (!chart) {
+                return;
+            }
+
+            wrap.offsetHeight;
+            chart.resize();
+            window.requestAnimationFrame(() => {
+                chart.resize();
+            });
+        }
+
+        function initChartControls() {
+            document.querySelectorAll('.btn-chart-height').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    const key = btn.dataset.chartKey;
+                    const expanded = btn.getAttribute('aria-pressed') !== 'true';
+                    setChartExpanded(key, expanded);
+                });
+            });
+
+            document.querySelectorAll('.btn-chart-zoom-reset:not([disabled])').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    chartInstances[btn.dataset.chartKey]?.resetZoom();
+                });
+            });
+
+            window.addEventListener('resize', () => {
+                document.querySelectorAll('.btn-chart-height[aria-pressed="true"]').forEach((btn) => {
+                    chartInstances[btn.dataset.chartKey]?.resize();
+                });
+            });
+        }
+
+        function initToolbar() {
+            const storedSourceBtn = document.querySelector(`[data-source="${dataSource}"]`);
+            if (storedSourceBtn) {
+                setActiveButtons('[data-source]', storedSourceBtn);
+            }
+
+            document.querySelectorAll('[data-source]').forEach((btn) => {
+                btn.addEventListener('click', async () => {
+                    dataSource = btn.dataset.source;
+                    localStorage.setItem(DATA_SOURCE_STORAGE_KEY, dataSource);
+                    setActiveButtons('[data-source]', btn);
+                    if (dataSource === 'live' || dataSource === 'merge') {
+                        try {
+                            await fetchLiveEvents();
+                        } catch (error) {
+                            setStatus(error.message, true);
+                            renderAll();
+                        }
+                    } else {
+                        renderAll();
+                    }
+                });
+            });
+
+            document.querySelectorAll('[data-hours]').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    applyPresetRange(Number(btn.dataset.hours), btn);
+                });
+            });
+
+            document.querySelector('#time-range-group [data-all]')?.addEventListener('click', (event) => {
+                range = {
+                    mode: 'all',
+                    hours: DEFAULT_TIME_RANGE_HOURS,
+                    customFrom: '',
+                    customTo: '',
+                    count: range.count,
+                };
+                savedTimeRange = {
+                    mode: 'all',
+                    hours: DEFAULT_TIME_RANGE_HOURS,
+                    customFrom: '',
+                    customTo: '',
+                };
+                saveStoredTimeRange(savedTimeRange);
+                clearRangeButtons();
+                event.currentTarget.classList.add('btn--active');
+                applyRangeAndRender();
+            });
+
+            document.querySelectorAll('[data-selection-mode]').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    applySelectionMode(btn.dataset.selectionMode);
+                });
+            });
+
+            document.querySelectorAll('[data-count]').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    applyCountRange(Number(btn.dataset.count), btn);
+                });
+            });
+
+            document.querySelector('[data-count-all]')?.addEventListener('click', (event) => {
+                applyCountAll(event.currentTarget);
+            });
+
+            document.getElementById('count-custom-apply')?.addEventListener('click', applyCountCustomRange);
+
+            document.getElementById('count-from')?.addEventListener('change', () => {
+                if (range.mode === 'countRange') {
+                    applyCountCustomRange();
+                }
+            });
+
+            document.getElementById('count-to')?.addEventListener('change', () => {
+                if (range.mode === 'countRange') {
+                    applyCountCustomRange();
+                }
+            });
+
+            if (selectionMode === 'count') {
+                const saved = savedCountRange;
+                range = {
+                    mode: saved.mode === 'all' ? 'all' : saved.mode === 'countRange' ? 'countRange' : 'count',
+                    hours: 720,
+                    customFrom: '',
+                    customTo: '',
+                    count: saved.count || 50,
+                    countFrom: saved.countFrom || 1,
+                    countTo: saved.countTo || saved.count || 50,
+                };
+            }
+            updateSelectionModeUi();
+            if (selectionMode === 'count') {
+                syncCountRangeButtons();
+            } else {
+                syncTimeRangeButtons();
+            }
+
+            document.getElementById('custom-apply')?.addEventListener('click', applyCustomRange);
+            document.getElementById('custom-reset')?.addEventListener('click', resetCustomRange);
+
+            document.getElementById('custom-from')?.addEventListener('change', () => {
+                const fromEl = document.getElementById('custom-from');
+                const toEl = document.getElementById('custom-to');
+                if (fromEl?.value && toEl?.value) {
+                    saveStoredCustomRange(fromEl.value, toEl.value);
+                }
+                if (range.mode === 'custom') {
+                    applyCustomRange();
+                }
+            });
+
+            document.getElementById('custom-to')?.addEventListener('change', () => {
+                const fromEl = document.getElementById('custom-from');
+                const toEl = document.getElementById('custom-to');
+                if (fromEl?.value && toEl?.value) {
+                    saveStoredCustomRange(fromEl.value, toEl.value);
+                }
+                if (range.mode === 'custom') {
+                    applyCustomRange();
+                }
+            });
+
+            updateCustomDateBounds();
+
+            const granularitySelect = document.getElementById('granularity-select');
+            if (granularitySelect) {
+                granularitySelect.value = granularity;
+                granularitySelect.addEventListener('change', () => {
+                    granularity = granularitySelect.value;
+                    localStorage.setItem(GRANULARITY_STORAGE_KEY, granularity);
+                    renderAll();
+                });
+            }
+
+            document.getElementById('csv-file-input')?.addEventListener('change', async (event) => {
+                const files = [...(event.target.files || [])];
+                if (!files.length) {
+                    return;
+                }
+                try {
+                    await loadCsvFiles(files);
+                } catch (error) {
+                    setStatus(`CSV-Fehler: ${error.message}`, true);
+                }
+            });
+
+            document.getElementById('live-refresh-btn')?.addEventListener('click', async () => {
+                try {
+                    await fetchLiveEvents({ force: true, incremental: true });
+                    setStatus('Live-Daten aktualisiert.');
+                } catch (error) {
+                    setStatus(error.message, true);
+                }
+            });
+
+            document.getElementById('export-json-btn')?.addEventListener('click', exportJson);
+
+            document.getElementById('budget-save-btn')?.addEventListener('click', () => {
+                const value = Number.parseFloat(document.getElementById('budget-input').value);
+                if (Number.isFinite(value) && value >= 0) {
+                    localStorage.setItem(BUDGET_STORAGE_KEY, String(value));
+                    renderAll();
+                }
+            });
+
+            const dropZone = document.getElementById('drop-zone');
+            dropZone.addEventListener('dragover', (event) => {
+                event.preventDefault();
+                dropZone.classList.add('drop-zone--active');
+            });
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('drop-zone--active');
+            });
+            dropZone.addEventListener('drop', async (event) => {
+                event.preventDefault();
+                dropZone.classList.remove('drop-zone--active');
+                const files = [...event.dataTransfer.files].filter((f) =>
+                    f.name.toLowerCase().endsWith('.csv')
+                );
+                if (files.length) {
+                    try {
+                        await loadCsvFiles(files);
+                    } catch (error) {
+                        setStatus(`CSV-Fehler: ${error.message}`, true);
+                    }
+                }
+            });
+
+            const storedBudget = localStorage.getItem(BUDGET_STORAGE_KEY);
+            if (storedBudget != null) {
+                document.getElementById('budget-input').value = storedBudget;
+            }
+
+            initChartControls();
+        }
+
+        async function initWhenReady(attempt = 0) {
+            if (typeof Chart === 'undefined') {
+                if (attempt > 200) {
+                    setStatus('Chart.js nicht geladen — Netzwerk/CDN prüfen.', true);
+                    return;
+                }
+                window.setTimeout(() => initWhenReady(attempt + 1), 50);
+                return;
+            }
+
+            try {
+                await ensureModules();
+            } catch (error) {
+                setStatus(
+                    `${error.message} — Server starten: python serve.py`,
+                    true
+                );
+                return;
+            }
+
+            const annotationPlugin =
+                window.chartjsPluginAnnotation || window.ChartAnnotation;
+            if (annotationPlugin) {
+                Chart.register(annotationPlugin);
+            }
+
+            await window.CursorAnalytics.markers.syncFromServer(PROXY_BASE);
+            await window.CursorAnalytics.usersConfig.loadUsersConfig();
+            eventsByUser = emptyEventsByUser();
+            liveEventsByUser = emptyEventsByUser();
+            normalizeUserFilter();
+            buildUserFilterToolbar();
+            buildMarkerUserSelect();
+            initLocaleSwitcher();
+            updateProjectFilterOptions();
+            initMarkerUi();
+            initMarkerChartDisplayUi();
+            initEventsSectionUi();
+            initToolbar();
+            loadDefaultCsvs();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initWhenReady);
+        } else {
+            initWhenReady();
+        }
+    </script>
+</body>
+
+</html>

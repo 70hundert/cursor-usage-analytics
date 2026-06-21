@@ -1,0 +1,14 @@
+{
+  "users": [
+    {
+      "id": "primary",
+      "label": "Primary",
+      "defaultCsvPaths": ["./data/usage-events-primary.csv"]
+    },
+    {
+      "id": "secondary",
+      "label": "Secondary",
+      "defaultCsvPaths": ["./data/usage-events-secondary.csv"]
+    }
+  ]
+}

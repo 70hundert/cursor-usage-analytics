@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cursor Usage Dashboard</title>
+    <style>
+        :root {
+            --bg: #0f1419;
+            --surface: #1a222d;
+            --text: #e8eef4;
+            --muted: #8b9aab;
+            --accent: #3ecf8e;
+            --border: #2d3a4a;
+            --radius: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: "Segoe UI", system-ui, sans-serif;
+            background: radial-gradient(circle at top, #17202b 0%, var(--bg) 55%);
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        main {
+            width: min(520px, 100%);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 2rem;
+        }
+
+        h1 {
+            margin: 0 0 0.5rem;
+            font-size: 1.5rem;
+        }
+
+        p {
+            margin: 0 0 1.5rem;
+            color: var(--muted);
+            line-height: 1.5;
+        }
+
+        ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        a {
+            display: block;
+            padding: 1rem 1.25rem;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            color: var(--text);
+            text-decoration: none;
+            transition: border-color 0.15s, background 0.15s;
+        }
+
+        a:hover {
+            border-color: var(--accent);
+            background: #243040;
+        }
+
+        a strong {
+            display: block;
+            color: var(--accent);
+            margin-bottom: 0.25rem;
+        }
+
+        a span {
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+
+<body>
+    <main>
+        <h1>Cursor Usage Dashboard</h1>
+        <p>Lokale Analyse der Cursor-Nutzung — CSV-Exporte und optional Live-Daten.</p>
+        <ul>
+            <li>
+                <a href="usage-events-chart.html">
+                    <strong>Event-Verlauf</strong>
+                    <span>Token-Verbrauch pro Event mit Zoom und Pan</span>
+                </a>
+            </li>
+            <li>
+                <a href="cursor-usage-analytics.html">
+                    <strong>Analytics</strong>
+                    <span>Kosten, Modelle, Muster und Budget</span>
+                </a>
+            </li>
+        </ul>
+    </main>
+</body>
+
+</html>

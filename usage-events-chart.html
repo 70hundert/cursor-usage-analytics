@@ -1,0 +1,2077 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cursor Usage — Token-Verlauf</title>
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.2.0/dist/chartjs-plugin-zoom.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.1.0/dist/chartjs-plugin-annotation.min.js" defer></script>
+    <script src="static/cursor-analytics/users-config.js?v=1" defer></script>
+    <script src="static/cursor-analytics/markers.js?v=3" defer></script>
+    <style>
+        :root {
+            --bg: #0f1419;
+            --surface: #1a222d;
+            --surface-2: #243040;
+            --text: #e8eef4;
+            --muted: #8b9aab;
+            --accent: #3ecf8e;
+            --warn: #f0b429;
+            --danger: #ef6461;
+            --border: #2d3a4a;
+            --radius: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: "Segoe UI", system-ui, sans-serif;
+            background: radial-gradient(circle at top, #17202b 0%, var(--bg) 55%);
+            color: var(--text);
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 1.5rem 2rem 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .page-header h1 {
+            margin: 0 0 0.25rem;
+            font-size: 1.75rem;
+        }
+
+        .subtitle {
+            margin: 0;
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 95%);
+            justify-content: center;
+            gap: 0.75rem;
+            padding: 1rem 2rem 2rem;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1rem 1.1rem;
+        }
+
+        .card--history {
+            grid-column: 1 / -1;
+        }
+
+        .card h2 {
+            margin: 0 0 0.5rem;
+            font-size: 1.05rem;
+        }
+
+        .card-meta {
+            margin: 0 0 0.75rem;
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+
+        .history-header {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .history-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .history-range,
+        .history-file {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem;
+            align-items: center;
+        }
+
+        .history-btn {
+            border: 1px solid var(--border);
+            background: var(--surface-2);
+            color: var(--text);
+            border-radius: 999px;
+            padding: 0.3rem 0.65rem;
+            font-size: 0.78rem;
+            cursor: pointer;
+        }
+
+        .history-btn:hover {
+            border-color: #4a6078;
+        }
+
+        .history-btn--active {
+            background: #2a4a3a;
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .file-input-label {
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--muted);
+            border-radius: 999px;
+            padding: 0.3rem 0.65rem;
+            font-size: 0.78rem;
+            cursor: pointer;
+        }
+
+        .file-input-label:hover {
+            border-color: #4a6078;
+            color: var(--text);
+        }
+
+        .file-input-label input {
+            display: none;
+        }
+
+        .history-custom {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem;
+            align-items: center;
+        }
+
+        .history-custom label {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.78rem;
+            color: var(--muted);
+        }
+
+        .history-custom input[type="date"] {
+            border: 1px solid var(--border);
+            background: var(--surface-2);
+            color: var(--text);
+            border-radius: 8px;
+            padding: 0.25rem 0.45rem;
+            font-size: 0.78rem;
+            color-scheme: dark;
+        }
+
+        .chart-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .chart-block {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        .chart-block__header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .chart-block__actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem;
+            align-items: center;
+        }
+
+        .chart-hint {
+            margin-top: 0.25rem;
+        }
+
+        .chart-wrap {
+            position: relative;
+            height: var(--chart-height, 320px);
+            background: var(--surface-2);
+            border-radius: 10px;
+            padding: 0.5rem;
+            transition: height 0.2s ease;
+        }
+
+        .chart-wrap--expanded {
+            --chart-height: calc(90vh - 4rem);
+            min-height: 320px;
+        }
+
+        .chart-stats {
+            margin: 0;
+            padding: 0 0.35rem;
+            font-size: 0.75rem;
+            color: var(--muted);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem 0.75rem;
+        }
+
+        .chart-stats__item {
+            white-space: nowrap;
+        }
+
+        .chart-stats__label {
+            font-weight: 600;
+        }
+
+        .usage-table-wrap {
+            overflow-x: auto;
+            margin-top: 0.5rem;
+        }
+
+        .usage-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        .usage-table th,
+        .usage-table td {
+            padding: 0.45rem 0.65rem;
+            border-bottom: 1px solid var(--border);
+            text-align: right;
+        }
+
+        .usage-table th:first-child,
+        .usage-table td:first-child {
+            text-align: left;
+        }
+
+        .usage-table thead th {
+            color: var(--muted);
+            font-weight: 600;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .usage-table tbody tr:hover {
+            background: var(--surface-2);
+        }
+
+        .usage-table__total {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .usage-table__user {
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+
+        .chart-block__title {
+            margin: 0;
+            font-size: 0.9rem;
+            color: var(--muted);
+        }
+
+        .usage-table tfoot td {
+            font-weight: 600;
+            border-top: 2px solid var(--border);
+            border-bottom: none;
+        }
+
+        .usage-table__empty {
+            text-align: center;
+            color: var(--muted);
+            padding: 1.5rem;
+        }
+
+        .hint-text {
+            margin: 0.5rem 0 0;
+            font-size: 0.78rem;
+            color: var(--muted);
+        }
+
+        .marker-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .history-marker-display {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.35rem;
+            margin-bottom: 0.65rem;
+            padding: 0.45rem 0.55rem;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+
+        .history-marker-display__label {
+            font-size: 0.72rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .history-marker-display select {
+            min-width: 10rem;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            padding: 0.25rem 0.45rem;
+            font-size: 0.82rem;
+        }
+
+        .history-marker-display .history-btn[disabled] {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .usage-table__row--clickable {
+            cursor: pointer;
+        }
+
+        .usage-table__actions {
+            text-align: center;
+        }
+
+        .usage-table__btn-delete {
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--danger);
+            border-radius: 6px;
+            padding: 0.15rem 0.45rem;
+            font-size: 0.72rem;
+            cursor: pointer;
+        }
+
+        .marker-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .marker-modal[hidden] {
+            display: none;
+        }
+
+        .marker-modal__backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.55);
+        }
+
+        .marker-modal__panel {
+            position: relative;
+            width: min(420px, 100%);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.1rem;
+            z-index: 1;
+        }
+
+        .marker-modal__panel h3 {
+            margin: 0 0 0.75rem;
+            font-size: 1rem;
+        }
+
+        .marker-form label {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            font-size: 0.78rem;
+            color: var(--muted);
+            margin-bottom: 0.55rem;
+        }
+
+        .marker-form input,
+        .marker-form textarea {
+            border: 1px solid var(--border);
+            background: var(--surface-2);
+            color: var(--text);
+            border-radius: 8px;
+            padding: 0.4rem 0.55rem;
+            font-size: 0.85rem;
+            color-scheme: dark;
+        }
+
+        .marker-form textarea {
+            min-height: 3rem;
+            resize: vertical;
+        }
+
+        .marker-form__actions {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-end;
+            margin-top: 0.75rem;
+        }
+    </style>
+</head>
+
+<body>
+    <header class="page-header">
+        <div>
+            <h1>Cursor Usage</h1>
+            <p class="subtitle">Token-Verbrauch aus Usage-Events-Export</p>
+        </div>
+        <nav class="header-links" style="display:flex;gap:0.75rem;">
+            <a href="cursor-usage-analytics.html" style="color:#3ecf8e;text-decoration:none;font-size:0.85rem;">Analytics (Kosten &amp; Modelle)</a>
+        </nav>
+    </header>
+
+    <main class="dashboard-grid">
+        <section class="card card--history" id="chart-card">
+            <div class="history-header">
+                <div>
+                    <h2>Verlauf</h2>
+                    <p class="card-meta" id="usage-status">Lade Daten…</p>
+                </div>
+                <div class="history-toolbar" id="history-toolbar">
+                    <div class="history-range">
+                        <button type="button" class="history-btn" data-hours="1">1 h</button>
+                        <button type="button" class="history-btn" data-hours="2">2 h</button>
+                        <button type="button" class="history-btn" data-hours="3">3 h</button>
+                        <button type="button" class="history-btn" data-hours="4">4 h</button>
+                        <button type="button" class="history-btn" data-hours="5">5 h</button>
+                        <button type="button" class="history-btn" data-hours="6">6 h</button>
+                        <button type="button" class="history-btn" data-hours="12">12 h</button>
+                        <button type="button" class="history-btn" data-hours="24">24 h</button>
+                        <button type="button" class="history-btn" data-hours="48">2 Tage</button>
+                        <button type="button" class="history-btn" data-hours="72">3 Tage</button>
+                        <button type="button" class="history-btn" data-hours="96">4 Tage</button>
+                        <button type="button" class="history-btn" data-hours="120">5 Tage</button>
+                        <button type="button" class="history-btn" data-hours="144">6 Tage</button>
+                        <button type="button" class="history-btn" data-hours="168">7 Tage</button>
+                        <button type="button" class="history-btn history-btn--active" data-hours="720">30 Tage</button>
+                        <button type="button" class="history-btn" data-hours="2160">90 Tage</button>
+                        <button type="button" class="history-btn" data-hours="4320">6 Monate</button>
+                        <button type="button" class="history-btn" data-hours="8760">1 Jahr</button>
+                        <button type="button" class="history-btn" data-all="true">Alle</button>
+                    </div>
+                    <div class="history-custom" id="history-custom">
+                        <label>Von
+                            <input type="date" id="custom-from" aria-label="Von Datum">
+                        </label>
+                        <label>Bis
+                            <input type="date" id="custom-to" aria-label="Bis Datum">
+                        </label>
+                        <button type="button" class="history-btn" id="custom-apply">Anwenden</button>
+                        <button type="button" class="history-btn" id="custom-reset">Zurücksetzen</button>
+                    </div>
+                    <div class="history-file">
+                        <label class="file-input-label">
+                            CSV(s) laden
+                            <input type="file" id="csv-file-input" accept=".csv,text/csv" multiple>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="history-marker-display" data-marker-display-host aria-label="Marker-Sichtbarkeit"></div>
+            <div class="chart-stack" id="chart-stack"></div>
+            <p class="hint-text" id="load-hint">
+                CSV-Pfade aus <code>config/users.json</code> — per
+                <code>python serve.py</code> starten oder CSV(s) manuell laden.
+            </p>
+        </section>
+
+        <section class="card card--history" id="table-card">
+            <h2>Tokens je Tag</h2>
+            <p class="card-meta" id="table-status">—</p>
+            <div class="usage-table-wrap">
+                <table class="usage-table" id="usage-daily-table">
+                    <thead>
+                        <tr>
+                            <th>Datum</th>
+                            <th>Benutzer</th>
+                            <th>Events</th>
+                            <th class="usage-table__total">Total Tokens</th>
+                            <th>Input</th>
+                            <th>Cache Read</th>
+                            <th>Output</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usage-daily-body"></tbody>
+                    <tfoot id="usage-daily-foot"></tfoot>
+                </table>
+            </div>
+        </section>
+
+        <section class="card card--history" id="marker-card">
+            <h2>Projekt-Marker</h2>
+            <p class="card-meta" id="marker-table-status">
+                Projekt- und Aufgaben-Marker am Chart — Intervall bis zum nächsten Marker oder Filter-Ende.
+            </p>
+            <div class="marker-toolbar">
+                <button type="button" class="history-btn" id="marker-export-btn">Marker exportieren</button>
+                <label class="file-input-label">
+                    Marker importieren
+                    <input type="file" id="marker-import-input" accept=".json,application/json">
+                </label>
+            </div>
+            <div class="usage-table-wrap">
+                <table class="usage-table" id="marker-table">
+                    <thead>
+                        <tr>
+                            <th>Von</th>
+                            <th>Bis</th>
+                            <th>Benutzer</th>
+                            <th>Projekt</th>
+                            <th>Aufgabe</th>
+                            <th>Events</th>
+                            <th class="usage-table__total">Total Tokens</th>
+                            <th>Output</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="marker-table-body"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <div class="marker-modal" id="marker-modal" hidden>
+        <div class="marker-modal__backdrop" id="marker-modal-backdrop"></div>
+        <div class="marker-modal__panel" role="dialog" aria-labelledby="marker-modal-title">
+            <h3 id="marker-modal-title">Projekt-Marker</h3>
+            <form class="marker-form" id="marker-form">
+                <input type="hidden" id="marker-id">
+                <input type="hidden" id="marker-user" value="primary">
+                <label>Von
+                    <input type="datetime-local" id="marker-start" required>
+                </label>
+                <label>Bis (optional)
+                    <input type="datetime-local" id="marker-end">
+                </label>
+                <label>Projekt
+                    <input type="text" id="marker-project" required maxlength="120" placeholder="z. B. Cursor-Usage-Dashboard">
+                </label>
+                <label>Aufgabe (optional)
+                    <input type="text" id="marker-task" maxlength="120" placeholder="z. B. REFERENCE.md">
+                </label>
+                <label>Notiz (optional)
+                    <textarea id="marker-note" maxlength="500"></textarea>
+                </label>
+                <div class="marker-form__actions">
+                    <button type="button" class="history-btn" id="marker-cancel-btn">Abbrechen</button>
+                    <button type="submit" class="history-btn history-btn--active">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const SERIES = [
+            { key: 'totalTokens', label: 'Total Tokens', color: '#3ecf8e' },
+            { key: 'inputNoCache', label: 'Input (ohne Cache Write)', color: '#58a6ff' },
+            { key: 'cacheRead', label: 'Cache Read', color: '#c9a227' },
+            { key: 'outputTokens', label: 'Output Tokens', color: '#e8783a' },
+        ];
+
+        let eventsByUser = {};
+        const USERS = {};
+        let USER_ORDER = [];
+        const numberFmt = new Intl.NumberFormat('de-DE');
+        const dateFmt = new Intl.DateTimeFormat('de-DE', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+        });
+        const dateTimeFmt = new Intl.DateTimeFormat('de-DE', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+        });
+
+        const CUSTOM_RANGE_STORAGE_KEY = 'cursor-event-chart-custom-range';
+
+        const RANGE_PRESETS = {
+            1: '1 h',
+            2: '2 h',
+            3: '3 h',
+            4: '4 h',
+            5: '5 h',
+            6: '6 h',
+            12: '12 h',
+            24: '24 h',
+            48: '2 Tage',
+            72: '3 Tage',
+            96: '4 Tage',
+            120: '5 Tage',
+            144: '6 Tage',
+            168: '7 Tage',
+            720: '30 Tage',
+            2160: '90 Tage',
+            4320: '6 Monate',
+            8760: '1 Jahr',
+        };
+
+        let eventsByUser = {};
+        let rangeMode = 'hours';
+        let currentHours = 720;
+        let customFromValue = '';
+        let customToValue = '';
+        let suppressCustomRangePersist = false;
+        let chartInstances = {};
+        let markerChartDisplay = { showMarkers: true, showLabels: true, projectFilter: 'all' };
+
+        function getMarkerChartContext(userId, filtered, filterEndMs) {
+            return {
+                mode: 'time',
+                user: userId,
+                filterEndMs,
+                events: filtered,
+                markers: getMarkersApi()?.getStore().markers ?? [],
+                showMarkers: markerChartDisplay.showMarkers,
+                showLabels: markerChartDisplay.showLabels,
+                projectFilter: markerChartDisplay.projectFilter,
+            };
+        }
+
+        function persistMarkerChartDisplay() {
+            getMarkersApi()?.saveMarkerChartDisplay(markerChartDisplay);
+        }
+
+        function mountMarkerChartDisplayControls() {
+            const template = `
+                <span class="history-marker-display__label">Chart-Marker</span>
+                <button type="button" class="history-btn history-btn--active" data-marker-chart-visible aria-pressed="true">Anzeigen</button>
+                <button type="button" class="history-btn history-btn--active" data-marker-labels-visible aria-pressed="true">Beschriftungen</button>
+                <select data-marker-project-filter aria-label="Marker nach Projekt filtern">
+                    <option value="all">Alle Projekte</option>
+                </select>
+            `;
+            document.querySelectorAll('[data-marker-display-host]').forEach((host) => {
+                host.innerHTML = template;
+            });
+        }
+
+        function syncMarkerChartDisplayUi() {
+            document.querySelectorAll('[data-marker-chart-visible]').forEach((markersBtn) => {
+                markersBtn.classList.toggle('history-btn--active', markerChartDisplay.showMarkers);
+                markersBtn.setAttribute('aria-pressed', markerChartDisplay.showMarkers ? 'true' : 'false');
+            });
+            document.querySelectorAll('[data-marker-labels-visible]').forEach((labelsBtn) => {
+                labelsBtn.classList.toggle('history-btn--active', markerChartDisplay.showLabels);
+                labelsBtn.setAttribute('aria-pressed', markerChartDisplay.showLabels ? 'true' : 'false');
+                labelsBtn.disabled = !markerChartDisplay.showMarkers;
+            });
+            document.querySelectorAll('[data-marker-project-filter]').forEach((projectSelect) => {
+                projectSelect.disabled = !markerChartDisplay.showMarkers;
+                projectSelect.value =
+                    [...projectSelect.options].some(
+                        (option) => option.value === markerChartDisplay.projectFilter
+                    )
+                        ? markerChartDisplay.projectFilter
+                        : 'all';
+            });
+        }
+
+        function updateMarkerChartProjectFilterOptions() {
+            const api = getMarkersApi();
+            if (!api) {
+                return;
+            }
+            const projects = [...new Set(api.getStore().markers.map((m) => m.project).filter(Boolean))].sort();
+            const current = markerChartDisplay.projectFilter;
+            const optionsHtml =
+                '<option value="all">Alle Projekte</option>' +
+                projects
+                    .map(
+                        (project) =>
+                            `<option value="${project.replace(/"/g, '&quot;')}">${project}</option>`
+                    )
+                    .join('');
+            markerChartDisplay.projectFilter =
+                projects.includes(current) || current === 'all' ? current : 'all';
+            document.querySelectorAll('[data-marker-project-filter]').forEach((select) => {
+                select.innerHTML = optionsHtml;
+            });
+            syncMarkerChartDisplayUi();
+        }
+
+        function initMarkerChartDisplayUi() {
+            const api = getMarkersApi();
+            if (api?.loadMarkerChartDisplay) {
+                markerChartDisplay = api.loadMarkerChartDisplay();
+            }
+
+            mountMarkerChartDisplayControls();
+
+            document.querySelectorAll('[data-marker-chart-visible]').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    markerChartDisplay.showMarkers = !markerChartDisplay.showMarkers;
+                    persistMarkerChartDisplay();
+                    syncMarkerChartDisplayUi();
+                    renderAll();
+                });
+            });
+
+            document.querySelectorAll('[data-marker-labels-visible]').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    if (!markerChartDisplay.showMarkers) {
+                        return;
+                    }
+                    markerChartDisplay.showLabels = !markerChartDisplay.showLabels;
+                    persistMarkerChartDisplay();
+                    syncMarkerChartDisplayUi();
+                    renderAll();
+                });
+            });
+
+            document.querySelectorAll('[data-marker-project-filter]').forEach((select) => {
+                select.addEventListener('change', (event) => {
+                    markerChartDisplay.projectFilter = event.target.value;
+                    persistMarkerChartDisplay();
+                    syncMarkerChartDisplayUi();
+                    renderAll();
+                });
+            });
+
+            updateMarkerChartProjectFilterOptions();
+        }
+
+        function getMarkersApi() {
+            return window.CursorAnalytics?.markers;
+        }
+
+        function buildChartAnnotations(userId, filtered) {
+            const api = getMarkersApi();
+            if (!api || !filtered.length) {
+                return {};
+            }
+            const filterEndMs = filtered[filtered.length - 1].date.getTime();
+            return api.toChartAnnotations(api.getStore().markers, {
+                mode: 'time',
+                user: userId,
+                filterEndMs,
+                events: filtered,
+                markers: api.getStore().markers,
+                formatters: { dateTimeFmt, numberFmt },
+                showPopover: true,
+                showMarkers: markerChartDisplay.showMarkers,
+                showLabels: markerChartDisplay.showLabels,
+                projectFilter: markerChartDisplay.projectFilter,
+                onEditMarker: (marker) => {
+                    const editUser =
+                        marker.user === 'all' || USER_ORDER.includes(marker.user)
+                            ? marker.user === 'all'
+                                ? userId
+                                : marker.user
+                            : userId;
+                    openMarkerModal(editUser, marker);
+                },
+            });
+        }
+
+        function getFilterEndMs(filteredByUser) {
+            const filtered = USER_ORDER.flatMap((userId) => filteredByUser[userId] || []);
+            if (!filtered.length) {
+                return Date.now();
+            }
+            return Math.max(...filtered.map((e) => e.date.getTime()));
+        }
+
+        async function persistMarkers() {
+            const api = getMarkersApi();
+            if (!api) {
+                return;
+            }
+            await api.saveStore(api.getStore(), '');
+        }
+
+        function openMarkerModal(userId, marker) {
+            const modal = document.getElementById('marker-modal');
+            const api = getMarkersApi();
+            if (!modal || !api) {
+                return;
+            }
+
+            api.hideChartPopover(true);
+            document.getElementById('marker-user').value = userId;
+            document.getElementById('marker-id').value = marker?.id || '';
+            document.getElementById('marker-project').value = marker?.project || '';
+            document.getElementById('marker-task').value = marker?.task || '';
+            document.getElementById('marker-note').value = marker?.note || '';
+
+            let startIso = marker?.start;
+            if (!startIso) {
+                startIso = new Date().toISOString();
+            }
+            document.getElementById('marker-start').value = api.toDatetimeLocalValue(startIso);
+            document.getElementById('marker-end').value = marker?.end
+                ? api.toDatetimeLocalValue(marker.end)
+                : '';
+
+            document.getElementById('marker-modal-title').textContent = marker
+                ? 'Marker bearbeiten'
+                : 'Projekt-Marker setzen';
+            modal.hidden = false;
+        }
+
+        function closeMarkerModal() {
+            const modal = document.getElementById('marker-modal');
+            if (modal) {
+                modal.hidden = true;
+            }
+        }
+
+        async function handleMarkerFormSubmit(event) {
+            event.preventDefault();
+            const api = getMarkersApi();
+            if (!api) {
+                return;
+            }
+
+            const id = document.getElementById('marker-id').value.trim();
+            const user = document.getElementById('marker-user').value.trim() || USER_ORDER[0];
+            const start = api.fromDatetimeLocalValue(document.getElementById('marker-start').value);
+            const endRaw = document.getElementById('marker-end').value;
+            const end = endRaw ? api.fromDatetimeLocalValue(endRaw) : null;
+
+            if (!start) {
+                return;
+            }
+
+            const existing = id ? api.getStore().markers.find((m) => m.id === id) : null;
+            api.upsertMarker({
+                id: id || undefined,
+                user,
+                start,
+                end,
+                project: document.getElementById('marker-project').value,
+                task: document.getElementById('marker-task').value,
+                note: document.getElementById('marker-note').value,
+                createdAt: existing?.createdAt,
+            });
+
+            await persistMarkers();
+            closeMarkerModal();
+            renderAll();
+        }
+
+        async function deleteMarkerById(id) {
+            const api = getMarkersApi();
+            if (!api || !id) {
+                return;
+            }
+            api.removeMarker(id);
+            await persistMarkers();
+            renderAll();
+        }
+
+        function renderMarkerTable(filteredByUser) {
+            const bodyEl = document.getElementById('marker-table-body');
+            const statusEl = document.getElementById('marker-table-status');
+            const api = getMarkersApi();
+            if (!bodyEl || !api) {
+                return;
+            }
+
+            const filterEndMs = getFilterEndMs(filteredByUser);
+            const rows = [];
+
+            for (const userId of USER_ORDER) {
+                const events = filteredByUser[userId] || [];
+                const intervals = api.computeIntervalRows(
+                    events,
+                    api.getStore().markers,
+                    userId,
+                    filterEndMs
+                );
+                for (const { marker, stats } of intervals) {
+                    rows.push({ marker, stats, userId });
+                }
+            }
+
+            rows.sort((a, b) => a.stats.startMs - b.stats.startMs);
+
+            if (!rows.length) {
+                bodyEl.innerHTML =
+                    '<tr><td class="usage-table__empty" colspan="9">Noch keine Marker — „Marker hier“ am Chart setzen</td></tr>';
+                if (statusEl) {
+                    statusEl.textContent =
+                        'Projekt- und Aufgaben-Marker am Chart — Intervall bis zum nächsten Marker oder Filter-Ende.';
+                }
+                return;
+            }
+
+            bodyEl.innerHTML = rows
+                .map(({ marker, stats, userId }) => {
+                    const endLabel = marker.end
+                        ? dateTimeFmt.format(new Date(marker.end))
+                        : dateTimeFmt.format(new Date(stats.endMs)) + ' *';
+                    return `<tr class="usage-table__row--clickable" data-marker-id="${marker.id}" data-marker-user="${userId}">
+                        <td>${dateTimeFmt.format(new Date(marker.start))}</td>
+                        <td>${endLabel}</td>
+                        <td class="usage-table__user usage-table__user--${userId}">${USERS[userId].label}</td>
+                        <td>${marker.project}</td>
+                        <td>${marker.task || '—'}</td>
+                        <td>${numberFmt.format(stats.calls)}</td>
+                        <td class="usage-table__total">${numberFmt.format(stats.totalTokens)}</td>
+                        <td>${numberFmt.format(stats.outputTokens)}</td>
+                        <td class="usage-table__actions">
+                            <button type="button" class="usage-table__btn-delete" data-marker-delete="${marker.id}">×</button>
+                        </td>
+                    </tr>`;
+                })
+                .join('');
+
+            if (statusEl) {
+                statusEl.textContent = `${numberFmt.format(rows.length)} Marker · * = implizites Intervall-Ende`;
+            }
+        }
+
+        function initMarkerUi() {
+            document.querySelectorAll('[data-marker-add]').forEach((button) => {
+                button.addEventListener('click', () => {
+                    openMarkerModal(button.dataset.markerAdd);
+                });
+            });
+
+            document.getElementById('marker-form')?.addEventListener('submit', handleMarkerFormSubmit);
+            document.getElementById('marker-cancel-btn')?.addEventListener('click', closeMarkerModal);
+            document.getElementById('marker-modal-backdrop')?.addEventListener('click', closeMarkerModal);
+
+            document.getElementById('marker-table-body')?.addEventListener('click', (event) => {
+                const deleteBtn = event.target.closest('[data-marker-delete]');
+                if (deleteBtn) {
+                    event.stopPropagation();
+                    deleteMarkerById(deleteBtn.dataset.markerDelete);
+                    return;
+                }
+                const row = event.target.closest('[data-marker-id]');
+                if (!row) {
+                    return;
+                }
+                const api = getMarkersApi();
+                const marker = api?.getStore().markers.find((m) => m.id === row.dataset.markerId);
+                if (marker) {
+                    openMarkerModal(row.dataset.markerUser, marker);
+                }
+            });
+
+            document.getElementById('marker-export-btn')?.addEventListener('click', () => {
+                const api = getMarkersApi();
+                if (!api) {
+                    return;
+                }
+                const blob = new Blob([JSON.stringify(api.exportStore(), null, 2)], {
+                    type: 'application/json',
+                });
+                const url = URL.createObjectURL(blob);
+                const anchor = document.createElement('a');
+                anchor.href = url;
+                anchor.download = `cursor-markers-${new Date().toISOString().slice(0, 10)}.json`;
+                anchor.click();
+                URL.revokeObjectURL(url);
+            });
+
+            document.getElementById('marker-import-input')?.addEventListener('change', async (event) => {
+                const file = event.target.files?.[0];
+                event.target.value = '';
+                if (!file) {
+                    return;
+                }
+                const api = getMarkersApi();
+                if (!api) {
+                    return;
+                }
+                try {
+                    const payload = JSON.parse(await file.text());
+                    api.importStore(payload, true);
+                    await persistMarkers();
+                    renderAll();
+                } catch (error) {
+                    document.getElementById('marker-table-status').textContent =
+                        `Import fehlgeschlagen: ${error.message}`;
+                }
+            });
+        }
+
+        function getMarkerTooltipLines(event, userId) {
+            const api = getMarkersApi();
+            if (!api) {
+                return [];
+            }
+            const marker = api.getMarkerForEvent(
+                { date: event.date, user: userId },
+                api.getStore().markers
+            );
+            if (!marker) {
+                return [];
+            }
+            const label = marker.task ? `${marker.project} — ${marker.task}` : marker.project;
+            return [`Projekt: ${label}`];
+        }
+
+        function getAllEvents() {
+            return USER_ORDER.flatMap((userId) => eventsByUser[userId] || []).sort(
+                (a, b) => a.date - b.date
+            );
+        }
+
+        function parseCsv(text) {
+            const rows = [];
+            let row = [];
+            let field = '';
+            let inQuotes = false;
+
+            for (let i = 0; i < text.length; i += 1) {
+                const char = text[i];
+                const next = text[i + 1];
+
+                if (inQuotes) {
+                    if (char === '"' && next === '"') {
+                        field += '"';
+                        i += 1;
+                    } else if (char === '"') {
+                        inQuotes = false;
+                    } else {
+                        field += char;
+                    }
+                    continue;
+                }
+
+                if (char === '"') {
+                    inQuotes = true;
+                } else if (char === ',') {
+                    row.push(field);
+                    field = '';
+                } else if (char === '\n') {
+                    row.push(field);
+                    field = '';
+                    if (row.some((cell) => cell.length > 0)) {
+                        rows.push(row);
+                    }
+                    row = [];
+                } else if (char !== '\r') {
+                    field += char;
+                }
+            }
+
+            if (field.length > 0 || row.length > 0) {
+                row.push(field);
+                if (row.some((cell) => cell.length > 0)) {
+                    rows.push(row);
+                }
+            }
+
+            return rows;
+        }
+
+        function parseIntField(value) {
+            if (value === null || value === undefined || value === '') {
+                return null;
+            }
+            const parsed = Number.parseInt(String(value).trim(), 10);
+            return Number.isFinite(parsed) ? parsed : null;
+        }
+
+        function parseUsageEvents(csvText, userId) {
+            const rows = parseCsv(csvText);
+            if (rows.length < 2) {
+                return [];
+            }
+
+            const header = rows[0];
+            const indexOf = (name) => header.indexOf(name);
+
+            const dateIdx = indexOf('Date');
+            const inputNoCacheIdx = indexOf('Input (w/o Cache Write)');
+            const cacheReadIdx = indexOf('Cache Read');
+            const outputIdx = indexOf('Output Tokens');
+            const totalIdx = indexOf('Total Tokens');
+
+            if ([dateIdx, inputNoCacheIdx, cacheReadIdx, outputIdx, totalIdx].some((idx) => idx < 0)) {
+                throw new Error('Ungültiges CSV-Format — erwartete Spalten fehlen.');
+            }
+
+            const events = [];
+
+            for (let i = 1; i < rows.length; i += 1) {
+                const row = rows[i];
+                const date = new Date(row[dateIdx]);
+                if (Number.isNaN(date.getTime())) {
+                    continue;
+                }
+
+                const inputNoCache = parseIntField(row[inputNoCacheIdx]);
+                const cacheRead = parseIntField(row[cacheReadIdx]);
+                const outputTokens = parseIntField(row[outputIdx]);
+                const totalTokens = parseIntField(row[totalIdx]);
+
+                if (
+                    inputNoCache === null ||
+                    cacheRead === null ||
+                    outputTokens === null ||
+                    totalTokens === null
+                ) {
+                    continue;
+                }
+
+                events.push({
+                    user: userId,
+                    date,
+                    dayKey: date.toISOString().slice(0, 10),
+                    inputNoCache,
+                    cacheRead,
+                    outputTokens,
+                    totalTokens,
+                });
+            }
+
+            events.sort((a, b) => a.date - b.date);
+            return events;
+        }
+
+        function eventDedupeKey(event) {
+            return [
+                event.date.toISOString(),
+                event.totalTokens,
+                event.inputNoCache,
+                event.cacheRead,
+                event.outputTokens,
+            ].join('|');
+        }
+
+        function mergeEvents(eventLists) {
+            const byKey = new Map();
+            let rawCount = 0;
+
+            for (const events of eventLists) {
+                for (const event of events) {
+                    rawCount += 1;
+                    byKey.set(eventDedupeKey(event), event);
+                }
+            }
+
+            const merged = [...byKey.values()].sort((a, b) => a.date - b.date);
+            return {
+                events: merged,
+                rawCount,
+                duplicateCount: rawCount - merged.length,
+            };
+        }
+
+        function setLoadHint(sourceLabel, loadSummary) {
+            const hintEl = document.getElementById('load-hint');
+            const parts = USER_ORDER.map((userId) => {
+                const summary = loadSummary[userId];
+                if (!summary) {
+                    return null;
+                }
+                const duplicateHint =
+                    summary.duplicateCount > 0
+                        ? ` · ${numberFmt.format(summary.duplicateCount)} Duplikate entfernt`
+                        : '';
+                const span = formatDataSpan(summary.events);
+                return `${USERS[userId].label}: ${numberFmt.format(summary.events.length)} Events · ${span}${duplicateHint}`;
+            }).filter(Boolean);
+
+            hintEl.textContent = `${sourceLabel} · ${parts.join(' · ')}`;
+        }
+
+        function formatDataSpan(events) {
+            if (!events.length) {
+                return '—';
+            }
+
+            const first = events[0].date;
+            const last = events[events.length - 1].date;
+            return `${dateFmt.format(first)} – ${dateFmt.format(last)}`;
+        }
+
+        function toDateInputValue(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function getDefaultCustomFrom() {
+            const from = startOfLocalDay(new Date());
+            from.setDate(from.getDate() - 2);
+            return toDateInputValue(from);
+        }
+
+        function getDefaultCustomTo() {
+            return toDateInputValue(startOfLocalDay(new Date()));
+        }
+
+        function loadStoredCustomRange() {
+            try {
+                const raw = localStorage.getItem(CUSTOM_RANGE_STORAGE_KEY);
+                if (!raw) {
+                    return null;
+                }
+                const parsed = JSON.parse(raw);
+                if (parsed?.customFrom && parsed?.customTo) {
+                    return { customFrom: parsed.customFrom, customTo: parsed.customTo };
+                }
+            } catch {
+                return null;
+            }
+            return null;
+        }
+
+        function saveStoredCustomRange(from, to) {
+            if (suppressCustomRangePersist || !from || !to) {
+                return;
+            }
+            localStorage.setItem(
+                CUSTOM_RANGE_STORAGE_KEY,
+                JSON.stringify({ customFrom: from, customTo: to })
+            );
+        }
+
+        function clearStoredCustomRange() {
+            localStorage.removeItem(CUSTOM_RANGE_STORAGE_KEY);
+        }
+
+        function clampDateInputValue(value, minValue, maxValue) {
+            if (!value) {
+                return value;
+            }
+            if (minValue && value < minValue) {
+                return minValue;
+            }
+            if (maxValue && value > maxValue) {
+                return maxValue;
+            }
+            return value;
+        }
+
+        function resolveCustomRangeValues(minValue, maxValue) {
+            const stored = loadStoredCustomRange();
+            let customFrom = stored?.customFrom ?? getDefaultCustomFrom();
+            let customTo = stored?.customTo ?? getDefaultCustomTo();
+            if (minValue && maxValue) {
+                customFrom = clampDateInputValue(customFrom, minValue, maxValue);
+                customTo = clampDateInputValue(customTo, minValue, maxValue);
+                if (customFrom > customTo) {
+                    return { customFrom: customTo, customTo: customFrom };
+                }
+            }
+            return { customFrom, customTo };
+        }
+
+        function setCustomRangeInputs(from, to) {
+            const fromEl = document.getElementById('custom-from');
+            const toEl = document.getElementById('custom-to');
+            if (!fromEl || !toEl) {
+                return;
+            }
+            suppressCustomRangePersist = true;
+            fromEl.value = from;
+            toEl.value = to;
+            suppressCustomRangePersist = false;
+        }
+
+        function parseDateInputValue(value) {
+            if (!value) {
+                return null;
+            }
+
+            const [year, month, day] = value.split('-').map(Number);
+            if (!year || !month || !day) {
+                return null;
+            }
+
+            return new Date(year, month - 1, day);
+        }
+
+        function startOfLocalDay(date) {
+            return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
+        }
+
+        function endOfLocalDay(date) {
+            return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
+        }
+
+        function getReferenceEndMs(events) {
+            if (!events.length) {
+                return Date.now();
+            }
+            return events[events.length - 1].date.getTime();
+        }
+
+        function updateCustomDateBounds() {
+            const fromEl = document.getElementById('custom-from');
+            const toEl = document.getElementById('custom-to');
+            if (!fromEl || !toEl) {
+                return;
+            }
+
+            const allEvents = getAllEvents();
+            let minValue = null;
+            let maxValue = null;
+
+            if (allEvents.length) {
+                minValue = toDateInputValue(allEvents[0].date);
+                maxValue = toDateInputValue(allEvents[allEvents.length - 1].date);
+                fromEl.min = minValue;
+                fromEl.max = maxValue;
+                toEl.min = minValue;
+                toEl.max = maxValue;
+            }
+
+            let { customFrom, customTo } = resolveCustomRangeValues(minValue, maxValue);
+
+            if (rangeMode === 'custom') {
+                if (customFromValue) {
+                    customFrom =
+                        minValue && maxValue
+                            ? clampDateInputValue(customFromValue, minValue, maxValue)
+                            : customFromValue;
+                }
+                if (customToValue) {
+                    customTo =
+                        minValue && maxValue
+                            ? clampDateInputValue(customToValue, minValue, maxValue)
+                            : customToValue;
+                }
+            }
+
+            setCustomRangeInputs(customFrom, customTo);
+        }
+
+        function resetCustomRange() {
+            clearStoredCustomRange();
+
+            const allEvents = getAllEvents();
+            let minValue = null;
+            let maxValue = null;
+            if (allEvents.length) {
+                minValue = toDateInputValue(allEvents[0].date);
+                maxValue = toDateInputValue(allEvents[allEvents.length - 1].date);
+            }
+
+            const { customFrom, customTo } = resolveCustomRangeValues(minValue, maxValue);
+            setCustomRangeInputs(customFrom, customTo);
+
+            if (rangeMode === 'custom') {
+                customFromValue = customFrom;
+                customToValue = customTo;
+                setActiveRangeButton(document.getElementById('custom-apply'));
+                renderAll();
+            }
+        }
+
+        function filterEvents(events) {
+            if (!events.length) {
+                return events;
+            }
+
+            if (rangeMode === 'all') {
+                return events;
+            }
+
+            if (rangeMode === 'custom') {
+                const fromDate = parseDateInputValue(customFromValue);
+                const toDate = parseDateInputValue(customToValue);
+                if (!fromDate || !toDate) {
+                    return events;
+                }
+
+                const fromMs = startOfLocalDay(fromDate).getTime();
+                const toMs = endOfLocalDay(toDate).getTime();
+                const [startMs, endMs] = fromMs <= toMs ? [fromMs, toMs] : [toMs, fromMs];
+
+                return events.filter((event) => {
+                    const time = event.date.getTime();
+                    return time >= startMs && time <= endMs;
+                });
+            }
+
+            const referenceEnd = getReferenceEndMs(events);
+            const cutoff = referenceEnd - currentHours * 60 * 60 * 1000;
+            return events.filter((event) => event.date.getTime() >= cutoff);
+        }
+
+        function rangeLabel() {
+            if (rangeMode === 'all') {
+                return 'Alle';
+            }
+
+            if (rangeMode === 'custom') {
+                const fromDate = parseDateInputValue(customFromValue);
+                const toDate = parseDateInputValue(customToValue);
+                if (fromDate && toDate) {
+                    const [startDate, endDate] =
+                        fromDate <= toDate ? [fromDate, toDate] : [toDate, fromDate];
+                    return `${dateFmt.format(startDate)} – ${dateFmt.format(endDate)}`;
+                }
+                return 'Custom';
+            }
+
+            return RANGE_PRESETS[currentHours] || `${currentHours} h`;
+        }
+
+        function clearActiveRangeButtons() {
+            document
+                .querySelectorAll(
+                    '#history-toolbar [data-hours], #history-toolbar [data-all], #custom-apply'
+                )
+                .forEach((button) => {
+                    button.classList.remove('history-btn--active');
+                });
+        }
+
+        function setActiveRangeButton(activeButton) {
+            clearActiveRangeButtons();
+            if (activeButton) {
+                activeButton.classList.add('history-btn--active');
+            }
+        }
+
+        function updateStatus(filteredByUser) {
+            const statusEl = document.getElementById('usage-status');
+            const tableStatusEl = document.getElementById('table-status');
+            const filtered = USER_ORDER.flatMap((userId) => filteredByUser[userId] || []).sort(
+                (a, b) => a.date - b.date
+            );
+
+            if (!filtered.length) {
+                const message = 'Keine Events im gewählten Zeitraum.';
+                statusEl.textContent = message;
+                tableStatusEl.textContent = message;
+                return;
+            }
+
+            const first = filtered[0].date;
+            const last = filtered[filtered.length - 1].date;
+            const span =
+                first.getTime() === last.getTime()
+                    ? dateTimeFmt.format(first)
+                    : `${dateTimeFmt.format(first)} – ${dateTimeFmt.format(last)}`;
+
+            const perUser = USER_ORDER.map((userId) => {
+                const count = (filteredByUser[userId] || []).length;
+                return count ? `${USERS[userId].label}: ${numberFmt.format(count)}` : null;
+            })
+                .filter(Boolean)
+                .join(' · ');
+
+            const text = `${rangeLabel()} · ${perUser} · ${span}`;
+            statusEl.textContent = text;
+            tableStatusEl.textContent = text;
+        }
+
+        function computeStats(values) {
+            if (!values.length) {
+                return { min: 0, max: 0, sum: 0 };
+            }
+            let min = values[0];
+            let max = values[0];
+            let sum = 0;
+            for (const value of values) {
+                min = Math.min(min, value);
+                max = Math.max(max, value);
+                sum += value;
+            }
+            return { min, max, sum };
+        }
+
+        function renderStats(userId, filtered) {
+            const statsEl = document.getElementById(USERS[userId].statsId);
+            if (!statsEl) {
+                return;
+            }
+
+            if (!filtered.length) {
+                statsEl.textContent = '';
+                return;
+            }
+
+            const items = SERIES.map(({ key, label }) => {
+                const values = filtered.map((event) => event[key]);
+                const { min, max, sum } = computeStats(values);
+                return `<span class="chart-stats__item"><span class="chart-stats__label">${label}:</span> min ${numberFmt.format(min)} · max ${numberFmt.format(max)} · Σ ${numberFmt.format(sum)}</span>`;
+            });
+
+            statsEl.innerHTML = items.join('');
+        }
+
+        function renderChart(userId, filtered) {
+            if (typeof Chart === 'undefined') {
+                return;
+            }
+
+            const userConfig = USERS[userId];
+            const canvas = document.getElementById(userConfig.chartCanvasId);
+            if (!canvas) {
+                return;
+            }
+
+            if (!filtered.length) {
+                if (chartInstances[userId]) {
+                    chartInstances[userId].destroy();
+                    chartInstances[userId] = null;
+                }
+                return;
+            }
+
+            const datasets = SERIES.map(({ key, label, color }) => ({
+                label,
+                data: filtered.map((event) => ({ x: event.date.getTime(), y: event[key] })),
+                borderColor: color,
+                backgroundColor: `${color}22`,
+                stepped: 'after',
+                pointRadius: 0,
+                pointHitRadius: 8,
+                spanGaps: true,
+            }));
+
+            const filterEndMs = filtered[filtered.length - 1].date.getTime();
+            const markerChartContext = getMarkerChartContext(userId, filtered, filterEndMs);
+            const markerTopPadding =
+                getMarkersApi()?.chartMarkerLabelTopPadding?.(
+                    markerChartContext.markers,
+                    markerChartContext
+                ) ?? 0;
+
+            const options = {
+                responsive: true,
+                maintainAspectRatio: false,
+                parsing: false,
+                layout: markerTopPadding > 0 ? { padding: { top: markerTopPadding } } : {},
+                interaction: {
+                    mode: 'nearest',
+                    axis: 'x',
+                    intersect: false,
+                },
+                plugins: {
+                    decimation: {
+                        enabled: false,
+                    },
+                    legend: {
+                        labels: { color: '#e8eef4', boxWidth: 12 },
+                    },
+                    title: {
+                        display: true,
+                        text: `${userConfig.label} — Token-Verbrauch pro Event (Steps)`,
+                        color: '#e8eef4',
+                        font: { size: 13, weight: '600' },
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title(items) {
+                                const x = items[0]?.parsed?.x;
+                                if (x == null) {
+                                    return '';
+                                }
+                                return dateTimeFmt.format(new Date(x));
+                            },
+                            label(context) {
+                                return `${context.dataset.label}: ${numberFmt.format(context.parsed.y)}`;
+                            },
+                            afterBody(items) {
+                                const x = items[0]?.parsed?.x;
+                                if (x == null) {
+                                    return [];
+                                }
+                                const event = filtered.find(
+                                    (entry) => entry.date.getTime() === x
+                                );
+                                if (!event) {
+                                    return [];
+                                }
+                                return getMarkerTooltipLines(event, userId);
+                            },
+                        },
+                    },
+                    annotation: {
+                        interaction: {
+                            mode: 'nearest',
+                            axis: 'x',
+                        },
+                        annotations: buildChartAnnotations(userId, filtered),
+                    },
+                    zoom: {
+                        pan: {
+                            enabled: true,
+                            mode: 'xy',
+                            threshold: 5,
+                        },
+                        zoom: {
+                            wheel: { enabled: true, speed: 0.08 },
+                            pinch: { enabled: true },
+                            mode: 'xy',
+                        },
+                        limits: {
+                            x: { min: 'original', max: 'original', minRange: 60 * 60 * 1000 },
+                            y: { min: 'original', max: 'original', minRange: 1000 },
+                        },
+                    },
+                },
+                scales: {
+                    x: {
+                        type: 'linear',
+                        ticks: {
+                            color: '#8b9aab',
+                            maxRotation: 0,
+                            autoSkip: true,
+                            maxTicksLimit: 8,
+                            callback(value) {
+                                return dateFmt.format(new Date(value));
+                            },
+                        },
+                        grid: { color: '#2d3a4a55' },
+                    },
+                    y: {
+                        ticks: {
+                            color: '#8b9aab',
+                            callback(value) {
+                                return numberFmt.format(value);
+                            },
+                        },
+                        grid: { color: '#2d3a4a88' },
+                    },
+                },
+            };
+
+            if (chartInstances[userId]) {
+                chartInstances[userId].destroy();
+                chartInstances[userId] = null;
+            }
+
+            chartInstances[userId] = new Chart(canvas, {
+                type: 'line',
+                data: { datasets },
+                options,
+            });
+        }
+
+        function aggregateByDayAndUser(filteredByUser) {
+            const byDayUser = new Map();
+
+            for (const userId of USER_ORDER) {
+                for (const event of filteredByUser[userId] || []) {
+                    const key = `${event.dayKey}|${userId}`;
+                    const existing = byDayUser.get(key) || {
+                        dayKey: event.dayKey,
+                        user: userId,
+                        events: 0,
+                        totalTokens: 0,
+                        inputNoCache: 0,
+                        cacheRead: 0,
+                        outputTokens: 0,
+                    };
+
+                    existing.events += 1;
+                    existing.totalTokens += event.totalTokens;
+                    existing.inputNoCache += event.inputNoCache;
+                    existing.cacheRead += event.cacheRead;
+                    existing.outputTokens += event.outputTokens;
+                    byDayUser.set(key, existing);
+                }
+            }
+
+            return [...byDayUser.values()].sort((a, b) => {
+                const dayCompare = b.dayKey.localeCompare(a.dayKey);
+                if (dayCompare !== 0) {
+                    return dayCompare;
+                }
+                return a.user.localeCompare(b.user);
+            });
+        }
+
+        function renderDailyTable(filteredByUser) {
+            const bodyEl = document.getElementById('usage-daily-body');
+            const footEl = document.getElementById('usage-daily-foot');
+            const filtered = USER_ORDER.flatMap((userId) => filteredByUser[userId] || []).sort(
+                (a, b) => a.date - b.date
+            );
+
+            if (!filtered.length) {
+                bodyEl.innerHTML =
+                    '<tr><td class="usage-table__empty" colspan="7">Keine Events im gewählten Zeitraum</td></tr>';
+                footEl.innerHTML = '';
+                return;
+            }
+
+            const days = aggregateByDayAndUser(filteredByUser);
+            const totals = {
+                events: 0,
+                totalTokens: 0,
+                inputNoCache: 0,
+                cacheRead: 0,
+                outputTokens: 0,
+            };
+
+            bodyEl.innerHTML = days
+                .map((day) => {
+                    totals.events += day.events;
+                    totals.totalTokens += day.totalTokens;
+                    totals.inputNoCache += day.inputNoCache;
+                    totals.cacheRead += day.cacheRead;
+                    totals.outputTokens += day.outputTokens;
+
+                    const displayDate = dateFmt.format(new Date(`${day.dayKey}T12:00:00Z`));
+
+                    return `<tr>
+                        <td>${displayDate}</td>
+                        <td class="usage-table__user usage-table__user--${day.user}">${USERS[day.user].label}</td>
+                        <td>${numberFmt.format(day.events)}</td>
+                        <td class="usage-table__total">${numberFmt.format(day.totalTokens)}</td>
+                        <td>${numberFmt.format(day.inputNoCache)}</td>
+                        <td>${numberFmt.format(day.cacheRead)}</td>
+                        <td>${numberFmt.format(day.outputTokens)}</td>
+                    </tr>`;
+                })
+                .join('');
+
+            footEl.innerHTML = `<tr>
+                <td>Gesamt</td>
+                <td>—</td>
+                <td>${numberFmt.format(totals.events)}</td>
+                <td class="usage-table__total">${numberFmt.format(totals.totalTokens)}</td>
+                <td>${numberFmt.format(totals.inputNoCache)}</td>
+                <td>${numberFmt.format(totals.cacheRead)}</td>
+                <td>${numberFmt.format(totals.outputTokens)}</td>
+            </tr>`;
+        }
+
+        function filterEventsByUser() {
+            const filteredByUser = {};
+            for (const userId of USER_ORDER) {
+                filteredByUser[userId] = filterEvents(eventsByUser[userId] || []);
+            }
+            return filteredByUser;
+        }
+
+        function renderAll() {
+            const filteredByUser = filterEventsByUser();
+            updateStatus(filteredByUser);
+            updateMarkerChartProjectFilterOptions();
+            for (const userId of USER_ORDER) {
+                renderChart(userId, filteredByUser[userId]);
+                renderStats(userId, filteredByUser[userId]);
+            }
+            renderDailyTable(filteredByUser);
+            renderMarkerTable(filteredByUser);
+        }
+
+        function applyLoadedEvents(nextEventsByUser, sourceLabel, loadSummary) {
+            eventsByUser = nextEventsByUser;
+            updateCustomDateBounds();
+            setLoadHint(sourceLabel, loadSummary);
+            renderAll();
+        }
+
+        function buildChartStackFromConfig() {
+            const uc = window.CursorAnalytics?.usersConfig;
+            if (!uc) {
+                return;
+            }
+            USER_ORDER = [...uc.USER_ORDER];
+            for (const key of Object.keys(USERS)) {
+                delete USERS[key];
+            }
+            const stack = document.getElementById('chart-stack');
+            if (!stack) {
+                return;
+            }
+            stack.innerHTML = '';
+            for (const userId of USER_ORDER) {
+                const meta = uc.USERS[userId];
+                USERS[userId] = {
+                    label: meta.label,
+                    defaultPaths: meta.defaultPaths,
+                    chartCanvasId: `chart-tokens-${userId}`,
+                    statsId: `chart-stats-${userId}`,
+                    zoomResetId: `chart-zoom-reset-${userId}`,
+                    heightToggleId: `chart-height-toggle-${userId}`,
+                };
+                const block = document.createElement('div');
+                block.className = 'chart-block';
+                block.innerHTML = `
+                    <div class="chart-block__header">
+                        <p class="chart-block__title">Benutzer <strong>${meta.label}</strong></p>
+                        <div class="chart-block__actions">
+                            <button type="button" class="history-btn" id="chart-height-toggle-${userId}" aria-pressed="false">90&nbsp;% Höhe</button>
+                            <button type="button" class="history-btn" id="chart-zoom-reset-${userId}">Zoom zurücksetzen</button>
+                            <button type="button" class="history-btn" data-marker-add="${userId}">Marker hier</button>
+                        </div>
+                    </div>
+                    <div class="chart-wrap">
+                        <canvas id="chart-tokens-${userId}" aria-label="Token-Verlauf ${meta.label}"></canvas>
+                    </div>
+                    <p class="hint-text chart-hint">Mausrad: Zoomen · Ziehen: Verschieben · Pinch auf Touch</p>
+                    <p class="chart-stats" id="chart-stats-${userId}"></p>`;
+                stack.appendChild(block);
+                chartInstances[userId] = null;
+            }
+            eventsByUser = uc.emptyEventsByUser();
+            const markerUser = document.getElementById('marker-user');
+            if (markerUser) {
+                markerUser.value = uc.getDefaultUserId();
+            }
+        }
+
+        function detectUserFromFilename(filename) {
+            const uc = window.CursorAnalytics?.usersConfig;
+            if (uc?.detectUserFromFilename) {
+                return uc.detectUserFromFilename(filename);
+            }
+            return USER_ORDER[0];
+        }
+
+        function setChartExpanded(userId, expanded) {
+            const userConfig = USERS[userId];
+            const canvas = document.getElementById(userConfig.chartCanvasId);
+            const chartWrap = canvas?.closest('.chart-wrap');
+            const toggleBtn = document.getElementById(userConfig.heightToggleId);
+            if (!chartWrap || !toggleBtn) {
+                return;
+            }
+
+            chartWrap.classList.toggle('chart-wrap--expanded', expanded);
+            toggleBtn.classList.toggle('history-btn--active', expanded);
+            toggleBtn.setAttribute('aria-pressed', expanded ? 'true' : 'false');
+            toggleBtn.textContent = expanded ? 'Standardhöhe' : '90 % Höhe';
+
+            window.requestAnimationFrame(() => {
+                chartInstances[userId]?.resize();
+            });
+        }
+
+        function initToolbar() {
+            document.querySelectorAll('#history-toolbar [data-hours]').forEach((button) => {
+                button.addEventListener('click', () => {
+                    rangeMode = 'hours';
+                    currentHours = Number(button.dataset.hours);
+                    setActiveRangeButton(button);
+                    renderAll();
+                });
+            });
+
+            document.querySelector('#history-toolbar [data-all]')?.addEventListener('click', (event) => {
+                rangeMode = 'all';
+                setActiveRangeButton(event.currentTarget);
+                renderAll();
+            });
+
+            document.getElementById('custom-apply')?.addEventListener('click', () => {
+                const fromEl = document.getElementById('custom-from');
+                const toEl = document.getElementById('custom-to');
+                if (!fromEl?.value || !toEl?.value) {
+                    document.getElementById('usage-status').textContent =
+                        'Bitte Von- und Bis-Datum wählen.';
+                    return;
+                }
+
+                customFromValue = fromEl.value;
+                customToValue = toEl.value;
+                saveStoredCustomRange(fromEl.value, toEl.value);
+                rangeMode = 'custom';
+                setActiveRangeButton(document.getElementById('custom-apply'));
+                renderAll();
+            });
+
+            document.getElementById('custom-reset')?.addEventListener('click', resetCustomRange);
+
+            document.getElementById('custom-from')?.addEventListener('change', () => {
+                const fromEl = document.getElementById('custom-from');
+                const toEl = document.getElementById('custom-to');
+                if (fromEl?.value && toEl?.value) {
+                    saveStoredCustomRange(fromEl.value, toEl.value);
+                }
+                if (rangeMode === 'custom') {
+                    customFromValue = fromEl.value;
+                    customToValue = toEl.value;
+                    renderAll();
+                }
+            });
+
+            document.getElementById('custom-to')?.addEventListener('change', () => {
+                const fromEl = document.getElementById('custom-from');
+                const toEl = document.getElementById('custom-to');
+                if (fromEl?.value && toEl?.value) {
+                    saveStoredCustomRange(fromEl.value, toEl.value);
+                }
+                if (rangeMode === 'custom') {
+                    customFromValue = fromEl.value;
+                    customToValue = toEl.value;
+                    renderAll();
+                }
+            });
+
+            updateCustomDateBounds();
+
+            for (const userId of USER_ORDER) {
+                document.getElementById(USERS[userId].zoomResetId)?.addEventListener('click', () => {
+                    chartInstances[userId]?.resetZoom();
+                });
+
+                document.getElementById(USERS[userId].heightToggleId)?.addEventListener('click', (event) => {
+                    const toggleBtn = event.currentTarget;
+                    const expanded = toggleBtn.getAttribute('aria-pressed') !== 'true';
+                    setChartExpanded(userId, expanded);
+                });
+            }
+
+            window.addEventListener('resize', () => {
+                for (const userId of USER_ORDER) {
+                    const canvas = document.getElementById(USERS[userId].chartCanvasId);
+                    if (canvas?.closest('.chart-wrap--expanded')) {
+                        chartInstances[userId]?.resize();
+                    }
+                }
+            });
+
+            document.getElementById('csv-file-input')?.addEventListener('change', async (event) => {
+                const files = [...(event.target.files || [])];
+                if (!files.length) {
+                    return;
+                }
+
+                try {
+                    const parsedByUser = {};
+                    for (const userId of USER_ORDER) {
+                        parsedByUser[userId] = [];
+                    }
+
+                    for (const file of files) {
+                        const userId = detectUserFromFilename(file.name);
+                        const text = await file.text();
+                        parsedByUser[userId].push(parseUsageEvents(text, userId));
+                    }
+
+                    const nextEventsByUser = {};
+                    const loadSummary = {};
+                    for (const userId of USER_ORDER) {
+                        const mergeResult = mergeEvents(parsedByUser[userId]);
+                        nextEventsByUser[userId] = mergeResult.events;
+                        loadSummary[userId] = mergeResult;
+                    }
+
+                    applyLoadedEvents(
+                        nextEventsByUser,
+                        `Geladen: ${files.map((file) => file.name).join(', ')}`,
+                        loadSummary
+                    );
+                } catch (error) {
+                    document.getElementById('usage-status').textContent = `Fehler beim Laden: ${error.message}`;
+                }
+            });
+        }
+
+        async function fetchCsvText(path) {
+            const response = await fetch(`${path}?v=${Date.now()}`, { cache: 'no-store' });
+            if (!response.ok) {
+                throw new Error(`${path}: HTTP ${response.status}`);
+            }
+            return response.text();
+        }
+
+        async function loadDefaultCsvs() {
+            const statusEl = document.getElementById('usage-status');
+            const nextEventsByUser = {};
+            for (const userId of USER_ORDER) {
+                nextEventsByUser[userId] = [];
+            }
+            const loadSummary = {};
+            const loadedLabels = [];
+            const failed = [];
+
+            for (const userId of USER_ORDER) {
+                const paths = USERS[userId].defaultPaths;
+                const texts = [];
+
+                for (const path of paths) {
+                    try {
+                        texts.push(await fetchCsvText(path));
+                        loadedLabels.push(path.replace('./data/', ''));
+                    } catch (error) {
+                        failed.push(String(error?.message || error));
+                    }
+                }
+
+                if (texts.length) {
+                    const mergeResult = mergeEvents(
+                        texts.map((text) => parseUsageEvents(text, userId))
+                    );
+                    nextEventsByUser[userId] = mergeResult.events;
+                    loadSummary[userId] = mergeResult;
+                }
+            }
+
+            if (!loadedLabels.length) {
+                statusEl.textContent =
+                    'CSV konnte nicht geladen werden — bitte Datei(en) manuell wählen oder lokalen Server starten.';
+                return;
+            }
+
+            applyLoadedEvents(nextEventsByUser, `Standard: ${loadedLabels.join(' + ')}`, loadSummary);
+
+            if (failed.length) {
+                document.getElementById('load-hint').textContent +=
+                    ` · Warnung: ${failed.join('; ')}`;
+            }
+        }
+
+        async function initWhenReady() {
+            if (
+                typeof Chart === 'undefined' ||
+                typeof Hammer === 'undefined' ||
+                !window.CursorAnalytics?.markers ||
+                !window.CursorAnalytics?.usersConfig
+            ) {
+                window.setTimeout(initWhenReady, 50);
+                return;
+            }
+
+            const annotationPlugin =
+                window.chartjsPluginAnnotation || window.ChartAnnotation;
+            if (annotationPlugin) {
+                Chart.register(annotationPlugin);
+            }
+
+            await window.CursorAnalytics.usersConfig.loadUsersConfig();
+            buildChartStackFromConfig();
+            await window.CursorAnalytics.markers.syncFromServer('');
+            initMarkerUi();
+            initMarkerChartDisplayUi();
+            initToolbar();
+            loadDefaultCsvs();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initWhenReady);
+        } else {
+            initWhenReady();
+        }
+    </script>
+</body>
+
+</html>

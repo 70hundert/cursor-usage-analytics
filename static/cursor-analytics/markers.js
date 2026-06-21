@@ -1,0 +1,1161 @@
+/**
+ * Projekt-Marker: CRUD, Statistik, Chart-Annotationen, Export/Import, Server-Sync
+ */
+(function initCursorAnalyticsMarkers(global) {
+    const STORAGE_KEY = 'cursor-usage-markers-v1';
+    const LEGACY_STORAGE_KEY = 'cursor-event-chart-markers-v1';
+    const MARKER_CHART_DISPLAY_STORAGE_KEY = 'cursor-marker-chart-display';
+    const STORE_VERSION = 1;
+
+    const DEFAULT_MARKER_CHART_DISPLAY = {
+        showMarkers: true,
+        showLabels: true,
+        projectFilter: 'all',
+    };
+
+    /** 10 Standard-Farben für Projekt-Marker (gut unterscheidbar auf dunklem Chart-Hintergrund). */
+    const PROJECT_COLORS = [
+        '#f0b429', // Gold
+        '#3ecf8e', // Grün
+        '#58a6ff', // Blau
+        '#e8783a', // Orange
+        '#a78bfa', // Violett
+        '#f472b6', // Pink
+        '#22d3ee', // Cyan
+        '#f87171', // Koralle
+        '#a3e635', // Limette
+        '#818cf8', // Indigo
+    ];
+
+    function generateId() {
+        if (global.crypto?.randomUUID) {
+            return `m-${global.crypto.randomUUID()}`;
+        }
+        return `m-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    }
+
+    function emptyStore() {
+        return { version: STORE_VERSION, markers: [] };
+    }
+
+    function readJsonStorage(key) {
+        try {
+            const raw = global.localStorage?.getItem(key);
+            if (!raw) {
+                return null;
+            }
+            const parsed = JSON.parse(raw);
+            if (!parsed || typeof parsed !== 'object') {
+                return null;
+            }
+            return parsed;
+        } catch {
+            return null;
+        }
+    }
+
+    function writeJsonStorage(key, value) {
+        try {
+            global.localStorage?.setItem(key, JSON.stringify(value));
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    function normalizeMarker(raw) {
+        if (!raw || typeof raw !== 'object') {
+            return null;
+        }
+        const project = String(raw.project ?? '').trim();
+        if (!project) {
+            return null;
+        }
+        const start = raw.start ? new Date(raw.start) : null;
+        if (!start || Number.isNaN(start.getTime())) {
+            return null;
+        }
+        let end = null;
+        if (raw.end) {
+            const endDate = new Date(raw.end);
+            if (!Number.isNaN(endDate.getTime())) {
+                end = endDate.toISOString();
+            }
+        }
+        const user = String(raw.user ?? 'info').trim() || 'info';
+        const now = new Date().toISOString();
+        return {
+            id: String(raw.id || generateId()),
+            user,
+            start: start.toISOString(),
+            end,
+            project,
+            task: String(raw.task ?? '').trim(),
+            note: String(raw.note ?? '').trim(),
+            createdAt: raw.createdAt || now,
+            updatedAt: raw.updatedAt || now,
+        };
+    }
+
+    function migrateLegacyStore(legacy) {
+        if (!legacy) {
+            return null;
+        }
+        const markers = Array.isArray(legacy.markers) ? legacy.markers : Array.isArray(legacy) ? legacy : [];
+        const normalized = markers.map(normalizeMarker).filter(Boolean);
+        if (!normalized.length) {
+            return null;
+        }
+        return { version: STORE_VERSION, markers: normalized };
+    }
+
+    function loadStore() {
+        const current = readJsonStorage(STORAGE_KEY);
+        if (current?.markers) {
+            return {
+                version: STORE_VERSION,
+                markers: current.markers.map(normalizeMarker).filter(Boolean),
+            };
+        }
+
+        const legacy = migrateLegacyStore(readJsonStorage(LEGACY_STORAGE_KEY));
+        if (legacy) {
+            writeJsonStorage(STORAGE_KEY, legacy);
+            return legacy;
+        }
+
+        return emptyStore();
+    }
+
+    let memoryStore = loadStore();
+    let syncPromise = null;
+
+    function getStore() {
+        return memoryStore;
+    }
+
+    function saveStoreLocal(store) {
+        memoryStore = {
+            version: STORE_VERSION,
+            markers: (store.markers || []).map(normalizeMarker).filter(Boolean),
+        };
+        writeJsonStorage(STORAGE_KEY, memoryStore);
+        return memoryStore;
+    }
+
+    async function saveStore(store, proxyBase = '') {
+        const saved = saveStoreLocal(store);
+        if (proxyBase !== null) {
+            try {
+                await pushToServer(saved, proxyBase);
+            } catch {
+                /* localStorage fallback — caller may show status */
+            }
+        }
+        return saved;
+    }
+
+    function listMarkers({ user, from, to } = {}) {
+        let markers = [...getStore().markers];
+        if (user && user !== 'all') {
+            markers = markers.filter((m) => m.user === user || m.user === 'all');
+        }
+        if (from) {
+            const fromMs = new Date(from).getTime();
+            markers = markers.filter((m) => new Date(m.start).getTime() >= fromMs);
+        }
+        if (to) {
+            const toMs = new Date(to).getTime();
+            markers = markers.filter((m) => new Date(m.start).getTime() <= toMs);
+        }
+        return markers.sort((a, b) => new Date(a.start) - new Date(b.start));
+    }
+
+    function upsertMarker(markerInput) {
+        const marker = normalizeMarker({
+            ...markerInput,
+            updatedAt: new Date().toISOString(),
+            createdAt: markerInput.createdAt || new Date().toISOString(),
+        });
+        if (!marker) {
+            throw new Error('Ungültiger Marker — Projekt und Startzeit sind Pflicht.');
+        }
+        const store = getStore();
+        const index = store.markers.findIndex((m) => m.id === marker.id);
+        if (index >= 0) {
+            marker.createdAt = store.markers[index].createdAt;
+            store.markers[index] = marker;
+        } else {
+            store.markers.push(marker);
+        }
+        return marker;
+    }
+
+    function removeMarker(id) {
+        const store = getStore();
+        store.markers = store.markers.filter((m) => m.id !== id);
+        return store;
+    }
+
+    function eventTimeMs(event) {
+        const t = event.timestamp ?? event.date;
+        if (t instanceof Date) {
+            return t.getTime();
+        }
+        return new Date(t).getTime();
+    }
+
+    function markersForUser(allMarkers, userId) {
+        if (userId === 'all') {
+            return [...allMarkers].sort((a, b) => new Date(a.start) - new Date(b.start));
+        }
+        return allMarkers
+            .filter((m) => m.user === userId || m.user === 'all')
+            .sort((a, b) => new Date(a.start) - new Date(b.start));
+    }
+
+    function loadMarkerChartDisplay() {
+        try {
+            const raw = global.localStorage?.getItem(MARKER_CHART_DISPLAY_STORAGE_KEY);
+            if (!raw) {
+                return { ...DEFAULT_MARKER_CHART_DISPLAY };
+            }
+            const parsed = JSON.parse(raw);
+            return {
+                showMarkers: parsed.showMarkers !== false,
+                showLabels: parsed.showLabels !== false,
+                projectFilter:
+                    typeof parsed.projectFilter === 'string' ? parsed.projectFilter : 'all',
+            };
+        } catch {
+            return { ...DEFAULT_MARKER_CHART_DISPLAY };
+        }
+    }
+
+    function saveMarkerChartDisplay(prefs) {
+        try {
+            global.localStorage?.setItem(
+                MARKER_CHART_DISPLAY_STORAGE_KEY,
+                JSON.stringify({
+                    showMarkers: prefs.showMarkers !== false,
+                    showLabels: prefs.showLabels !== false,
+                    projectFilter: prefs.projectFilter || 'all',
+                })
+            );
+        } catch {
+            /* ignore quota / private mode */
+        }
+    }
+
+    function filterChartMarkers(markers, chartContext = {}) {
+        if (chartContext.showMarkers === false) {
+            return [];
+        }
+        let visible = chartContext.user
+            ? markersForUser(markers, chartContext.user)
+            : [...markers].sort((a, b) => new Date(a.start) - new Date(b.start));
+        const projectFilter = chartContext.projectFilter;
+        if (projectFilter && projectFilter !== 'all') {
+            visible = visible.filter((m) => m.project === projectFilter);
+        }
+        return visible;
+    }
+
+    function resolveIntervalEndMs(marker, sortedMarkers, filterEndMs) {
+        if (marker.end) {
+            return new Date(marker.end).getTime();
+        }
+        const startMs = new Date(marker.start).getTime();
+        const sameUser = markersForUser(sortedMarkers, marker.user === 'all' ? 'all' : marker.user);
+        for (const next of sameUser) {
+            const nextStart = new Date(next.start).getTime();
+            if (nextStart > startMs && next.id !== marker.id) {
+                return nextStart;
+            }
+        }
+        return filterEndMs ?? Date.now();
+    }
+
+    function computeStats(events, marker, allMarkers, filterEndMs) {
+        const startMs = new Date(marker.start).getTime();
+        const endMs = marker.end
+            ? new Date(marker.end).getTime()
+            : resolveIntervalEndMs(marker, allMarkers, filterEndMs);
+
+        let calls = 0;
+        let totalTokens = 0;
+        let outputTokens = 0;
+        let inputNoCache = 0;
+        let cacheRead = 0;
+        let costCents = 0;
+
+        for (const event of events) {
+            const userLabel = event.userLabel ?? event.user;
+            if (marker.user !== 'all' && userLabel && userLabel !== marker.user) {
+                continue;
+            }
+            const t = eventTimeMs(event);
+            if (t < startMs || t >= endMs) {
+                continue;
+            }
+            calls += 1;
+            totalTokens += event.totalTokens ?? 0;
+            outputTokens += event.outputTokens ?? 0;
+            inputNoCache += event.inputNoCache ?? 0;
+            cacheRead += event.cacheRead ?? 0;
+            costCents += event.costCents ?? 0;
+        }
+
+        return {
+            startMs,
+            endMs,
+            calls,
+            totalTokens,
+            outputTokens,
+            inputNoCache,
+            cacheRead,
+            costCents,
+        };
+    }
+
+    function computeIntervalRows(events, markers, userId, filterEndMs) {
+        const userMarkers = markersForUser(markers, userId);
+        return userMarkers.map((marker) => ({
+            marker,
+            stats: computeStats(events, marker, markers, filterEndMs),
+        }));
+    }
+
+    function buildProjectColorMap(projects) {
+        const unique = [...new Set(projects.filter(Boolean))].sort((a, b) =>
+            a.localeCompare(b, 'de', { sensitivity: 'base' }),
+        );
+        return new Map(unique.map((name, index) => [name, PROJECT_COLORS[index % PROJECT_COLORS.length]]));
+    }
+
+    function projectColor(project, colorMapOrMarkers) {
+        let colorMap = colorMapOrMarkers;
+        if (Array.isArray(colorMapOrMarkers)) {
+            colorMap = buildProjectColorMap(
+                colorMapOrMarkers.map((entry) => (typeof entry === 'string' ? entry : entry?.project)),
+            );
+        }
+        if (colorMap instanceof Map && colorMap.has(project)) {
+            return colorMap.get(project);
+        }
+        return PROJECT_COLORS[0];
+    }
+
+    function bucketStartMs(bucket) {
+        if (bucket.bucketStart instanceof Date) {
+            return bucket.bucketStart.getTime();
+        }
+        return bucket.sortKey;
+    }
+
+    function bucketEndMs(buckets, index) {
+        if (index + 1 < buckets.length) {
+            return bucketStartMs(buckets[index + 1]);
+        }
+        return bucketStartMs(buckets[index]) + 1;
+    }
+
+    function bucketIndexRangeForInterval(buckets, startMs, endMs, options = {}) {
+        if (!buckets?.length) {
+            return null;
+        }
+
+        const { events, marker } = options;
+        const matchEvents = Boolean(marker && events?.length === buckets.length);
+        let xMin = null;
+        let xMax = null;
+
+        for (let i = 0; i < buckets.length; i += 1) {
+            const bucketStart = bucketStartMs(buckets[i]);
+            const bucketEnd = bucketEndMs(buckets, i);
+            if (bucketStart >= endMs || bucketEnd <= startMs) {
+                continue;
+            }
+
+            if (matchEvents) {
+                const userLabel = events[i].userLabel ?? events[i].user;
+                if (marker.user !== 'all' && userLabel && userLabel !== marker.user) {
+                    continue;
+                }
+            }
+
+            if (xMin === null) {
+                xMin = i;
+            }
+            xMax = i;
+        }
+
+        if (xMin === null) {
+            return null;
+        }
+
+        return { xMin, xMax };
+    }
+
+    /** @deprecated use bucketIndexRangeForInterval */
+    function bucketIndexForTimestamp(buckets, timestampMs) {
+        if (!buckets?.length) {
+            return null;
+        }
+        for (let i = 0; i < buckets.length; i += 1) {
+            if (buckets[i].sortKey >= timestampMs) {
+                return i;
+            }
+        }
+        return buckets.length - 1;
+    }
+
+    let popoverEl = null;
+    let popoverHideTimer = null;
+    let popoverMarkerId = null;
+    let popoverPinned = false;
+
+    function clearPopoverHideTimer() {
+        if (popoverHideTimer) {
+            clearTimeout(popoverHideTimer);
+            popoverHideTimer = null;
+        }
+    }
+
+    function isMouseOverPopover() {
+        return Boolean(popoverEl && !popoverEl.hidden && popoverEl.matches(':hover'));
+    }
+    function ensurePopoverStyles() {
+        if (document.getElementById('marker-chart-popover-styles')) {
+            return;
+        }
+        const style = document.createElement('style');
+        style.id = 'marker-chart-popover-styles';
+        style.textContent = `
+            .marker-chart-popover {
+                position: fixed;
+                z-index: 1100;
+                min-width: 200px;
+                max-width: 320px;
+                padding: 0.55rem 0.65rem 0.5rem;
+                background: #1a222d;
+                border: 1px solid #2d3a4a;
+                border-radius: 10px;
+                box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+                color: #e8eef4;
+                font-size: 0.78rem;
+                line-height: 1.45;
+                pointer-events: auto;
+            }
+            .marker-chart-popover[hidden] {
+                display: none;
+            }
+            .marker-chart-popover__title {
+                font-weight: 600;
+                font-size: 0.85rem;
+                margin-bottom: 0.35rem;
+                color: #f0b429;
+            }
+            .marker-chart-popover__row {
+                color: #8b9aab;
+            }
+            .marker-chart-popover__row strong {
+                color: #e8eef4;
+                font-weight: 600;
+            }
+            .marker-chart-popover__stats {
+                margin-top: 0.35rem;
+                padding-top: 0.35rem;
+                border-top: 1px solid #2d3a4a;
+                color: #8b9aab;
+            }
+            .marker-chart-popover__edit {
+                margin-top: 0.5rem;
+                border: 1px solid #3ecf8e;
+                background: rgba(62, 207, 142, 0.12);
+                color: #3ecf8e;
+                border-radius: 8px;
+                padding: 0.28rem 0.65rem;
+                font-size: 0.75rem;
+                cursor: pointer;
+                width: 100%;
+            }
+            .marker-chart-popover__edit:hover {
+                background: rgba(62, 207, 142, 0.22);
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    function ensurePopover() {
+        ensurePopoverStyles();
+        if (popoverEl) {
+            return popoverEl;
+        }
+        popoverEl = document.createElement('div');
+        popoverEl.id = 'marker-chart-popover';
+        popoverEl.className = 'marker-chart-popover';
+        popoverEl.hidden = true;
+        popoverEl.innerHTML =
+            '<div class="marker-chart-popover__body"></div>' +
+            '<button type="button" class="marker-chart-popover__edit">Bearbeiten</button>';
+        popoverEl.addEventListener('mouseenter', () => {
+            clearPopoverHideTimer();
+            popoverPinned = true;
+        });
+        popoverEl.addEventListener('mouseleave', () => {
+            scheduleHidePopover(250);
+        });
+        popoverEl.querySelector('.marker-chart-popover__edit').addEventListener('mousedown', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const marker = getStore().markers.find((m) => m.id === popoverMarkerId);
+            const callback = popoverEl._onEdit;
+            if (marker && callback) {
+                callback(marker);
+            }
+            hideChartPopover(true);
+        });
+        document.body.appendChild(popoverEl);
+        return popoverEl;
+    }
+
+    function scheduleHidePopover(delayMs = 300) {
+        clearPopoverHideTimer();
+        popoverHideTimer = setTimeout(() => {
+            if (isMouseOverPopover()) {
+                popoverHideTimer = null;
+                return;
+            }
+            hideChartPopover(true);
+        }, delayMs);
+    }
+
+    function hideChartPopover(immediate = false) {
+        clearPopoverHideTimer();
+        if (!popoverEl) {
+            return;
+        }
+        if (!immediate) {
+            scheduleHidePopover(300);
+            return;
+        }
+        popoverEl.hidden = true;
+        popoverMarkerId = null;
+        popoverPinned = false;
+    }
+
+    function formatPopoverDate(iso, formatters) {
+        if (!iso) {
+            return '—';
+        }
+        const date = new Date(iso);
+        if (Number.isNaN(date.getTime())) {
+            return '—';
+        }
+        if (formatters?.dateTimeFmt) {
+            return formatters.dateTimeFmt.format(date);
+        }
+        return date.toLocaleString('de-DE');
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    function buildPopoverHtml(marker, chartContext) {
+        const { filterEndMs, markers, events, formatters } = chartContext;
+        const allMarkers = markers || getStore().markers;
+        const endMs = marker.end
+            ? new Date(marker.end).getTime()
+            : resolveIntervalEndMs(marker, allMarkers, filterEndMs);
+        const endLabel = marker.end
+            ? formatPopoverDate(marker.end, formatters)
+            : `${formatPopoverDate(new Date(endMs).toISOString(), formatters)} *`;
+
+        let statsHtml = '';
+        if (events?.length) {
+            const stats = computeStats(events, marker, allMarkers, filterEndMs);
+            const parts = [`${stats.calls} Events`, `${stats.totalTokens.toLocaleString('de-DE')} Tokens`];
+            if (stats.costCents > 0 || formatters?.currencyFmt) {
+                const costLabel = formatters?.currencyFmt
+                    ? formatters.currencyFmt.format(stats.costCents / 100)
+                    : `${(stats.costCents / 100).toFixed(2)} $`;
+                parts.push(costLabel);
+            }
+            statsHtml = `<div class="marker-chart-popover__stats">${parts.join(' · ')}</div>`;
+        }
+
+        const taskRow = marker.task
+            ? `<div class="marker-chart-popover__row">Aufgabe: <strong>${escapeHtml(marker.task)}</strong></div>`
+            : '';
+        const noteRow = marker.note
+            ? `<div class="marker-chart-popover__row">Notiz: <strong>${escapeHtml(marker.note)}</strong></div>`
+            : '';
+        const userLabel = marker.user === 'all' ? 'Gesamt' : escapeHtml(marker.user);
+
+        return `
+            <div class="marker-chart-popover__title">${escapeHtml(marker.project)}</div>
+            ${taskRow}
+            <div class="marker-chart-popover__row">Benutzer: <strong>${userLabel}</strong></div>
+            <div class="marker-chart-popover__row">Von: <strong>${formatPopoverDate(marker.start, formatters)}</strong></div>
+            <div class="marker-chart-popover__row">Bis: <strong>${endLabel}</strong></div>
+            ${noteRow}
+            ${statsHtml}
+        `;
+    }
+
+    function getNativeClientPoint(event) {
+        const native = event?.native;
+        if (native && typeof native.clientX === 'number') {
+            return { x: native.clientX, y: native.clientY };
+        }
+        return { x: window.innerWidth / 2, y: window.innerHeight / 3 };
+    }
+
+    function positionPopoverStable(ctx, event) {
+        const el = ensurePopover();
+        const canvas = ctx?.chart?.canvas;
+        const margin = 12;
+
+        if (canvas) {
+            const rect = canvas.getBoundingClientRect();
+            const width = el.offsetWidth || 240;
+            const height = el.offsetHeight || 140;
+            let left = rect.right - width - margin;
+            let top = rect.top + margin;
+            if (left < margin) {
+                left = rect.left + margin;
+            }
+            if (top + height > window.innerHeight - margin) {
+                top = window.innerHeight - height - margin;
+            }
+            el.style.left = `${Math.max(margin, left)}px`;
+            el.style.top = `${Math.max(margin, top)}px`;
+            return;
+        }
+
+        const { x, y } = getNativeClientPoint(event);
+        el.style.left = `${Math.min(window.innerWidth - el.offsetWidth - margin, x + margin)}px`;
+        el.style.top = `${Math.min(window.innerHeight - el.offsetHeight - margin, y + margin)}px`;
+    }
+
+    function showChartPopover(marker, event, chartContext, ctx) {
+        if (!marker) {
+            return;
+        }
+        clearPopoverHideTimer();
+
+        if (popoverMarkerId === marker.id && popoverEl && !popoverEl.hidden) {
+            popoverPinned = true;
+            return;
+        }
+
+        const el = ensurePopover();
+        popoverMarkerId = marker.id;
+        popoverPinned = true;
+        el._onEdit = chartContext.onEditMarker || null;
+        el.querySelector('.marker-chart-popover__body').innerHTML = buildPopoverHtml(marker, chartContext);
+        const editBtn = el.querySelector('.marker-chart-popover__edit');
+        if (chartContext.onEditMarker) {
+            editBtn.hidden = false;
+        } else {
+            editBtn.hidden = true;
+        }
+
+        el.hidden = false;
+        positionPopoverStable(ctx, event);
+    }
+
+    function defaultHitWidthMs(chartContext) {
+        if (chartContext.hitWidthMs) {
+            return chartContext.hitWidthMs;
+        }
+        return 20 * 60 * 1000;
+    }
+
+    const CHART_LABEL_LINE_LEN = 22;
+    const CHART_LABEL_LANE_HEIGHT = 16;
+    const CHART_LABEL_OFFSET_TOP = -15;
+    const CHART_LABEL_OFFSET_LEFT = 2;
+
+    function splitChartLabelLines(text) {
+        const value = String(text ?? '').trim();
+        if (!value) {
+            return [];
+        }
+        if (value.length <= CHART_LABEL_LINE_LEN) {
+            return [value];
+        }
+        const splitAt = value.lastIndexOf(' ', CHART_LABEL_LINE_LEN);
+        if (splitAt > 6) {
+            const first = value.slice(0, splitAt);
+            const rest = value.slice(splitAt + 1).trim();
+            if (rest.length <= CHART_LABEL_LINE_LEN) {
+                return [first, rest];
+            }
+            return [first, `${rest.slice(0, CHART_LABEL_LINE_LEN - 1)}…`];
+        }
+        return [`${value.slice(0, CHART_LABEL_LINE_LEN - 1)}…`];
+    }
+
+    /** Mehrzeiliger Chart-Text — Projekt steht in Popover und Marker-Farbe. */
+    function chartLabelContent(marker) {
+        const task = String(marker.task ?? '').trim();
+        const project = String(marker.project ?? '').trim();
+        return splitChartLabelLines(task || project);
+    }
+
+    function estimateLabelWidthUnits(content, mode) {
+        const longestLine = content.reduce((max, line) => Math.max(max, line.length), 0);
+        if (mode === 'category') {
+            return Math.max(0.45, longestLine * 0.085);
+        }
+        return Math.max(25 * 60 * 1000, longestLine * 2.5 * 60 * 1000);
+    }
+
+    function computeCollisionLabelLanes(placements) {
+        const lanes = new Map();
+        if (!placements.length) {
+            return { lanes, maxLane: -1 };
+        }
+
+        const sorted = [...placements].sort((a, b) => a.x - b.x || String(a.id).localeCompare(String(b.id)));
+        const laneEnds = [];
+
+        for (const item of sorted) {
+            let lane = 0;
+            while (lane < laneEnds.length && item.x < laneEnds[lane] - 0.02) {
+                lane += 1;
+            }
+            laneEnds[lane] = item.x + item.width;
+            lanes.set(item.id, lane);
+        }
+
+        return { lanes, maxLane: laneEnds.length - 1 };
+    }
+
+    function collectMarkerLabelPlacements(visible, chartContext) {
+        const { mode = 'time', buckets, markers, filterEndMs } = chartContext;
+        const placements = [];
+
+        for (const marker of visible) {
+            const content = chartLabelContent(marker);
+            if (!content.length) {
+                continue;
+            }
+
+            if (mode === 'category' && buckets?.length) {
+                const startMs = new Date(marker.start).getTime();
+                const endMs = marker.end
+                    ? new Date(marker.end).getTime()
+                    : resolveIntervalEndMs(marker, markers, filterEndMs);
+                const range = bucketIndexRangeForInterval(buckets, startMs, endMs, {
+                    events: chartContext.events,
+                    marker,
+                });
+                if (!range) {
+                    continue;
+                }
+                placements.push({
+                    id: marker.id,
+                    x: range.xMin,
+                    width: estimateLabelWidthUnits(content, 'category'),
+                    content,
+                });
+                continue;
+            }
+
+            placements.push({
+                id: marker.id,
+                x: new Date(marker.start).getTime(),
+                width: estimateLabelWidthUnits(content, 'time'),
+                content,
+            });
+        }
+
+        return placements;
+    }
+
+    function chartMarkerLabelTopPadding(markers, chartContext = {}) {
+        if (chartContext.showMarkers === false || chartContext.showLabels === false) {
+            return 0;
+        }
+        const visible = filterChartMarkers(markers, chartContext);
+        const placements = collectMarkerLabelPlacements(visible, chartContext);
+        const { maxLane } = computeCollisionLabelLanes(placements);
+        if (maxLane < 0) {
+            return 0;
+        }
+        return 8 + CHART_LABEL_OFFSET_TOP + (maxLane + 1) * CHART_LABEL_LANE_HEIGHT;
+    }
+
+    function chartAnnotationLabelOptions(content, laneIndex, color, variant = 'box') {
+        const lineCount = Array.isArray(content) ? content.length : 1;
+        const laneOffset = laneIndex * CHART_LABEL_LANE_HEIGHT + CHART_LABEL_OFFSET_TOP;
+        const base = {
+            display: Boolean(content?.length),
+            content,
+            color: '#e8eef4',
+            backgroundColor: `${color}dd`,
+            font: { size: 9, lineHeight: 1.15 },
+            padding: { top: 4, bottom: 3, left: 6, right: 5 },
+            rotation: 0,
+            textAlign: 'start',
+            clip: false,
+            borderRadius: 4,
+        };
+
+        if (variant === 'box') {
+            return {
+                ...base,
+                position: { x: 'start', y: 'start' },
+                xAdjust: CHART_LABEL_OFFSET_LEFT,
+                yAdjust: -(laneOffset + (lineCount - 1) * 6),
+            };
+        }
+
+        return {
+            ...base,
+            position: 'end',
+            xAdjust: CHART_LABEL_OFFSET_LEFT,
+            yAdjust: -(laneOffset + (lineCount - 1) * 6),
+        };
+    }
+
+    function highlightTimeLineAnnotation(chart, markerId, borderWidth) {
+        const lineKey = `marker-${markerId}`;
+        const annotations = chart?.options?.plugins?.annotation?.annotations;
+        if (annotations?.[lineKey]) {
+            annotations[lineKey].borderWidth = borderWidth;
+            return true;
+        }
+        return false;
+    }
+
+    function createAnnotationInteraction(marker, chartContext, role, colorMap) {
+        return {
+            enter(ctx, event) {
+                showChartPopover(marker, event, chartContext, ctx);
+                if (role === 'line-label' || role === 'hit') {
+                    highlightTimeLineAnnotation(ctx.chart, marker.id, 4);
+                } else if (role === 'box') {
+                    const options = ctx.element?.options;
+                    if (options) {
+                        if (options.borderWidth != null) {
+                            options.borderWidth = 4;
+                        }
+                        if (options.backgroundColor && String(options.backgroundColor).includes('18')) {
+                            options.backgroundColor = `${projectColor(marker.project, colorMap)}33`;
+                        }
+                    }
+                }
+            },
+            leave(ctx) {
+                if (role === 'line-label' || role === 'hit') {
+                    highlightTimeLineAnnotation(ctx.chart, marker.id, 2);
+                } else if (role === 'box') {
+                    const options = ctx.element?.options;
+                    if (options) {
+                        if (options.borderWidth != null) {
+                            options.borderWidth = 1;
+                        }
+                        if (options.backgroundColor && String(options.backgroundColor).includes('33')) {
+                            options.backgroundColor = `${projectColor(marker.project, colorMap)}18`;
+                        }
+                    }
+                }
+                if (popoverPinned && popoverMarkerId === marker.id) {
+                    scheduleHidePopover(450);
+                    return;
+                }
+                scheduleHidePopover(300);
+            },
+            click(ctx, event) {
+                showChartPopover(marker, event, chartContext, ctx);
+            },
+        };
+    }
+
+    function toChartAnnotations(markers, chartContext = {}) {
+        if (chartContext.showMarkers === false) {
+            return {};
+        }
+        const { mode = 'time', buckets, filterEndMs } = chartContext;
+        const visible = filterChartMarkers(markers, chartContext);
+        const colorMap = buildProjectColorMap(markers.map((marker) => marker.project));
+        const showLabels = chartContext.showLabels !== false;
+        const interactive = Boolean(chartContext.onEditMarker || chartContext.showPopover);
+        const placements = showLabels ? collectMarkerLabelPlacements(visible, chartContext) : [];
+        const { lanes: labelLanes } = computeCollisionLabelLanes(placements);
+        const contentById = new Map(placements.map((item) => [item.id, item.content]));
+        const annotations = {};
+
+        visible.forEach((marker, index) => {
+            const color = projectColor(marker.project, colorMap);
+            const laneIndex = labelLanes.get(marker.id) ?? 0;
+            const labelContent = showLabels ? contentById.get(marker.id) || [] : [];
+            const key = `marker-${marker.id || index}`;
+            const interaction = interactive
+                ? createAnnotationInteraction(marker, chartContext, 'box', colorMap)
+                : {};
+
+            if (mode === 'category' && buckets?.length) {
+                const startMs = new Date(marker.start).getTime();
+                const endMs = marker.end
+                    ? new Date(marker.end).getTime()
+                    : resolveIntervalEndMs(marker, markers, filterEndMs);
+                const range = bucketIndexRangeForInterval(buckets, startMs, endMs, {
+                    events: chartContext.events,
+                    marker,
+                });
+                if (!range) {
+                    return;
+                }
+                const { xMin, xMax } = range;
+
+                annotations[key] = {
+                    type: 'box',
+                    xMin,
+                    xMax,
+                    backgroundColor: `${color}18`,
+                    borderColor: color,
+                    borderWidth: 1,
+                    ...interaction,
+                    label: chartAnnotationLabelOptions(labelContent, laneIndex, color, 'box'),
+                };
+
+                annotations[`${key}-line`] = {
+                    type: 'line',
+                    xMin,
+                    xMax: xMin,
+                    borderColor: color,
+                    borderWidth: 2,
+                    label: { display: false },
+                };
+                return;
+            }
+
+            const xValue = new Date(marker.start).getTime();
+            const hitWidth = defaultHitWidthMs(chartContext);
+            const lineInteraction = interactive
+                ? createAnnotationInteraction(marker, chartContext, 'hit', colorMap)
+                : {};
+
+            if (interactive) {
+                annotations[`${key}-hit`] = {
+                    type: 'box',
+                    xScaleID: 'x',
+                    yScaleID: 'y',
+                    xMin: xValue - hitWidth,
+                    xMax: xValue + hitWidth,
+                    yMin: (ctx) => ctx.chart.scales.y?.min ?? 0,
+                    yMax: (ctx) => ctx.chart.scales.y?.max ?? 1,
+                    backgroundColor: 'transparent',
+                    borderWidth: 0,
+                    drawTime: 'beforeDatasetsDraw',
+                    ...lineInteraction,
+                    label: { display: false },
+                };
+            }
+
+            annotations[key] = {
+                type: 'line',
+                scaleID: 'x',
+                value: xValue,
+                borderColor: color,
+                borderWidth: 2,
+                borderDash: [4, 4],
+                label: chartAnnotationLabelOptions(labelContent, laneIndex, color, 'line'),
+            };
+        });
+
+        return annotations;
+    }
+
+    function annotationPluginOptions(markers, chartContext = {}) {
+        const annotations = toChartAnnotations(markers, chartContext);
+        if (!Object.keys(annotations).length) {
+            return { annotations: {} };
+        }
+        return {
+            interaction: {
+                mode: 'nearest',
+                axis: 'x',
+            },
+            annotations,
+        };
+    }
+
+    function getMarkerForEvent(event, markers) {
+        const t = eventTimeMs(event);
+        const userLabel = event.userLabel ?? event.user;
+        const candidates = markersForUser(markers, userLabel);
+        let match = null;
+
+        for (const marker of candidates) {
+            const startMs = new Date(marker.start).getTime();
+            const endMs = marker.end
+                ? new Date(marker.end).getTime()
+                : resolveIntervalEndMs(marker, markers, Date.now());
+            if (t >= startMs && t < endMs) {
+                if (!match || new Date(marker.start) > new Date(match.start)) {
+                    match = marker;
+                }
+            }
+        }
+        return match;
+    }
+
+    function exportStore() {
+        return {
+            version: STORE_VERSION,
+            markers: getStore().markers,
+            exportedAt: new Date().toISOString(),
+        };
+    }
+
+    function importStore(payload, merge = true) {
+        const incoming = Array.isArray(payload?.markers) ? payload.markers : [];
+        const normalized = incoming.map(normalizeMarker).filter(Boolean);
+        if (!merge) {
+            return saveStoreLocal({ version: STORE_VERSION, markers: normalized });
+        }
+
+        const store = getStore();
+        const byId = new Map(store.markers.map((m) => [m.id, m]));
+        for (const marker of normalized) {
+            byId.set(marker.id, marker);
+        }
+        return saveStoreLocal({ version: STORE_VERSION, markers: [...byId.values()] });
+    }
+
+    function getVisibleChartTimeMs(chart) {
+        if (!chart?.scales?.x) {
+            return Date.now();
+        }
+        const { min, max } = chart.scales.x;
+        if (typeof min === 'number' && typeof max === 'number') {
+            return Math.round((min + max) / 2);
+        }
+        return Date.now();
+    }
+
+    function toDatetimeLocalValue(isoString) {
+        const date = new Date(isoString);
+        if (Number.isNaN(date.getTime())) {
+            return '';
+        }
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    }
+
+    function fromDatetimeLocalValue(value) {
+        if (!value) {
+            return null;
+        }
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? null : date.toISOString();
+    }
+
+    async function fetchServerStore(proxyBase = '') {
+        const response = await fetch(`${proxyBase}/api/markers`, { cache: 'no-store' });
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        return response.json();
+    }
+
+    async function pushToServer(store, proxyBase = '') {
+        const response = await fetch(`${proxyBase}/api/markers`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(store),
+        });
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        return response.json();
+    }
+
+    function mergeStores(local, remote) {
+        const byId = new Map();
+        for (const marker of remote?.markers || []) {
+            const normalized = normalizeMarker(marker);
+            if (normalized) {
+                byId.set(normalized.id, normalized);
+            }
+        }
+        for (const marker of local?.markers || []) {
+            const existing = byId.get(marker.id);
+            if (!existing) {
+                byId.set(marker.id, marker);
+                continue;
+            }
+            const localUpdated = new Date(marker.updatedAt || marker.createdAt).getTime();
+            const remoteUpdated = new Date(existing.updatedAt || existing.createdAt).getTime();
+            if (localUpdated > remoteUpdated) {
+                byId.set(marker.id, marker);
+            }
+        }
+        return { version: STORE_VERSION, markers: [...byId.values()] };
+    }
+
+    async function syncFromServer(proxyBase = '') {
+        if (syncPromise) {
+            return syncPromise;
+        }
+        syncPromise = (async () => {
+            try {
+                const remote = await fetchServerStore(proxyBase);
+                const merged = mergeStores(getStore(), remote);
+                saveStoreLocal(merged);
+                return { ok: true, source: 'server' };
+            } catch {
+                return { ok: false, source: 'local' };
+            } finally {
+                syncPromise = null;
+            }
+        })();
+        return syncPromise;
+    }
+
+    global.CursorAnalytics = global.CursorAnalytics || {};
+    global.CursorAnalytics.markers = {
+        STORAGE_KEY,
+        LEGACY_STORAGE_KEY,
+        loadStore,
+        getStore,
+        saveStore,
+        saveStoreLocal,
+        listMarkers,
+        upsertMarker,
+        removeMarker,
+        computeStats,
+        computeIntervalRows,
+        toChartAnnotations,
+        annotationPluginOptions,
+        chartMarkerLabelTopPadding,
+        showChartPopover,
+        hideChartPopover,
+        getMarkerForEvent,
+        projectColor,
+        buildProjectColorMap,
+        exportStore,
+        importStore,
+        getVisibleChartTimeMs,
+        toDatetimeLocalValue,
+        fromDatetimeLocalValue,
+        eventTimeMs,
+        resolveIntervalEndMs,
+        loadMarkerChartDisplay,
+        saveMarkerChartDisplay,
+        filterChartMarkers,
+        syncFromServer,
+        pushToServer,
+    };
+})(typeof window !== 'undefined' ? window : globalThis);

@@ -1,0 +1,16 @@
+.env
+data/
+venv/
+__pycache__/
+*.py[cod]
+*.log
+.Python
+.specstory/
+.specstory/.project.json
+
+# Lokale Dev-/Planungsdateien (nicht für Public-Repo)
+config/users.json
+docs/PROMPT-feature-reference.md
+docs/VORLAGE-PROMPT-feature-reference.md
+docs/ROADMAP.md
+.cursor/rules/feature-reference-workflow.mdc
