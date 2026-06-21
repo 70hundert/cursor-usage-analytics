@@ -121,4 +121,4 @@ Siehe [docs/screenshots/README.md](docs/screenshots/README.md) — PNGs vor Rele
 
 ## Zwei Repos (privat + public)
 
-Persönliche Planung und AI-Vorlagen bleiben lokal gitignored. Details: [docs/PUBLIC_REPO.md](docs/PUBLIC_REPO.md).
+Persönliche Planung und AI-Vorlagen bleiben lokal gitignored. Für ein öffentliches Repo mit sauberer Historie: [docs/PUBLIC_REPO.md](docs/PUBLIC_REPO.md).

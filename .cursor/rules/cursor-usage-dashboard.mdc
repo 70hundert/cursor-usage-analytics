@@ -37,5 +37,3 @@ Bei Änderungen an Shared-Impact (User-Pfade, CSV-Format, Design-Tokens) REFEREN
 | API-Proxy, Static-Serving | `serve.py` |
 
 Bei Shared-Änderungen mit Bezug zu diesem Scope: REFERENCE.md manuell lesen.
-
-
