@@ -14,7 +14,8 @@ Local dashboard for **Cursor IDE usage** — token timeline, costs, models, budg
 ## Quick start
 
 ```powershell
-cd path\to\Cursor-Usage-Dashboard
+git clone https://github.com/70hundert/cursor-usage-analytics.git
+cd cursor-usage-analytics
 python -m venv venv
 .\venv\Scripts\Activate.ps1
 pip install -r requirements.txt
@@ -114,7 +115,13 @@ docs/REFERENCE.md
 
 ## Screenshots
 
-See [docs/screenshots/README.md](docs/screenshots/README.md) — add PNGs before release.
+Demo data (user **Demo**), time range **All**:
+
+| Overview & KPIs | Project markers | Individual requests |
+| --------------- | --------------- | ------------------- |
+| ![Analytics overview](docs/screenshots/analytics-overview.png) | ![Project markers](docs/screenshots/analytics-markers.png) | ![Events table](docs/screenshots/events-table.png) |
+
+Regenerate: `python scripts/capture-screenshots.py` (server running; in venv: `pip install playwright pillow` + `playwright install chromium`).
 
 ## Known limitations
 
@@ -122,6 +129,10 @@ See [docs/screenshots/README.md](docs/screenshots/README.md) — add PNGs before
 - Chart.js from jsDelivr CDN
 - No Enterprise Admin API
 - Large event sets may slow the browser
+
+## Feedback
+
+Early-stage side project (v0.1). Issues, bug reports, and ideas are welcome. For larger changes, please open an issue first. See [SECURITY.md](SECURITY.md) for sensitive reports.
 
 ## License
 

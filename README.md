@@ -14,7 +14,8 @@ Lokales Dashboard zur Analyse der **Cursor-Nutzung** — Token-Verlauf, Kosten, 
 ## Schnellstart
 
 ```powershell
-cd path\to\Cursor-Usage-Dashboard
+git clone https://github.com/70hundert/cursor-usage-analytics.git
+cd cursor-usage-analytics
 python -m venv venv
 .\venv\Scripts\Activate.ps1
 pip install -r requirements.txt
@@ -116,7 +117,13 @@ docs/REFERENCE.md
 
 ## Screenshots
 
-Siehe [docs/screenshots/README.md](docs/screenshots/README.md) — PNGs vor Release ergänzen.
+Demo-Daten (User **Demo**), Zeitraum **Alle**:
+
+| Übersicht & KPIs | Projekt-Marker | Einzelne Anfragen |
+| ---------------- | -------------- | ----------------- |
+| ![Analytics-Übersicht](docs/screenshots/analytics-overview.png) | ![Projekt-Marker](docs/screenshots/analytics-markers.png) | ![Events-Tabelle](docs/screenshots/events-table.png) |
+
+Neu erzeugen: `python scripts/capture-screenshots.py` (Server muss laufen; im venv: `pip install playwright pillow` + `playwright install chromium`).
 
 ## Bekannte Einschränkungen
 
@@ -124,6 +131,10 @@ Siehe [docs/screenshots/README.md](docs/screenshots/README.md) — PNGs vor Rele
 - Chart.js via jsDelivr (CDN) — Offline nur mit lokalem Vendor
 - Enterprise Admin API nicht implementiert
 - Sehr große Event-Mengen → Browser-Performance
+
+## Feedback
+
+Frühe Version (v0.1) — ein persönliches Side-Project. Issues, Bugreports und Verbesserungsvorschläge sind willkommen. Bei größeren Änderungen bitte vorher ein Issue eröffnen. Siehe auch [SECURITY.md](SECURITY.md) für sensible Meldungen.
 
 ## Lizenz
 

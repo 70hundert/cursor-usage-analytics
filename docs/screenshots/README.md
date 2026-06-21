@@ -1,6 +1,6 @@
 # Screenshots for README
 
-Add PNG screenshots here before publishing or for release notes:
+Committed PNGs used in [README.md](../../README.md) and [README_EN.md](../../README_EN.md).
 
 | File | Content |
 |------|---------|
@@ -8,6 +8,15 @@ Add PNG screenshots here before publishing or for release notes:
 | `analytics-markers.png` | Project markers on chart + marker table |
 | `events-table.png` | Individual requests table with filters |
 
-Capture at `http://127.0.0.1:8060/` after `python serve.py`, with sample CSV data in `data/`.
+## Regenerate
 
-Recommended size: 1200–1400 px width, dark theme as shipped.
+```powershell
+Copy-Item config\users.example.json config\users.json -ErrorAction SilentlyContinue
+python serve.py
+# second terminal:
+python scripts\capture-screenshots.py
+```
+
+Requires Playwright and Pillow in the local venv (`pip install playwright pillow`, then `playwright install chromium`) — dev only, not a runtime dependency.
+
+Recommended viewport: 1400 px width, dark theme as shipped.

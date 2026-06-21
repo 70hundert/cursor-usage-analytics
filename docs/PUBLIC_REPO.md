@@ -11,7 +11,7 @@ Die einmalige Migration vom privaten Ordner ins Public-Repo ist abgeschlossen. F
 
 ## GitHub-Repo
 
-**Public-Clone (saubere Historie):** https://github.com/70hundert/cursor-usage-analytics (derzeit **private**)
+**Public-Repo:** https://github.com/70hundert/cursor-usage-analytics (**public** seit v0.1.0)
 
 Das alte Repo `Cursor-Usage-Dashboard` auf GitHub bleibt mit der bisherigen Historie — nicht weiter nutzen für neue Arbeit.
 
@@ -29,8 +29,6 @@ Falls du ein neues Remote-Repo anlegst:
 gh repo create <name> --private --source=. --remote=origin
 git push -u origin main
 ```
-
-Später public schalten: GitHub → Settings → Change visibility.
 
 ## Nach dem Klon
 
