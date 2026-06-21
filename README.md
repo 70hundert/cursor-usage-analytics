@@ -62,6 +62,8 @@ Cursor Dashboard → Usage → Export nach `data/` — Pfade in `config/users.js
 
 Erwartete Spalten u. a.: `Date`, `Model`, `Kind`, `Cost`, Token-Spalten.
 
+**Kosten:** Werden nicht aus Tokens geschätzt, sondern aus der Spalte `Cost` (bzw. Live-API) übernommen und summiert — **ohne Gewähr**, nur zur Orientierung; maßgeblich ist die Cursor-Abrechnung. Konfigurierbar ist nur das **Monatsbudget** zum Abgleich. Details: [docs/REFERENCE.md — Kostenberechnung](docs/REFERENCE.md#kostenberechnung-analytics).
+
 ### Live-API (inoffiziell)
 
 Reverse-engineered Endpoints (Quelle: [dmwyatt/cursor-usage](https://github.com/dmwyatt/cursor-usage)):
