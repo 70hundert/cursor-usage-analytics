@@ -512,25 +512,21 @@
             endMs = startMs + 60_000;
         }
 
-        const { events, marker, allMarkers } = options;
+        const { events, marker } = options;
         const matchEvents = Boolean(marker && events?.length === buckets.length);
         let xMin = null;
         let xMax = null;
 
         for (let i = 0; i < buckets.length; i += 1) {
+            const bucketStart = bucketStartMs(buckets[i]);
+            const bucketEnd = bucketEndMs(buckets, i);
+            if (bucketStart >= endMs || bucketEnd <= startMs) {
+                continue;
+            }
+
             if (matchEvents) {
                 const userLabel = events[i].userLabel ?? events[i].user;
                 if (marker.user !== 'all' && userLabel && userLabel !== marker.user) {
-                    continue;
-                }
-                const owner = getMarkerForEvent(events[i], allMarkers || []);
-                if (owner?.id !== marker.id) {
-                    continue;
-                }
-            } else {
-                const bucketStart = bucketStartMs(buckets[i]);
-                const bucketEnd = bucketEndMs(buckets, i);
-                if (bucketStart >= endMs || bucketEnd <= startMs) {
                     continue;
                 }
             }
@@ -910,7 +906,6 @@
                 const range = bucketIndexRangeForInterval(buckets, startMs, endMs, {
                     events: chartContext.events,
                     marker,
-                    allMarkers: markers,
                 });
                 if (!range) {
                     continue;
@@ -1078,7 +1073,6 @@
                 const range = bucketIndexRangeForInterval(buckets, startMs, endMs, {
                     events: chartContext.events,
                     marker,
-                    allMarkers: markers,
                 });
                 if (!range) {
                     return;
