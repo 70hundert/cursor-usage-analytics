@@ -272,10 +272,77 @@
             color: var(--muted);
         }
 
-        .chart-zoom-hint {
-            margin: 0 0 0.75rem;
-            font-size: 0.78rem;
+        .chart-heading {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            flex-wrap: wrap;
+        }
+
+        .chart-heading--section {
+            margin-bottom: 0.75rem;
+        }
+
+        .chart-heading--section h2 {
+            margin: 0;
+        }
+
+        .chart-help-btn {
+            position: relative;
+            flex-shrink: 0;
+            width: 1.25rem;
+            height: 1.25rem;
+            padding: 0;
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            background: var(--surface-2);
             color: var(--muted);
+            font-size: 0.72rem;
+            font-weight: 600;
+            line-height: 1;
+            cursor: help;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .chart-help-btn:hover,
+        .chart-help-btn:focus-visible,
+        .chart-help-btn.is-open {
+            border-color: #4a6078;
+            color: var(--text);
+        }
+
+        .chart-help-btn__tooltip {
+            position: absolute;
+            z-index: 20;
+            top: calc(100% + 0.35rem);
+            left: 50%;
+            transform: translateX(-50%);
+            width: max-content;
+            max-width: min(320px, calc(100vw - 2rem));
+            padding: 0.5rem 0.65rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--surface);
+            color: var(--muted);
+            font-size: 0.78rem;
+            font-weight: 400;
+            line-height: 1.45;
+            text-align: left;
+            white-space: normal;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+            visibility: hidden;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.15s ease, visibility 0.15s ease;
+        }
+
+        .chart-help-btn:hover .chart-help-btn__tooltip,
+        .chart-help-btn:focus-visible .chart-help-btn__tooltip,
+        .chart-help-btn.is-open .chart-help-btn__tooltip {
+            visibility: visible;
+            opacity: 1;
         }
 
         .chart-wrap {
@@ -1164,7 +1231,14 @@
             <div class="kpi-grid" id="kpi-grid" style="margin-top: 0.75rem;"></div>
             <div class="overview-section" id="overview-section" hidden>
                 <div class="overview-section__header">
-                    <h3 class="overview-section__title" id="overview-section-title">Übersicht — Tokens &amp; Kosten</h3>
+                    <div class="chart-heading">
+                        <h3 class="overview-section__title" id="overview-section-title">Übersicht — Tokens &amp; Kosten</h3>
+                        <button type="button" class="chart-help-btn" data-i18n-aria="chartZoomHelpAria"
+                            aria-label="Chart-Bedienung" aria-expanded="false">
+                            <span aria-hidden="true">?</span>
+                            <span class="chart-help-btn__tooltip" role="tooltip" data-i18n="chartZoomHint">Mausrad: Zoomen · Strg + Ziehen: Verschieben · Umschalt + Ziehen: Zeitraum verschieben · Pinch auf Touch</span>
+                        </button>
+                    </div>
                     <div class="overview-section__toolbar">
                         <div class="marker-chart-display-control" data-marker-display-host
                             data-i18n-aria="markerVisibilityAria" aria-label="Marker-Sichtbarkeit"></div>
@@ -1195,8 +1269,14 @@
         </section>
 
         <section class="card">
-            <h2 data-i18n="visualizations">Visualisierungen</h2>
-            <p class="chart-zoom-hint" data-i18n="chartZoomHint">Mausrad: Zoomen · Strg + Ziehen: Verschieben · Umschalt + Ziehen: Zeitraum verschieben · Pinch auf Touch</p>
+            <div class="chart-heading chart-heading--section">
+                <h2 data-i18n="visualizations">Visualisierungen</h2>
+                <button type="button" class="chart-help-btn" data-i18n-aria="chartZoomHelpAria"
+                    aria-label="Chart-Bedienung" aria-expanded="false">
+                    <span aria-hidden="true">?</span>
+                    <span class="chart-help-btn__tooltip" role="tooltip" data-i18n="chartZoomHint">Mausrad: Zoomen · Strg + Ziehen: Verschieben · Umschalt + Ziehen: Zeitraum verschieben · Pinch auf Touch</span>
+                </button>
+            </div>
             <div class="chart-grid">
                 <div class="chart-card">
                     <div class="chart-card__header">
@@ -5292,7 +5372,39 @@
             });
         }
 
+        function initChartHelpButtons() {
+            document.querySelectorAll('.chart-help-btn').forEach((btn) => {
+                btn.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    const wasOpen = btn.classList.contains('is-open');
+                    document.querySelectorAll('.chart-help-btn.is-open').forEach((openBtn) => {
+                        openBtn.classList.remove('is-open');
+                        openBtn.setAttribute('aria-expanded', 'false');
+                    });
+                    if (!wasOpen) {
+                        btn.classList.add('is-open');
+                        btn.setAttribute('aria-expanded', 'true');
+                    }
+                });
+            });
+            document.addEventListener('click', () => {
+                document.querySelectorAll('.chart-help-btn.is-open').forEach((btn) => {
+                    btn.classList.remove('is-open');
+                    btn.setAttribute('aria-expanded', 'false');
+                });
+            });
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape') {
+                    document.querySelectorAll('.chart-help-btn.is-open').forEach((btn) => {
+                        btn.classList.remove('is-open');
+                        btn.setAttribute('aria-expanded', 'false');
+                    });
+                }
+            });
+        }
+
         function initChartControls() {
+            initChartHelpButtons();
             document.querySelectorAll('.btn-chart-height').forEach((btn) => {
                 btn.addEventListener('click', () => {
                     const key = btn.dataset.chartKey;
