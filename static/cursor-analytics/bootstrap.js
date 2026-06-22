@@ -13,8 +13,9 @@ import './users-config.js';
 import './i18n.js';
 import './parser.js';
 import './metrics.js';
+import './markers/index.js';
 
-const CLASSIC_MODULES = ['markers.js', 'charts.js'];
+const CLASSIC_MODULES = ['charts.js'];
 const MODULE_VERSION = 'v=21';
 
 function loadClassicScript(src) {
