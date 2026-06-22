@@ -1,6 +1,6 @@
 # Cursor Usage Dashboard
 
-Local dashboard for **Cursor IDE usage** — token timeline, costs, models, budget, and project markers (including hover info in charts and tables, optionally disableable). Built for personal multi-account setups (CSV + optional unofficial live API).
+Local dashboard for **Cursor IDE usage** — token timeline, costs, models, budget, and project markers (including session focus, hover info in charts and tables, optionally disableable). Built for personal multi-account setups (CSV + optional unofficial live API).
 
 **Deutsch:** [README.md](README.md)
 
@@ -105,6 +105,14 @@ Then check `%USERPROFILE%\.cursor\marker-hook.json` (`defaultUser`, optional `em
 **Manual markers** still work. Starting a **new auto-chat** closes all **open** markers for the same user — including manual ones without `end`.
 
 Works the same in the **Agents window** and the **editor** (same Composer pipeline). Details: [docs/REFERENCE.md — Auto-Marker](docs/REFERENCE.md#auto-marker-cursor-hooks-optional).
+
+## Marker focus (session drill-down)
+
+Click a **marker table row** or the **🔍** on a chart label to focus KPIs and tables on that session; overview/cumulative charts keep surrounding context (auto-zoom, then mouse wheel / Ctrl+drag). Label click = edit. Details: [docs/REFERENCE.md — Marker focus](docs/REFERENCE.md#marker-fokus-session-drill-down).
+
+## Shift time window
+
+With a time preset (e.g. **3 h**): **Shift + drag** on the overview chart moves the window forward or backward — duration and preset stay the same; KPIs, tables, and all charts update. Click the preset again to snap back to the latest data. Details: [docs/REFERENCE.md — Shift time window](docs/REFERENCE.md#zeitraum-fenster-verschieben-shiftziehen).
 
 **Disclaimer:** Not an official Cursor API. Endpoints may change; session tokens expire. Use at your own risk; respect Cursor’s terms of service.
 

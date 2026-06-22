@@ -1,6 +1,6 @@
 # Cursor Usage Dashboard
 
-Lokales Dashboard zur Analyse der **Cursor-Nutzung** — Token-Verlauf, Kosten, Modelle, Budget und Projekt-Marker (inkl. Hover-Info in Charts und Tabellen, optional abschaltbar). Für persönliche Multi-Account-Setups (CSV + optional inoffizielle Live-API).
+Lokales Dashboard zur Analyse der **Cursor-Nutzung** — Token-Verlauf, Kosten, Modelle, Budget und Projekt-Marker (inkl. Session-Fokus, Hover-Info in Charts und Tabellen, optional abschaltbar). Für persönliche Multi-Account-Setups (CSV + optional inoffizielle Live-API).
 
 **English:** [README_EN.md](README_EN.md)
 
@@ -107,6 +107,14 @@ Danach `%USERPROFILE%\.cursor\marker-hook.json` prüfen (`defaultUser`, optional
 **Manuelle Marker** weiterhin möglich. Beim Start eines **neuen Auto-Chats** werden jedoch alle **offenen** Marker desselben Users geschlossen — auch manuelle ohne `end`.
 
 Gilt in **Agents Window** und **Editor** gleichermaßen (dieselbe Composer-Pipeline). Details: [docs/REFERENCE.md — Auto-Marker](docs/REFERENCE.md#auto-marker-cursor-hooks-optional).
+
+## Marker-Fokus (Session-Drill-down)
+
+Klick auf eine **Marker-Zeile** oder das **🔍** am Chart-Label fokussiert KPIs und Tabellen auf diese Session; Overview/Kumulativ behalten den umgebenden Kontext (Auto-Zoom, danach Mausrad/Strg+Ziehen). Label-Klick = Bearbeiten. Details: [docs/REFERENCE.md — Marker-Fokus](docs/REFERENCE.md#marker-fokus-session-drill-down).
+
+## Zeitraum verschieben
+
+Bei einem Zeitraum-Preset (z. B. **3 Std**): **Umschalt + Ziehen** auf dem Overview-Chart verschiebt das Fenster vor oder zurück — Dauer und Preset bleiben gleich; KPIs, Tabellen und alle Charts folgen mit. Preset erneut klicken setzt auf das Datenende zurück. Details: [docs/REFERENCE.md — Zeitraum-Fenster verschieben](docs/REFERENCE.md#zeitraum-fenster-verschieben-shiftziehen).
 
 **Disclaimer:** Keine offizielle Personal-API. Endpoints können sich ändern; Session-Tokens laufen ab. Nutzung auf eigenes Risiko — Cursor-Nutzungsbedingungen beachten.
 

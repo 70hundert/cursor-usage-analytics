@@ -418,6 +418,57 @@
             cursor: pointer;
         }
 
+        .usage-table__row--focused td {
+            background: color-mix(in srgb, var(--accent) 12%, transparent);
+            box-shadow: inset 3px 0 0 var(--accent);
+        }
+
+        .usage-table__btn-edit {
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--muted);
+            border-radius: 6px;
+            padding: 0.15rem 0.45rem;
+            font-size: 0.72rem;
+            cursor: pointer;
+            margin-right: 0.2rem;
+        }
+
+        .usage-table__btn-edit:hover {
+            color: var(--text);
+            border-color: var(--accent);
+        }
+
+        .marker-focus-banner {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.5rem 0.75rem;
+            margin-top: 0.75rem;
+            padding: 0.55rem 0.75rem;
+            border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+            border-radius: var(--radius);
+            background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+            color: var(--text);
+            font-size: 0.85rem;
+        }
+
+        .marker-focus-banner[hidden] {
+            display: none;
+        }
+
+        .marker-focus-banner__text {
+            flex: 1 1 12rem;
+            font-weight: 600;
+        }
+
+        .marker-focus-banner__hint {
+            flex: 1 1 100%;
+            font-size: 0.78rem;
+            font-weight: 400;
+            color: var(--muted);
+        }
+
         .usage-table__actions {
             text-align: center;
         }
@@ -1103,6 +1154,13 @@
             <div class="drop-zone" id="drop-zone" data-i18n="dropZone">
                 CSV hier ablegen oder „CSV laden“ wählen
             </div>
+            <div class="marker-focus-banner" id="marker-focus-banner" hidden>
+                <span class="marker-focus-banner__text" id="marker-focus-banner-text"></span>
+                <button type="button" class="btn" id="marker-focus-clear" data-i18n="markerFocusClear">Fokus
+                    aufheben</button>
+                <span class="marker-focus-banner__hint" id="marker-focus-banner-hint"
+                    data-i18n="markerFocusZoomHint"></span>
+            </div>
             <div class="kpi-grid" id="kpi-grid" style="margin-top: 0.75rem;"></div>
             <div class="overview-section" id="overview-section" hidden>
                 <div class="overview-section__header">
@@ -1618,7 +1676,7 @@
             }
             const base = new URL('.', window.location.href);
             for (const file of MODULE_FILES) {
-                await loadScript(new URL(`${file}?v=16`, base).href);
+                await loadScript(new URL(`${file}?v=20`, base).href);
             }
         }
 
@@ -1660,6 +1718,7 @@
         const COUNT_STORAGE_KEY = 'cursor-analytics-count';
         const CUSTOM_RANGE_STORAGE_KEY = 'cursor-analytics-custom-range';
         const TIME_RANGE_STORAGE_KEY = 'cursor-analytics-time-range';
+        const MARKER_FOCUS_STORAGE_KEY = 'cursor-marker-focus-id';
         const DATA_SOURCE_STORAGE_KEY = 'cursor-analytics-data-source';
         const USER_FILTER_STORAGE_KEY = 'cursor-analytics-user-filter';
         const VALID_DATA_SOURCES = ['csv', 'live', 'merge'];
@@ -1787,6 +1846,7 @@
             projectFilter: 'all',
             showTablePopover: true,
         };
+        let markerFocusId = null;
         let eventsGroupMode = localStorage.getItem('events-group-mode') || 'marker';
         const EVENTS_PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
         const EVENTS_PAGE_SIZE_STORAGE_KEY = 'events-page-size';
@@ -1843,11 +1903,116 @@
                 mode: 'category',
                 formatters: { dateTimeFmt, numberFmt, currencyFmt },
                 showPopover: true,
+                focusedMarkerId: markerFocusId,
+                onFocusMarker: (marker) => toggleMarkerFocus(marker),
                 onEditMarker: (marker) => openMarkerModal({ marker }),
                 showMarkers: markerChartDisplay.showMarkers,
                 showLabels: markerChartDisplay.showLabels,
                 projectFilter: markerChartDisplay.projectFilter,
             };
+        }
+
+        function loadStoredMarkerFocusId() {
+            try {
+                const raw = localStorage.getItem(MARKER_FOCUS_STORAGE_KEY);
+                return raw && typeof raw === 'string' ? raw : null;
+            } catch {
+                return null;
+            }
+        }
+
+        function saveStoredMarkerFocusId(id) {
+            try {
+                if (id) {
+                    localStorage.setItem(MARKER_FOCUS_STORAGE_KEY, id);
+                } else {
+                    localStorage.removeItem(MARKER_FOCUS_STORAGE_KEY);
+                }
+            } catch {
+                /* ignore */
+            }
+        }
+
+        function getFocusedMarker() {
+            if (!markerFocusId) {
+                return null;
+            }
+            const api = getMarkersApi();
+            if (!api) {
+                return null;
+            }
+            return api.getStore().markers.find((marker) => marker.id === markerFocusId) ?? null;
+        }
+
+        function syncMarkerFocusUi() {
+            const banner = document.getElementById('marker-focus-banner');
+            const textEl = document.getElementById('marker-focus-banner-text');
+            const hintEl = document.getElementById('marker-focus-banner-hint');
+            const marker = getFocusedMarker();
+            if (!banner || !textEl) {
+                return;
+            }
+            if (!marker) {
+                banner.hidden = true;
+                textEl.textContent = '';
+                if (hintEl) {
+                    hintEl.textContent = '';
+                }
+                return;
+            }
+            const api = getMarkersApi();
+            const baseEvents = filteredEvents();
+            const filterEndMs = baseEvents.length
+                ? baseEvents[baseEvents.length - 1].timestamp.getTime()
+                : Date.now();
+            const { endMs } = api.markerIntervalMs(marker, api.getStore().markers, filterEndMs);
+            const label = marker.task?.trim() || marker.project?.trim() || '—';
+            textEl.textContent = tf('markerFocusBanner', {
+                label,
+                from: dateTimeFmt.format(new Date(marker.start)),
+                to: marker.end
+                    ? dateTimeFmt.format(new Date(marker.end))
+                    : `${dateTimeFmt.format(new Date(endMs))} *`,
+            });
+            if (hintEl) {
+                hintEl.textContent = t('markerFocusZoomHint');
+            }
+            banner.hidden = false;
+        }
+
+        function setMarkerFocus(id) {
+            markerFocusId = id || null;
+            saveStoredMarkerFocusId(markerFocusId);
+            syncMarkerFocusUi();
+            renderAll();
+        }
+
+        function clearMarkerFocus() {
+            if (!markerFocusId) {
+                return;
+            }
+            setMarkerFocus(null);
+        }
+
+        function toggleMarkerFocus(marker) {
+            if (!marker) {
+                return;
+            }
+            if (markerFocusId === marker.id) {
+                clearMarkerFocus();
+                return;
+            }
+            setMarkerFocus(marker.id);
+        }
+
+        function reconcileMarkerFocus() {
+            if (!markerFocusId) {
+                return;
+            }
+            if (!getFocusedMarker()) {
+                markerFocusId = null;
+                saveStoredMarkerFocusId(null);
+            }
         }
 
         function mountMarkerTableHover(tbody) {
@@ -1871,7 +2036,7 @@
                 if (!marker) {
                     return;
                 }
-                const ctx = buildMarkerContext(filteredEvents());
+                const ctx = buildMarkerContext(eventsForDashboard());
                 if (!ctx) {
                     return;
                 }
@@ -2028,7 +2193,7 @@
         }
 
         function eventsForTable() {
-            let events = filteredEvents();
+            let events = eventsForDashboard();
             if (projectFilter !== 'all') {
                 const api = getMarkersApi();
                 if (api) {
@@ -2366,6 +2531,10 @@
                 return;
             }
             api.removeMarker(id);
+            if (markerFocusId === id) {
+                markerFocusId = null;
+                saveStoredMarkerFocusId(null);
+            }
             await persistMarkers();
             updateProjectFilterOptions();
             updateMarkerTableProjectFilterOptions();
@@ -2523,7 +2692,8 @@
                 : '';
             const hiddenAttr = collapsed ? ' hidden' : '';
             const modeLabel = api?.composerModeLabel(api.resolveComposerMode(marker)) ?? '—';
-            return `<tr class="usage-table__row--clickable usage-table__row--group-member" data-marker-id="${marker.id}" style="--project-color: ${color}"${memberAttr}${hiddenAttr}>
+            const focusedClass = marker.id === markerFocusId ? ' usage-table__row--focused' : '';
+            return `<tr class="usage-table__row--clickable usage-table__row--group-member${focusedClass}" data-marker-id="${marker.id}" style="--project-color: ${color}"${memberAttr}${hiddenAttr}>
                         <td>${dateTimeFmt.format(new Date(marker.start))}</td>
                         <td>${endLabel}</td>
                         <td class="usage-table__user usage-table__user--${userId}">${userId}</td>
@@ -2535,6 +2705,7 @@
                         <td>${numberFmt.format(stats.outputTokens)}</td>
                         <td>${currencyFmt.format(stats.costCents / 100)}</td>
                         <td class="usage-table__actions">
+                            <button type="button" class="usage-table__btn-edit" data-marker-edit="${marker.id}" title="${t('editMarker').replace(/"/g, '&quot;')}" aria-label="${t('editMarker').replace(/"/g, '&quot;')}">✎</button>
                             <button type="button" class="usage-table__btn-delete" data-marker-delete="${marker.id}">×</button>
                         </td>
                     </tr>`;
@@ -2664,10 +2835,10 @@
                     markerTableProjectFilter !== 'all'
                         ? tf('statusMarkerFilterProject', { project: markerTableProjectFilter })
                         : '';
-                statusEl.textContent = tf('statusMarkerCount', {
+                statusEl.textContent = `${tf('statusMarkerCount', {
                     count: numberFmt.format(sorted.length),
                     filterHint,
-                });
+                })} ${t('markerTableFocusHint')}`;
             }
             syncMarkerSortHeaders();
         }
@@ -2760,6 +2931,16 @@
                     deleteMarkerById(deleteBtn.dataset.markerDelete);
                     return;
                 }
+                const editBtn = event.target.closest('[data-marker-edit]');
+                if (editBtn) {
+                    event.stopPropagation();
+                    const api = getMarkersApi();
+                    const marker = api?.getStore().markers.find((m) => m.id === editBtn.dataset.markerEdit);
+                    if (marker) {
+                        openMarkerModal({ marker });
+                    }
+                    return;
+                }
                 const row = event.target.closest('[data-marker-id]');
                 if (!row) {
                     return;
@@ -2767,8 +2948,12 @@
                 const api = getMarkersApi();
                 const marker = api?.getStore().markers.find((m) => m.id === row.dataset.markerId);
                 if (marker) {
-                    openMarkerModal({ marker });
+                    toggleMarkerFocus(marker);
                 }
+            });
+
+            document.getElementById('marker-focus-clear')?.addEventListener('click', () => {
+                clearMarkerFocus();
             });
 
             document.getElementById('marker-export-btn')?.addEventListener('click', () => {
@@ -3340,6 +3525,7 @@
             syncChartHeightLabels();
             syncEventsSortHeaders();
             syncMarkerSortHeaders();
+            syncMarkerFocusUi();
             const locale = getI18n()?.getLocale() || 'de';
             document.querySelectorAll('[data-locale]').forEach((btn) => {
                 btn.classList.toggle('btn--active', btn.dataset.locale === locale);
@@ -3408,6 +3594,24 @@
             }
             events = metrics.filterByUser(events, userFilter);
             return events;
+        }
+
+        function eventsForDashboard() {
+            const baseEvents = filteredEvents();
+            const marker = getFocusedMarker();
+            const api = getMarkersApi();
+            if (!marker || !api) {
+                return baseEvents;
+            }
+            const filterEndMs = baseEvents.length
+                ? baseEvents[baseEvents.length - 1].timestamp.getTime()
+                : Date.now();
+            return api.filterEventsByMarkerInterval(
+                baseEvents,
+                marker,
+                api.getStore().markers,
+                filterEndMs
+            );
         }
 
         function setStatus(text, isError = false) {
@@ -4351,9 +4555,13 @@
                 return;
             }
 
+            reconcileMarkerFocus();
+            syncMarkerFocusUi();
+
             const metrics = getMetrics();
             const charts = getCharts();
-            const events = filteredEvents();
+            const baseEvents = filteredEvents();
+            const events = eventsForDashboard();
 
             if (!events.length) {
                 charts.destroyAll(chartInstances);
@@ -4363,12 +4571,16 @@
                 renderDailyTable([]);
                 renderExpensiveTable([]);
                 renderEventsTable([]);
-                renderMarkerTable([]);
+                renderMarkerTable(baseEvents);
                 renderMarkerCharts([]);
                 syncActiveMarkerSessionButtons();
-                setStatus(
-                    selectionMode === 'count' ? t('noEventsCount') : t('noEvents')
-                );
+                if (markerFocusId && getFocusedMarker() && baseEvents.length) {
+                    setStatus(t('statusMarkerFocusEmpty'));
+                } else {
+                    setStatus(
+                        selectionMode === 'count' ? t('noEventsCount') : t('noEvents')
+                    );
+                }
                 return;
             }
 
@@ -4414,7 +4626,7 @@
             renderDailyTable(dailyRows);
             renderExpensiveTable(expensive, events);
             renderEventsTable(eventsForTable());
-            renderMarkerTable(events);
+            renderMarkerTable(baseEvents);
             renderMarkerCharts(events);
             updateProjectFilterOptions();
             updateMarkerChartProjectFilterOptions();
@@ -4429,18 +4641,24 @@
 
             try {
                 const formatters = { numberFmt, currencyFmt, dateFmt, dateTimeFmt, monthFmt };
-                const markerContext = buildMarkerContext(events);
+                const chartEvents = markerFocusId ? baseEvents : events;
+                const chartMarkerContext = buildMarkerContext(chartEvents);
+                const focusedMarker = getFocusedMarker();
                 const overviewTitleEl = document.getElementById('overview-section-title');
                 const cumulativeTitleEl = document.getElementById('chart-cumulative-title');
                 const chartGranularity = selectionMode === 'count' ? 'event' : granularity;
                 const overviewBuckets =
                     selectionMode === 'count'
-                        ? metrics.aggregateByGranularity(events, 'event', bucketFormatters)
-                        : timeBuckets;
+                        ? metrics.aggregateByGranularity(chartEvents, 'event', bucketFormatters)
+                        : markerFocusId
+                          ? metrics.aggregateByGranularity(chartEvents, granularity, bucketFormatters)
+                          : timeBuckets;
                 const chartCumulativeBuckets =
                     selectionMode === 'count'
-                        ? metrics.cumulativeByGranularity(events, 'event', bucketFormatters)
-                        : cumulativeBuckets;
+                        ? metrics.cumulativeByGranularity(chartEvents, 'event', bucketFormatters)
+                        : markerFocusId
+                          ? metrics.cumulativeByGranularity(chartEvents, granularity, bucketFormatters)
+                          : cumulativeBuckets;
                 const overviewTitle = overviewTitleFor(chartGranularity);
 
                 if (overviewTitleEl) {
@@ -4458,8 +4676,17 @@
                     overviewTitle,
                     formatters,
                     chartGranularity,
-                    markerContext
+                    chartMarkerContext
                 );
+
+                if (focusedMarker) {
+                    charts.applyMarkerFocusZoom(
+                        chartInstances.overview,
+                        overviewBuckets,
+                        focusedMarker,
+                        chartMarkerContext
+                    );
+                }
 
                 charts.renderAll(
                     chartInstances,
@@ -4474,7 +4701,7 @@
                         families,
                         maxMode,
                         cache,
-                        markerContext,
+                        markerContext: chartMarkerContext,
                         canvases: {
                             topCost: document.getElementById('chart-top-cost'),
                             topTokens: document.getElementById('chart-top-tokens'),
@@ -4490,6 +4717,16 @@
                     },
                     formatters
                 );
+
+                if (focusedMarker) {
+                    charts.applyMarkerFocusZoom(
+                        chartInstances.cumulative,
+                        chartCumulativeBuckets,
+                        focusedMarker,
+                        chartMarkerContext
+                    );
+                }
+
                 resizeAllCharts();
             } catch (error) {
                 console.error(error);
@@ -5197,6 +5434,8 @@
             }
 
             await window.CursorAnalytics.markers.syncFromServer(PROXY_BASE);
+            markerFocusId = loadStoredMarkerFocusId();
+            reconcileMarkerFocus();
             await window.CursorAnalytics.usersConfig.loadUsersConfig();
             eventsByUser = emptyEventsByUser();
             liveEventsByUser = emptyEventsByUser();

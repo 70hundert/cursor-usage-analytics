@@ -361,6 +361,18 @@
         return { startMs, endMs };
     }
 
+    function filterEventsByMarkerInterval(events, marker, allMarkers, filterEndMs) {
+        const { startMs, endMs } = markerIntervalMs(marker, allMarkers, filterEndMs);
+        return events.filter((event) => {
+            const userLabel = event.userLabel ?? event.user;
+            if (marker.user !== 'all' && userLabel && userLabel !== marker.user) {
+                return false;
+            }
+            const t = eventTimeMs(event);
+            return t >= startMs && t < endMs;
+        });
+    }
+
     function computeStats(events, marker, allMarkers, filterEndMs) {
         const { startMs, endMs } = markerIntervalMs(marker, allMarkers, filterEndMs);
 
@@ -549,7 +561,8 @@
         const isPerEvent = Boolean(events?.length && events.length === buckets.length);
         const categoryPct = isPerEvent ? 1 : 0.75;
         const barPct = isPerEvent ? 0.95 : 0.85;
-        return (categoryPct * barPct) / 2;
+        const half = (categoryPct * barPct) / 2;
+        return isPerEvent ? half + 0.05 : half;
     }
 
     function expandCategoryRangeForBars(range, buckets, events) {
@@ -563,6 +576,11 @@
             return null;
         }
         return expandCategoryRangeForBars(range, buckets, events);
+    }
+
+    function markerBucketIndexRange(buckets, marker, allMarkers, filterEndMs, events) {
+        const { startMs, endMs } = markerIntervalMs(marker, allMarkers, filterEndMs);
+        return bucketIndexRangeForInterval(buckets, startMs, endMs, { events, marker });
     }
 
     /** @deprecated use bucketIndexRangeForInterval */
@@ -582,6 +600,7 @@
     let popoverHideTimer = null;
     let popoverMarkerId = null;
     let popoverPinned = false;
+    let popoverChartContext = null;
 
     function clearPopoverHideTimer() {
         if (popoverHideTimer) {
@@ -810,6 +829,7 @@
         const el = ensurePopover();
         popoverMarkerId = marker.id;
         popoverPinned = true;
+        popoverChartContext = chartContext;
         el.querySelector('.marker-chart-popover__body').innerHTML = buildPopoverHtml(marker, chartContext);
 
         el.hidden = false;
@@ -833,6 +853,10 @@
     const CHART_LABEL_OFFSET_LEFT = 6;
     const CHART_LABEL_OFFSET_TOP = 4;
     const CHART_LABEL_COLLISION_GAP = 0.12;
+    const CHART_FOCUS_ICON = '🔍';
+    const CHART_FOCUS_ICON_ACTIVE = '◉';
+    const CHART_FOCUS_ICON_SLOT_PX = 26;
+    const MARKER_FOCUS_COLOR = '#3ecf8e';
 
     function compactChartLabelText(marker) {
         const task = String(marker.task ?? '').trim();
@@ -884,6 +908,10 @@
         return Math.max(25 * 60 * 1000, len * 3 * 60 * 1000);
     }
 
+    function focusIconWidthUnits(mode) {
+        return mode === 'category' ? 0.5 : 18 * 60 * 1000;
+    }
+
     function computeCollisionLabelLanes(placements) {
         const lanes = new Map();
         if (!placements.length) {
@@ -909,6 +937,7 @@
         const { mode = 'time', buckets, markers, filterEndMs } = chartContext;
         const showLabels = chartContext.showLabels !== false;
         const canEdit = Boolean(chartContext.onEditMarker);
+        const canFocus = Boolean(chartContext.onFocusMarker);
         const placements = [];
 
         for (const marker of visible) {
@@ -921,6 +950,8 @@
             if (!content.length) {
                 continue;
             }
+
+            const focusExtra = canFocus ? focusIconWidthUnits(mode) : 0;
 
             if (mode === 'category' && buckets?.length) {
                 const { startMs, endMs } = markerIntervalMs(marker, markers, filterEndMs);
@@ -937,7 +968,7 @@
                 placements.push({
                     id: marker.id,
                     x: range.xMin,
-                    width: estimateLabelWidthUnits(content, 'category'),
+                    width: estimateLabelWidthUnits(content, 'category') + focusExtra,
                     content,
                 });
                 continue;
@@ -946,7 +977,7 @@
             placements.push({
                 id: marker.id,
                 x: new Date(marker.start).getTime(),
-                width: estimateLabelWidthUnits(content, 'time'),
+                width: estimateLabelWidthUnits(content, 'time') + focusExtra,
                 content,
             });
         }
@@ -958,12 +989,20 @@
         return 0;
     }
 
-    function chartMarkerLabelAnnotation({ content, laneIndex, color, xValue, labelInteraction = {} }) {
+    function chartMarkerLabelAnnotation({
+        content,
+        laneIndex,
+        color,
+        xValue,
+        labelInteraction = {},
+        hasFocusIcon = false,
+    }) {
         const text = labelTextFromContent(content);
         if (!text) {
             return null;
         }
         const laneOffset = CHART_LABEL_OFFSET_TOP + laneIndex * CHART_LABEL_LANE_HEIGHT;
+        const iconSlot = hasFocusIcon ? CHART_FOCUS_ICON_SLOT_PX : 0;
         return {
             type: 'label',
             xScaleID: 'x',
@@ -982,10 +1021,97 @@
             clip: false,
             borderRadius: 3,
             position: { x: 'start', y: 'start' },
-            xAdjust: CHART_LABEL_OFFSET_LEFT,
+            xAdjust: CHART_LABEL_OFFSET_LEFT + iconSlot,
             yAdjust: laneOffset,
             drawTime: 'afterDatasetsDraw',
             ...labelInteraction,
+        };
+    }
+
+    function chartMarkerFocusIconAnnotation({ marker, laneIndex, color, xValue, chartContext }) {
+        if (!chartContext.onFocusMarker) {
+            return null;
+        }
+        const isFocused = chartContext.focusedMarkerId === marker.id;
+        const laneOffset = CHART_LABEL_OFFSET_TOP + laneIndex * CHART_LABEL_LANE_HEIGHT;
+        const focusInteraction = createLabelFocusInteraction(marker, chartContext);
+        return {
+            type: 'label',
+            xScaleID: 'x',
+            yScaleID: 'y',
+            xValue,
+            yValue: (ctx) => ctx.chart.scales.y?.max ?? 0,
+            content: isFocused ? CHART_FOCUS_ICON_ACTIVE : CHART_FOCUS_ICON,
+            color: isFocused ? MARKER_FOCUS_COLOR : color,
+            backgroundColor: isFocused ? 'rgba(62, 207, 142, 0.2)' : 'rgba(11, 17, 26, 0.94)',
+            borderColor: isFocused ? `${MARKER_FOCUS_COLOR}aa` : `${color}66`,
+            borderWidth: 1,
+            font: { size: 10, weight: '700', lineHeight: 1.2 },
+            padding: { top: 4, bottom: 2, left: 4, right: 4 },
+            rotation: 0,
+            textAlign: 'center',
+            clip: false,
+            borderRadius: 3,
+            position: { x: 'start', y: 'start' },
+            xAdjust: CHART_LABEL_OFFSET_LEFT,
+            yAdjust: laneOffset,
+            drawTime: 'afterDatasetsDraw',
+            ...focusInteraction,
+        };
+    }
+
+    function addMarkerLabelAnnotations(
+        annotations,
+        key,
+        { marker, labelContent, laneIndex, color, xValue, chartContext, labelInteraction }
+    ) {
+        if (!labelContent) {
+            return;
+        }
+        const hasFocusIcon = Boolean(chartContext.onFocusMarker);
+        const labelAnn = chartMarkerLabelAnnotation({
+            content: labelContent,
+            laneIndex,
+            color,
+            xValue,
+            labelInteraction,
+            hasFocusIcon,
+        });
+        if (labelAnn) {
+            annotations[`${key}-label`] = labelAnn;
+        }
+        if (hasFocusIcon) {
+            const focusAnn = chartMarkerFocusIconAnnotation({
+                marker,
+                laneIndex,
+                color,
+                xValue,
+                chartContext,
+            });
+            if (focusAnn) {
+                annotations[`${key}-focus`] = focusAnn;
+            }
+        }
+    }
+
+    function createLabelFocusInteraction(marker, chartContext) {
+        return {
+            click(ctx, event) {
+                if (chartContext.onFocusMarker) {
+                    chartContext.onFocusMarker(marker);
+                    hideChartPopover(true);
+                }
+            },
+            enter(ctx, event) {
+                showChartPopover(marker, event, chartContext, ctx);
+            },
+            leave() {
+                if (popoverPinned && popoverMarkerId === marker.id) {
+                    scheduleHidePopover(450);
+                    return;
+                }
+                scheduleHidePopover(300);
+            },
         };
     }
 
@@ -1023,6 +1149,30 @@
         return false;
     }
 
+    function markerBoxBorderWidth(marker, chartContext, hovered = false) {
+        const isFocused = chartContext.focusedMarkerId === marker.id;
+        if (hovered) {
+            return isFocused ? 3.5 : 3;
+        }
+        return isFocused ? 2.5 : 1;
+    }
+
+    function markerBoxBackground(marker, color, chartContext) {
+        const isFocused = chartContext.focusedMarkerId === marker.id;
+        const isDimmed = chartContext.focusedMarkerId && chartContext.focusedMarkerId !== marker.id;
+        if (isFocused) {
+            return 'rgba(62, 207, 142, 0.14)';
+        }
+        if (isDimmed) {
+            return `${color}08`;
+        }
+        return `${color}18`;
+    }
+
+    function markerBoxBorderColor(marker, color, chartContext) {
+        return chartContext.focusedMarkerId === marker.id ? MARKER_FOCUS_COLOR : color;
+    }
+
     function createAnnotationInteraction(marker, chartContext, role, colorMap) {
         return {
             enter(ctx, event) {
@@ -1033,10 +1183,15 @@
                     const options = ctx.element?.options;
                     if (options) {
                         if (options.borderWidth != null) {
-                            options.borderWidth = 4;
+                            options.borderWidth = markerBoxBorderWidth(marker, chartContext, true);
                         }
-                        if (options.backgroundColor && String(options.backgroundColor).includes('18')) {
-                            options.backgroundColor = `${projectColor(marker.project, colorMap)}33`;
+                        if (!chartContext.focusedMarkerId || chartContext.focusedMarkerId === marker.id) {
+                            const accent = markerBoxBorderColor(marker, projectColor(marker.project, colorMap), chartContext);
+                            if (options.backgroundColor && String(options.backgroundColor).includes('18')) {
+                                options.backgroundColor = `${accent}33`;
+                            } else if (options.backgroundColor && String(options.backgroundColor).includes('14')) {
+                                options.backgroundColor = 'rgba(62, 207, 142, 0.22)';
+                            }
                         }
                     }
                 }
@@ -1046,13 +1201,13 @@
                     highlightTimeLineAnnotation(ctx.chart, marker.id, 2);
                 } else if (role === 'box') {
                     const options = ctx.element?.options;
+                    const accent = projectColor(marker.project, colorMap);
                     if (options) {
                         if (options.borderWidth != null) {
-                            options.borderWidth = 1;
+                            options.borderWidth = markerBoxBorderWidth(marker, chartContext, false);
                         }
-                        if (options.backgroundColor && String(options.backgroundColor).includes('33')) {
-                            options.backgroundColor = `${projectColor(marker.project, colorMap)}18`;
-                        }
+                        options.backgroundColor = markerBoxBackground(marker, accent, chartContext);
+                        options.borderColor = markerBoxBorderColor(marker, accent, chartContext);
                     }
                 }
                 if (popoverPinned && popoverMarkerId === marker.id) {
@@ -1074,7 +1229,9 @@
         const { mode = 'time', buckets, filterEndMs } = chartContext;
         const visible = filterChartMarkers(markers, chartContext);
         const colorMap = buildProjectColorMap(markers.map((marker) => marker.project));
-        const interactive = Boolean(chartContext.onEditMarker || chartContext.showPopover);
+        const interactive = Boolean(
+            chartContext.onFocusMarker || chartContext.onEditMarker || chartContext.showPopover
+        );
         const placements = collectMarkerLabelPlacements(visible, chartContext);
         const { lanes: labelLanes } = computeCollisionLabelLanes(placements);
         const contentById = new Map(placements.map((item) => [item.id, item.content]));
@@ -1105,37 +1262,37 @@
                     return;
                 }
                 const { xMin, xMax } = range;
+                const isFocused = chartContext.focusedMarkerId === marker.id;
 
                 annotations[key] = {
                     type: 'box',
                     xMin,
                     xMax,
-                    backgroundColor: `${color}18`,
-                    borderColor: color,
-                    borderWidth: 1,
+                    backgroundColor: markerBoxBackground(marker, color, chartContext),
+                    borderColor: markerBoxBorderColor(marker, color, chartContext),
+                    borderWidth: markerBoxBorderWidth(marker, chartContext, false),
                     ...interaction,
                     label: { display: false },
                 };
 
                 if (labelContent) {
-                    const labelAnn = chartMarkerLabelAnnotation({
-                        content: labelContent,
+                    addMarkerLabelAnnotations(annotations, key, {
+                        marker,
+                        labelContent,
                         laneIndex,
                         color,
                         xValue: xMin,
+                        chartContext,
                         labelInteraction,
                     });
-                    if (labelAnn) {
-                        annotations[`${key}-label`] = labelAnn;
-                    }
                 }
 
                 annotations[`${key}-line`] = {
                     type: 'line',
                     xMin,
                     xMax: xMin,
-                    borderColor: color,
-                    borderWidth: 2,
+                    borderColor: isFocused ? MARKER_FOCUS_COLOR : color,
+                    borderWidth: isFocused ? 3 : 2,
                     label: { display: false },
                 };
                 return;
@@ -1175,16 +1332,15 @@
             };
 
             if (labelContent) {
-                const labelAnn = chartMarkerLabelAnnotation({
-                    content: labelContent,
+                addMarkerLabelAnnotations(annotations, key, {
+                    marker,
+                    labelContent,
                     laneIndex,
                     color,
                     xValue,
+                    chartContext,
                     labelInteraction,
                 });
-                if (labelAnn) {
-                    annotations[`${key}-label`] = labelAnn;
-                }
             }
         });
 
@@ -1352,6 +1508,8 @@
         getActiveOpenMarker,
         computeStats,
         computeIntervalRows,
+        markerIntervalMs,
+        filterEventsByMarkerInterval,
         parseTaskCategory,
         MARKER_CATEGORY_SUGGESTIONS,
         COMPOSER_MODES,
@@ -1377,6 +1535,8 @@
         fromDatetimeLocalValue,
         eventTimeMs,
         resolveIntervalEndMs,
+        categoryAnnotationRange,
+        markerBucketIndexRange,
         loadMarkerChartDisplay,
         saveMarkerChartDisplay,
         filterChartMarkers,

@@ -17,7 +17,7 @@ Master-Referenz für AI-Chats. Abdeckung: Hub, Analytics (Thin-Shell), Shared-Mo
 | CSV/API-Parsing, Event-Modell, Dedupe                         | `static/cursor-analytics/parser.js`                                                            |
 | KPIs, Filter, Aggregationen, Granularität                     | `static/cursor-analytics/metrics.js`                                                           |
 | Chart-Rendering, Legend-Persistenz, Zoom, Marker-Annotationen | `static/cursor-analytics/charts.js`                                                            |
-| Projekt-Marker (CRUD, Statistik, Sync, Popover)               | `static/cursor-analytics/markers.js`                                                           |
+| Projekt-Marker (CRUD, Statistik, Sync, Popover, Fokus)        | `static/cursor-analytics/markers.js`                                                           |
 | Analytics-UI, Live-Fetch, Toolbar, Budget                     | `cursor-usage-analytics.html` (inline `<script>`)                                              |
 | Live-API, Static-Serving, Event-Cache                         | `serve.py`                                                                                     |
 | Multi-User-Konfiguration                                      | `users-config.js`, `serve.py` (`USER_TOKENS`), `.env`                                          |
@@ -130,14 +130,15 @@ Event-Cache: In-Memory, TTL `CURSOR_EVENTS_CACHE_TTL` (Default 120 s), Key `user
 | Section             | ID / Selektor                                                      | Inhalt                                                                                                                                                   |
 | ------------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Toolbar             | `#main-toolbar`                                                    | Datenquelle, User, CSV, Live, Export, Marker Export/Import                                                                                               |
-| Projekt-Marker      | `#marker-card`, `#marker-table-body`, `#marker-charts-section`     | Intervall-Statistik, Spalte **Modus** (`composerMode`), Breakdown-Charts (Projekt/Kategorie), optionaler Hover-Popover (`[data-marker-table-popover]`) |
+| Projekt-Marker      | `#marker-card`, `#marker-table-body`, `#marker-charts-section`     | Intervall-Statistik, Spalte **Modus** (`composerMode`), Breakdown-Charts; Zeilenklick = Session-Fokus; ✎ = Bearbeiten |
 | Projekt-Filter      | `#project-filter`                                                  | Filter für Einzelanfragen-Tabelle                                                                                                                        |
 | Marker-Dialog       | `#marker-modal`, `#marker-form`                                    | CRUD (Von/Bis/Projekt/**Cursor-Modus** Agents/Editor, Aufgabe/Notiz)                                                                                     |
-| Zeitraum / Anfragen | `#date-range-panel`                                                | Modus-Umschalter (`data-selection-mode`), Zeitraum-Presets (`#time-range-group`), Anfragen-Presets (`#count-range-group`, `data-count`), Custom datetime |
+| Zeitraum / Anfragen | `#date-range-panel`                                                | Modus-Umschalter (`data-selection-mode`), Zeitraum-Presets (`#time-range-group`), Anfragen-Presets (`#count-range-group`, `data-count`), Custom datetime; **Umschalt+Ziehen** auf Overview verschiebt Fenster bei fester Dauer (siehe §9) |
 | Granularität        | `#granularity-select` (nur Zeitraum-Modus)                         | event / quarter / hour / day / week / month                                                                                                              |
 | Drop-Zone           | `#drop-zone`                                                       | Drag-and-Drop CSV (wird nach Load versteckt)                                                                                                             |
-| KPIs                | `#kpi-grid`                                                        | Dynamisch gerendert                                                                                                                                      |
-| Übersicht-Chart     | `#overview-section`, `#chart-overview-daily`                       | Zeitraum: Buckets nach Granularität; Anfragen: Buckets pro Event (wie Granularität „Pro Anfrage“)                                                        |
+| KPIs                | `#kpi-grid`                                                        | Dynamisch gerendert; bei Marker-Fokus nur Events der fokussierten Session                  |
+| Marker-Fokus-Banner | `#marker-focus-banner`, `#marker-focus-clear`                      | Aktiver Session-Fokus + Hinweis Chart-Zoom; Persistenz `cursor-marker-focus-id`            |
+| Übersicht-Chart     | `#overview-section`, `#chart-overview-daily`                       | Zeitraum: Buckets nach Granularität; Anfragen: Buckets pro Event; bei Fokus voller Kontext + Auto-Zoom; **Umschalt+Ziehen**: globales Zeitfenster verschieben (`initTimeWindowPan`) |
 | Detail-Charts       | `#chart-top-cost`, `#chart-top-tokens`, …                          | 8 Canvas-Elemente                                                                                                                                        |
 | Tabellen            | `#daily-table-body`, `#expensive-table-body`, `#events-table-body` | Tages-, Teuerste-, Einzelanfragen (Spalte **Projekt**); markierte Zeilen: `data-marker-id` → Marker-Popover beim Hover (abschaltbar)                   |
 | Pagination          | `#events-pagination`                                               | 50 Events/Seite                                                                                                                                          |
@@ -173,7 +174,8 @@ Event-Cache: In-Memory, TTL `CURSOR_EVENTS_CACHE_TTL` (Default 120 s), Key `user
 | `[data-marker-chart-visible]`                     | Button          | Marker-Linien/Boxen in Charts ein/aus                            |
 | `[data-marker-labels-visible]`                    | Button          | Marker-Beschriftungen in Charts ein/aus                          |
 | `[data-marker-project-filter]`                    | `<select>`      | Marker in Charts nach Projekt filtern                            |
-| `#marker-chart-popover`                           | `<div>`         | Gemeinsamer Marker-Info-Popover (Charts + Tabellen)              |
+| `#marker-chart-popover`                           | `<div>`         | Gemeinsamer Marker-Info-Popover (Charts + Tabellen) — nur Info, keine Aktions-Buttons       |
+| `#marker-focus-banner`, `#marker-focus-clear`     | `<div>`, Button | Session-Fokus-Anzeige / Fokus aufheben (`markerFocusId`)                                    |
 | `#project-filter`                                 | `<select>`      | Events-Tabelle nach Projekt filtern                              |
 
 
@@ -213,7 +215,7 @@ Keine Monkey-Patches. CSV-Parsing ausschließlich in `parser.js` (`parseUsageEve
 
 - **Kein gemeinsames Stylesheet** — Design-Tokens in `:root` in `cursor-usage-analytics.html`
 - Tokens: `--bg`, `--surface`, `--surface-2`, `--text`, `--muted`, `--accent`, `--warn`, `--danger`, `--border`, `--radius`
-- Analytics-Klassen: `.dashboard-grid`, `.kpi-grid`, `.drop-zone`, `.live-loading`, `.events-pagination`, `.marker-chart-popover`
+- Analytics-Klassen: `.dashboard-grid`, `.kpi-grid`, `.drop-zone`, `.live-loading`, `.events-pagination`, `.marker-chart-popover`, `.marker-focus-banner`, `.usage-table__row--focused`
 - Dynamischer Zustand: `.btn--active`, `.btn--loading`, `.drop-zone--hidden`, `.status-error`, `[aria-pressed="true"]` auf Chart-Höhe-Buttons
 
 ---
@@ -230,7 +232,7 @@ DOMContentLoaded
       → initMarkerUi + initToolbar
         → loadDefaultCsvs (fetch ./data/*.csv)
           → renderAll
-            → filteredEvents → KPIs, Tabellen, charts.renderAll
+            → filteredEvents (Basis) → eventsForDashboard (optional Marker-Fokus) → KPIs, Tabellen, charts.renderAll
 ```
 
 Live-Pfad bei `dataSource === 'live'|'merge'`:
@@ -292,7 +294,33 @@ Marker sind **keine CSV-Daten** — manuell gesetzte Metadaten zu Zeitintervalle
 - **`composerMode`:** Cursor-Composer-Modus — `"agent"` (UI: **Agents**) | `"edit"` (UI: **Editor**) | `"chat"` (nur Auto-Marker). Im Marker-Dialog Pflicht-Radio (Agents/Editor). Legacy-Marker ohne Feld: Fallback aus `note` (`Modus: Agent` / `Modus: Edit`), sonst Default **Agents**. Hilfsfunktionen: `normalizeComposerMode`, `resolveComposerMode`, `composerModeLabel` in `markers.js`.
 - Statistik (`computeStats`): Events im Intervall — nicht persistiert.
 
-**Chart-Annotationen:** Overview + Cumulative nutzen Kategorie-Achse → Bucket-Index-Mapping via `sortKey`. Hover auf den Marker-Bereich (farbige Box bzw. Timeline-Hit-Area) öffnet `#marker-chart-popover` (`showChartPopover`). Marker-Labels sind separate `type: 'label'`-Annotationen: **Klick auf Label** öffnet direkt `#marker-modal` (`onEditMarker`); bei ausgeblendeten Labels (`showLabels: false`) erscheint stattdessen ein kompaktes **✎** am Marker-Start mit gleichem Klick-Verhalten. Timeline-Charts ergänzen den Chart.js-Tooltip um Projekt, Aufgabe und Notiz (`markerTooltipLines` in `charts.js`).
+**Chart-Annotationen:** Overview + Cumulative nutzen Kategorie-Achse → Bucket-Index-Mapping via `sortKey`. Hover auf den Marker-Bereich (farbige Box bzw. Timeline-Hit-Area) öffnet `#marker-chart-popover` (`showChartPopover`) — **nur Info**, keine Buttons im Popover. Marker-Labels sind separate `type: 'label'`-Annotationen am Intervall-Start: Layout **`[🔍] [Text…]`** — **🔍** fokussiert die Session (`onFocusMarker`); **Klick auf Text** (bzw. **✎** wenn Labels aus) öffnet `#marker-modal` (`onEditMarker`). Fokussierter Marker: grüner Rahmen (`MARKER_FOCUS_COLOR` / `#3ecf8e`), andere Marker abgedunkelt. Box-Breite: `bucketIndexRangeForInterval` + `expandCategoryRangeForBars` (Bar-Halbbreite synchron zu `charts.js` `categoryPercentage`/`barPercentage`). Timeline-Charts ergänzen den Chart.js-Tooltip um Projekt, Aufgabe und Notiz (`markerTooltipLines` in `charts.js`).
+
+#### Marker-Fokus (Session-Drill-down)
+
+Optionaler Drill-down auf ein Marker-Intervall — **ohne** Zeitraum-/User-Filter zu ersetzen.
+
+| Aktion | Auslöser |
+| ------ | -------- |
+| Session fokussieren | Klick auf Marker-Zeile in `#marker-table-body` |
+| Session fokussieren | Klick auf **🔍** links am Chart-Label (Overview/Cumulative) |
+| Bearbeiten | Klick auf Label-Text / **✎** (Chart) oder **✎**-Button in Marker-Tabelle |
+| Fokus aufheben | `#marker-focus-clear`, erneuter Klick auf Zeile oder **🔍**, Toggle |
+
+**Datenfluss** (`cursor-usage-analytics.html`):
+
+| Schicht | Funktion | Inhalt bei aktivem Fokus |
+| ------- | -------- | ------------------------ |
+| Basis | `filteredEvents()` | Zeitraum/Anfragen + User (unverändert) |
+| Dashboard | `eventsForDashboard()` | Basis-Events ∩ Marker-Intervall (`filterEventsByMarkerInterval` in `markers.js`) |
+| Charts (Overview/Kumulativ) | `chartEvents = baseEvents` | Voller Kontext; Auto-Zoom via `charts.applyMarkerFocusZoom()` (+3 Nachbar-Buckets) |
+| Marker-Tabelle | `renderMarkerTable(baseEvents)` | Alle Marker im Filter (Wechsel des Fokus) |
+
+State: `markerFocusId` (inline JS). Persistenz: **`cursor-marker-focus-id`** (`localStorage`). Gelöschter Marker → Fokus wird in `reconcileMarkerFocus()` entfernt.
+
+**Chart-Navigation bei Fokus:** Mausrad rauszoomen, **Strg+Ziehen** pan (nur Chart-Viewport). Hinweis im Banner (`markerFocusZoomHint`). Globales Zeitfenster verschieben: [Zeitraum-Fenster verschieben](#zeitraum-fenster-verschieben-shiftziehen).
+
+**API (Shared):** `filterEventsByMarkerInterval`, `markerIntervalMs`, `markerBucketIndexRange` (`markers.js`); `applyMarkerFocusZoom` (`charts.js`).
 
 #### Marker-Info-Popover (Charts & Tabellen)
 
@@ -300,11 +328,13 @@ Gemeinsame UI-Komponente in `markers.js` (`buildPopoverHtml`, `#marker-chart-pop
 
 | Kontext | Auslöser | API |
 | ------- | -------- | --- |
-| **Charts** | Hover auf Marker-Bereich; Hover auf Label zeigt ebenfalls Infos | `showChartPopover()` |
-| **Charts** | Klick auf Label (bzw. ✎ wenn Labels aus) | `onEditMarker` → `#marker-modal` |
+| **Charts** | Hover auf Marker-Bereich oder Label | `showChartPopover()` — nur Statistik/Metadaten |
+| **Charts** | Klick auf Label-Text (bzw. ✎ wenn Labels aus) | `onEditMarker` → `#marker-modal` |
+| **Charts** | Klick auf **🔍** am Label | `onFocusMarker` → Session-Fokus |
 | **Tabellen** | Hover auf `tr[data-marker-id]` in `#expensive-table-body`, `#events-table-body`, `#marker-table-body` | `showTableMarkerPopover()` via `mountMarkerTableHover()` (Analytics-HTML) |
+| **Marker-Tabelle** | Klick auf Zeile (nicht ✎/×) | `toggleMarkerFocus()` |
 
-**Popover-Inhalt:** Projekt, Aufgabe, Benutzer, **Modus** (`composerMode`), Von/Bis, Notiz (falls gesetzt), Intervall-Statistik (Events, Tokens, Kosten). Bearbeiten nur per Label-Klick im Chart (bzw. ✎ wenn Labels aus) oder über die Marker-Tabelle.
+**Popover-Inhalt:** Projekt, Aufgabe, Benutzer, **Modus** (`composerMode`), Von/Bis, Notiz (falls gesetzt), Intervall-Statistik (Events, Tokens, Kosten). **Keine Aktions-Buttons** im Popover — Bearbeiten bewusst nur über Label/✎ (Chart oder Tabelle).
 
 **Tabellen abschalten:** Checkbox `[data-marker-table-popover]` (i18n: `showTableMarkerPopover`) — drei synchronisierte Instanzen in den Toolbars von Teuerste Events, Einzelne Anfragen und Projekt-Marker. Persistenz: `cursor-marker-chart-display` → Feld `showTablePopover` (Default `true`). Bei Deaktivierung wird ein sichtbarer Popover sofort geschlossen.
 
@@ -313,6 +343,31 @@ Gemeinsame UI-Komponente in `markers.js` (`buildPopoverHtml`, `#marker-chart-pop
 **Gotcha Granularität:** Bei Wechsel der Granularität verschieben sich Bucket-Grenzen — Marker-Positionen in Overview/Cumulative (Zeitraum-Modus mit grober Granularität) sind Näherungen. Marker-Boxen nutzen `bucketIndexRangeForInterval` mit **Zeit-Overlap** zwischen Marker-Intervall (`markerIntervalMs`) und Bucket-Zeitfenster — sowohl bei aggregierten Buckets (Tag/Stunde/…) als auch bei Pro-Anfrage (`events.length === buckets.length`). Optional zusätzlich User-Filter, wenn `marker.user !== 'all'`. `getMarkerForEvent` gilt für Statistik-Aggregation (`aggregateEventsByMarkerDimension`), nicht für Chart-Hintergrundboxen. Bei bewusst überlappenden Markern kann eine äußere Box kürzere innere Marker visuell überdecken; sequentielle Auto-Marker (mit `end` bei Session-Ende) bleiben lückenlos.
 
 **Anfragen-Modus:** `filterEventsByCount` liefert die neuesten N Events oder einen Von–Bis-Bereich (`countRange`, 1 = neueste). Live-Fetch nutzt heuristische Zeitfenster nach Anzahl (nicht mehr pauschal „gesamter Verlauf“), nur User mit Token (`/health`). Beim Wechsel zurück zu Zeitraum wird der Vollcache invalidiert.
+
+#### Zeitraum-Fenster verschieben (Shift+Ziehen)
+
+Im Zeitraum-Modus (`selectionMode === 'time'`) kann ein Preset-Fenster (z. B. **3 Std**) oder Custom-Bereich **ohne Daueränderung** entlang der geladenen Events verschoben werden — **global** (KPIs, Tabellen, alle Charts). Der aktive Preset-Button bleibt aktiv.
+
+| Aspekt | Verhalten |
+| ------ | --------- |
+| Bedienung | **Umschalt + Ziehen** auf `#chart-overview-daily` |
+| Richtung | Nach rechts ziehen = frühere Zeit (Karten-Pan); Dauer bleibt konstant |
+| `hours`-Modus | Runtime-State `range.windowEndMs` (optionaler Fenster-Anker; **nicht** in `localStorage`) |
+| `custom`-Modus | `customFrom` / `customTo` werden synchron verschoben; Inputs aktualisiert |
+| Reset | Preset erneut klicken, Modus „Alle“, Custom **Anwenden**, Wechsel Anfragen ↔ Zeitraum |
+| Clamping | `dataMin + duration ≤ end ≤ dataMax` aus **ung gefilterten** `activeEvents()` |
+| Nicht aktiv | `mode === 'all'`, Anfragen-Modus (`selectionMode === 'count'`) |
+
+**Datenfluss:**
+
+| Schicht | Funktion | Rolle |
+| ------- | -------- | ----- |
+| Bounds | `resolveFilterBoundsMs()` (`metrics.js`) | Zentrale Berechnung `{ startMs, endMs, durationMs }` |
+| Filter | `filterEvents()` | Events im Fenster |
+| Live-Fetch | `liveFetchBoundsMs()` → `desiredLiveBounds()` | API-Zeitraum für verschobenes Fenster |
+| UI | `initTimeWindowPan()` (`cursor-usage-analytics.html`) | Pointer-Drag mit `requestAnimationFrame`-Drosselung |
+
+**Chart-Zoom (unabhängig):** Mausrad und **Strg+Ziehen** betreffen nur den Chart-Viewport (`charts.js`, chartjs-plugin-zoom). Hinweis in `.chart-zoom-hint` / i18n `chartZoomHint`.
 
 #### Marker-Konvention (empfohlen)
 
@@ -521,10 +576,11 @@ Upstream: `https://cursor.com/api/usage-summary`, `https://cursor.com/api/dashbo
 | `cursor-analytics-granularity`        | `hour`                        | Overview-Aggregation (Zeitraum-Modus)                                       |
 | `cursor-analytics-selection-mode`     | `time`                        | `time` = Zeitraum-Filter, `count` = letzte N Anfragen                       |
 | `cursor-analytics-count`              | `50`                          | Default-Anzahl im Anfragen-Modus                                            |
-| `cursor-analytics-time-range`         | `hours` / 24 h                | Aktiver Zeitraum-Filter (`mode`, `hours`, optional `customFrom`/`customTo`) |
+| `cursor-analytics-time-range`         | `hours` / 24 h                | Aktiver Zeitraum-Filter (`mode`, `hours`, optional `customFrom`/`customTo`); **`windowEndMs` nur Runtime** (Shift+Ziehen, nicht persistiert) |
 | `cursor-analytics-custom-range`       | heute−2d / heute              | Von/Bis-Zeitraum (Analytics, JSON `{ customFrom, customTo }`)               |
 | `cursor-analytics-chart-visibility`   | `{}`                          | Legend-Sichtbarkeit pro Chart-Key                                           |
 | `cursor-marker-chart-display`         | siehe unten                   | Chart-Marker-Sichtbarkeit + Tabellen-Hover-Popover                          |
+| `cursor-marker-focus-id`              | —                             | ID des fokussierten Markers (Session-Drill-down); leer = kein Fokus         |
 | `cursor-usage-markers-v1`             | `{ version: 1, markers: [] }` | Projekt-Marker (Primary Client-Cache)                                       |
 | `cursor-event-chart-markers-v1`       | —                             | Legacy-Key (Migration → `cursor-usage-markers-v1`)                          |
 
@@ -547,6 +603,8 @@ Server-Datei: `data/project-markers.json` (liegt unter gitignored `data/`).
 | API-Response-Format        | `parser.js` `normalizeApiEvent`, `serve.py` Proxy                            |
 | `serve.py`-Routen          | Analytics `fetch()` (`PROXY_BASE` = `''`), Marker `/api/markers`             |
 | Marker-Schema / Sync       | `markers.js`, `serve.py`, `cursor-usage-analytics.html`                      |
+| Marker-Fokus / Drill-down  | `markers.js` (`filterEventsByMarkerInterval`), `charts.js` (`applyMarkerFocusZoom`), `cursor-usage-analytics.html` (`eventsForDashboard`, `markerFocusId`) |
+| Zeitfenster-Verschiebung   | `metrics.js` (`resolveFilterBoundsMs`, `filterEvents`, `liveFetchBoundsMs`), `cursor-usage-analytics.html` (`initTimeWindowPan`, `range.windowEndMs`) |
 | Marker-Popover / Tabellen-Hover | `markers.js`, `charts.js` (`markerTooltipLines`), `i18n.js`, `cursor-usage-analytics.html` |
 
 

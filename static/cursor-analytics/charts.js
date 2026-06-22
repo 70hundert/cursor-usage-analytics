@@ -199,6 +199,8 @@
             events: markerContext.events,
             markers: markerContext.markers,
             formatters: markerContext.formatters,
+            focusedMarkerId: markerContext.focusedMarkerId,
+            onFocusMarker: markerContext.onFocusMarker,
             onEditMarker: markerContext.onEditMarker,
             showPopover: markerContext.showPopover !== false,
             showMarkers: markerContext.showMarkers !== false,
@@ -1290,6 +1292,29 @@
         }
     }
 
+    const MARKER_FOCUS_ZOOM_PADDING = 3;
+
+    function applyMarkerFocusZoom(chart, buckets, marker, markerContext) {
+        const markersApi = global.CursorAnalytics?.markers;
+        if (!chart?.zoomScale || !markersApi || !marker || !buckets?.length || !markerContext) {
+            return;
+        }
+        const range = markersApi.markerBucketIndexRange(
+            buckets,
+            marker,
+            markerContext.markers,
+            markerContext.filterEndMs,
+            markerContext.events
+        );
+        if (!range) {
+            return;
+        }
+        const pad = Math.min(MARKER_FOCUS_ZOOM_PADDING, Math.max(1, buckets.length - 1));
+        const min = Math.max(0, range.xMin - pad);
+        const max = Math.min(buckets.length - 1, range.xMax + pad);
+        chart.zoomScale('x', { min, max });
+    }
+
     global.CursorAnalytics = global.CursorAnalytics || {};
     global.CursorAnalytics.charts = {
         COLORS,
@@ -1302,5 +1327,7 @@
         destroyAll,
         destroyChart,
         renderMarkerBreakdown,
+        applyMarkerFocusZoom,
+        MARKER_FOCUS_ZOOM_PADDING,
     };
 })(typeof window !== 'undefined' ? window : globalThis);
