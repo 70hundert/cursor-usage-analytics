@@ -625,3 +625,6 @@
         translations,
     };
 })(typeof window !== 'undefined' ? window : globalThis);
+
+// ESM-Export (Bridge: window.CursorAnalytics.i18n bleibt fuer klassische Consumer erhalten)
+export const i18n = window.CursorAnalytics.i18n;

@@ -1,9 +1,11 @@
 /**
  * CSV + API → normalisiertes Usage-Event-Modell
  */
+import { usersConfig } from './users-config.js';
+
 (function initCursorAnalyticsParser(global) {
     function getUsersConfig() {
-        return global.CursorAnalytics?.usersConfig;
+        return usersConfig;
     }
 
     function getUserOrder() {
@@ -305,3 +307,6 @@
         parseCostCents,
     };
 })(typeof window !== 'undefined' ? window : globalThis);
+
+// ESM-Export (Bridge: window.CursorAnalytics.parser bleibt fuer klassische Consumer erhalten)
+export const parser = window.CursorAnalytics.parser;

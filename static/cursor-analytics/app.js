@@ -1,51 +1,27 @@
 const PROXY_BASE = '';
 const BUDGET_STORAGE_KEY = 'cursor-analytics-monthly-budget-usd';
-const MODULE_FILES = [
-    'static/cursor-analytics/users-config.js',
-    'static/cursor-analytics/i18n.js',
-    'static/cursor-analytics/parser.js',
-    'static/cursor-analytics/metrics.js',
-    'static/cursor-analytics/markers.js',
-    'static/cursor-analytics/charts.js',
-];
 
 function resolveToolPath(relativePath) {
     const cleaned = String(relativePath).replace(/^\.\//, '');
     return new URL(cleaned, new URL('.', window.location.href)).href;
 }
 
-function loadScript(url) {
-    return new Promise((resolve, reject) => {
-        const existing = document.querySelector(`script[data-src="${url}"]`);
-        if (existing) {
-            existing.addEventListener('load', () => resolve(), { once: true });
-            existing.addEventListener('error', () => reject(new Error(url)), { once: true });
+// Module werden von bootstrap.js (<script type="module">) geladen; hier nur warten.
+async function ensureModules() {
+    for (let attempt = 0; attempt < 200; attempt += 1) {
+        if (
+            window.CursorAnalytics?.parser &&
+            window.CursorAnalytics?.metrics &&
+            window.CursorAnalytics?.markers &&
+            window.CursorAnalytics?.charts &&
+            window.CursorAnalytics?.usersConfig &&
+            window.CursorAnalytics?.i18n
+        ) {
             return;
         }
-        const script = document.createElement('script');
-        script.src = url;
-        script.dataset.src = url;
-        script.onload = () => resolve();
-        script.onerror = () => reject(new Error(tf('scriptNotFound', { url })));
-        document.head.appendChild(script);
-    });
-}
-
-async function ensureModules() {
-    if (
-        window.CursorAnalytics?.parser &&
-        window.CursorAnalytics?.metrics &&
-        window.CursorAnalytics?.markers &&
-        window.CursorAnalytics?.charts &&
-        window.CursorAnalytics?.usersConfig &&
-        window.CursorAnalytics?.i18n
-    ) {
-        return;
+        await new Promise((resolve) => window.setTimeout(resolve, 50));
     }
-    const base = new URL('.', window.location.href);
-    for (const file of MODULE_FILES) {
-        await loadScript(new URL(`${file}?v=20`, base).href);
-    }
+    throw new Error('Module konnten nicht geladen werden (bootstrap.js).');
 }
 
 let numberFmt;

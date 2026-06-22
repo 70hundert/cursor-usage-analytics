@@ -1,6 +1,8 @@
 /**
  * Aggregationen und KPIs für Cursor Usage Analytics
  */
+import { i18n } from './i18n.js';
+
 (function initCursorAnalyticsMetrics(global) {
     const DAY_NAMES = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 
@@ -537,7 +539,7 @@
     }
 
     function localizedDayNames() {
-        const labels = global.CursorAnalytics?.i18n?.getWeekdayLabels?.();
+        const labels = i18n?.getWeekdayLabels?.();
         return labels?.length === 7 ? labels : DAY_NAMES;
     }
 
@@ -753,3 +755,6 @@
         sumField,
     };
 })(typeof window !== 'undefined' ? window : globalThis);
+
+// ESM-Export (Bridge: window.CursorAnalytics.metrics bleibt fuer klassische Consumer erhalten)
+export const metrics = window.CursorAnalytics.metrics;

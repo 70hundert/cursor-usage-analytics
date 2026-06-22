@@ -154,3 +154,6 @@
         injectUserStyles,
     };
 })(typeof window !== 'undefined' ? window : globalThis);
+
+// ESM-Export (Bridge: window.CursorAnalytics.usersConfig bleibt fuer klassische Consumer erhalten)
+export const usersConfig = window.CursorAnalytics.usersConfig;

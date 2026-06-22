@@ -134,14 +134,11 @@
             </li>
         </ul>
     </main>
-    <script src="static/cursor-analytics/i18n.js"></script>
-    <script>
-        function getI18n() {
-            return window.CursorAnalytics?.i18n;
-        }
+    <script type="module">
+        import { i18n } from './static/cursor-analytics/i18n.js?v=21';
 
         function t(key) {
-            return getI18n()?.t(key) ?? key;
+            return i18n?.t(key) ?? key;
         }
 
         function applyI18nLabels() {
@@ -151,7 +148,7 @@
                     el.textContent = t(key);
                 }
             });
-            const locale = getI18n()?.getLocale() || 'de';
+            const locale = i18n?.getLocale() || 'de';
             document.querySelectorAll('[data-locale]').forEach((btn) => {
                 btn.classList.toggle('locale-btn--active', btn.dataset.locale === locale);
             });
@@ -159,7 +156,7 @@
 
         document.querySelectorAll('[data-locale]').forEach((btn) => {
             btn.addEventListener('click', () => {
-                getI18n()?.switchLocale(btn.dataset.locale);
+                i18n?.switchLocale(btn.dataset.locale);
                 applyI18nLabels();
             });
         });
