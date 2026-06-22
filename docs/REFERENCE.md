@@ -318,7 +318,7 @@ Marker sind manuell — ohne einheitliche Benennung lassen sich Projekt- und Kat
 | ---- | --------- | --------- |
 | **`project`** | Repo, Modul, Cursor-Modus oder Projektphase | `Cursor-Usage-Dashboard`, `Grow-Tagebuch/API`, `Agent`, `Editor` |
 | **`task`** | Kategorie + Kurzbeschreibung (`Kategorie: Aufgabe`) | `Feature: Marker-Charts`, `Bugfix: Login-Timeout`, `Analyse: fullEntryService.js` |
-| **`note`** | Freitext, Scope-Hinweise, Effizienz | `nur 2 Dateien`, `gesamtes Projekt` |
+| **`note`** | Freitext, Scope-Hinweise, Effizienz; Auto-Marker: `Modus: Agent` / `Modus: Edit` / `Modus: Chat` | `nur 2 Dateien`, `Modus: Agent` |
 | **`start` / `end`** | Arbeitsintervall | Bei Task-Start setzen, bei Task-Ende `end` setzen oder nächsten Marker starten |
 
 **Kategorie-Prefix in `task`:** Parser `parseTaskCategory()` erkennt Präfixe vor `:`, `-`, `–` oder `—`. Empfohlene Werte: `Bugfix`, `Feature`, `Refactoring`, `Analyse`, `Dokumentation`, `Suche`. Ohne Prefix → Gruppe „Ohne Kategorie“ in den Charts.

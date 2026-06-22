@@ -19,6 +19,11 @@ from typing import Any
 CONFIG_PATH = Path.home() / ".cursor" / "marker-hook.json"
 STATE_PATH = Path.home() / ".cursor" / "marker-hook-state.json"
 DEFAULT_MODES = frozenset({"agent", "edit", "chat"})
+MODE_NOTE_LABELS = {
+    "agent": "Modus: Agent",
+    "edit": "Modus: Edit",
+    "chat": "Modus: Chat",
+}
 EVENT_ACTIONS = {
     "sessionStart": "start",
     "beforeSubmitPrompt": "prompt",
@@ -102,8 +107,27 @@ def _composer_mode(payload: dict[str, Any], state: dict[str, Any], session_id: s
     return ""
 
 
+def _repair_text(text: str) -> str:
+    """Fix UTF-8 mojibake when Windows passes hook JSON with wrong code page."""
+    if not text:
+        return text
+    for encoding in ("latin-1", "cp1252"):
+        try:
+            repaired = text.encode(encoding).decode("utf-8")
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            continue
+        if repaired != text and "\ufffd" not in repaired:
+            return repaired
+    return text
+
+
+def _mode_note(composer_mode: str) -> str:
+    mode = str(composer_mode or "").strip().lower()
+    return MODE_NOTE_LABELS.get(mode, f"Modus: {mode}" if mode else "")
+
+
 def _truncate_task(text: str, max_len: int = 120) -> str:
-    cleaned = " ".join(str(text or "").split())
+    cleaned = " ".join(_repair_text(str(text or "")).split())
     if len(cleaned) <= max_len:
         return cleaned
     return cleaned[: max_len - 1].rstrip() + "…"
@@ -157,7 +181,7 @@ def _build_request_body(
         "sessionId": session_id,
         "user": _resolve_user(config, payload),
         "project": project,
-        "note": composer_mode,
+        "note": _mode_note(composer_mode),
         "composerMode": composer_mode,
     }
     if action == "prompt":
@@ -375,7 +399,7 @@ def _read_hook_payload() -> dict[str, Any]:
     if not raw_bytes:
         return {}
 
-    for encoding in ("utf-8-sig", "utf-8", "utf-16", "utf-16-le", "utf-16-be"):
+    for encoding in ("utf-8-sig", "utf-8", "cp1252", "latin-1", "utf-16", "utf-16-le", "utf-16-be"):
         try:
             raw = raw_bytes.decode(encoding).strip()
         except UnicodeDecodeError:

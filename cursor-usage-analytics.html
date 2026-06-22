@@ -64,7 +64,7 @@
             margin: 0 auto;
         }
 
-        .dashboard-grid > .card {
+        .dashboard-grid>.card {
             min-width: 0;
         }
 
@@ -738,11 +738,11 @@
             gap: 0.45rem 0.65rem;
         }
 
-        .range-group-header > .toolbar-label {
+        .range-group-header>.toolbar-label {
             flex: 0 0 auto;
         }
 
-        .range-group-header > .toolbar-group {
+        .range-group-header>.toolbar-group {
             flex: 1 1 auto;
         }
 
@@ -963,9 +963,9 @@
                         <span data-i18n="loadCsv">CSV laden</span>
                         <input type="file" id="csv-file-input" accept=".csv,text/csv" multiple>
                     </label>
-                    <button type="button" class="btn btn--primary" id="live-refresh-btn" data-i18n="liveRefresh">Live aktualisieren</button>
                     <button type="button" class="btn" id="export-json-btn" data-i18n="exportJson">Export JSON</button>
-                    <button type="button" class="btn" id="marker-export-btn" data-i18n="exportMarkers">Marker exportieren</button>
+                    <button type="button" class="btn" id="marker-export-btn" data-i18n="exportMarkers">Marker
+                        exportieren</button>
                     <label class="file-input-label">
                         <span data-i18n="importMarkers">Marker importieren</span>
                         <input type="file" id="marker-import-input" accept=".json,application/json">
@@ -976,8 +976,10 @@
                 <div class="selection-mode-group">
                     <span class="toolbar-label" data-i18n="view">Ansicht</span>
                     <div class="toolbar-group">
-                        <button type="button" class="btn btn--active" data-selection-mode="time" data-i18n="timeRange">Zeitraum</button>
-                        <button type="button" class="btn" data-selection-mode="count" data-i18n="requests">Anfragen</button>
+                        <button type="button" class="btn btn--active" data-selection-mode="time"
+                            data-i18n="timeRange">Zeitraum</button>
+                        <button type="button" class="btn" data-selection-mode="count"
+                            data-i18n="requests">Anfragen</button>
                     </div>
                 </div>
                 <div id="time-range-group">
@@ -989,9 +991,11 @@
                             <button type="button" class="btn" data-hours="3" data-i18n="preset3h">3&nbsp;Std</button>
                             <button type="button" class="btn" data-hours="6" data-i18n="preset6h">6&nbsp;Std</button>
                             <button type="button" class="btn" data-hours="12" data-i18n="preset12h">12&nbsp;Std</button>
-                            <button type="button" class="btn btn--active" data-hours="24" data-i18n="preset1d">1&nbsp;Tag</button>
+                            <button type="button" class="btn btn--active" data-hours="24"
+                                data-i18n="preset1d">1&nbsp;Tag</button>
                             <button type="button" class="btn" data-hours="168" data-i18n="preset7d">7&nbsp;Tage</button>
-                            <button type="button" class="btn" data-hours="720" data-i18n="preset30d">30&nbsp;Tage</button>
+                            <button type="button" class="btn" data-hours="720"
+                                data-i18n="preset30d">30&nbsp;Tage</button>
                             <button type="button" class="btn" data-all="true" data-i18n="all">Alle</button>
                         </div>
                     </div>
@@ -1009,7 +1013,8 @@
                         <button type="button" class="btn" id="custom-reset" data-i18n="reset">Zurücksetzen</button>
                     </div>
                     <div class="granularity-control" id="granularity-control">
-                        <select class="granularity-select" id="granularity-select" data-i18n-aria="granularity" aria-label="Granularität">
+                        <select class="granularity-select" id="granularity-select" data-i18n-aria="granularity"
+                            aria-label="Granularität">
                             <option value="event" data-i18n="granEvent">Pro Anfrage</option>
                             <option value="quarter" data-i18n="granQuarter">15 Minuten</option>
                             <option value="hour" data-i18n="granHour">Stündlich</option>
@@ -1037,15 +1042,13 @@
                         <label><span data-i18n="fromWithHash">Von&nbsp;#</span>
                             <input type="number" class="count-input" id="count-from" min="1" step="1" value="1"
                                 data-i18n-title="countFromTitle" data-i18n-aria="countFromTitle"
-                                title="Von Anfrage (1 = neueste)"
-                                aria-label="Von Anfrage (1 = neueste)">
+                                title="Von Anfrage (1 = neueste)" aria-label="Von Anfrage (1 = neueste)">
                         </label>
                         <span class="date-range-sep" data-i18n="toSep">bis</span>
                         <label class="date-range-end">
                             <input type="number" class="count-input" id="count-to" min="1" step="1" value="50"
                                 data-i18n-title="countToTitle" data-i18n-aria="countToTitle"
-                                title="Bis Anfrage (neueste #)"
-                                aria-label="Bis Anfrage">
+                                title="Bis Anfrage (neueste #)" aria-label="Bis Anfrage">
                         </label>
                         <button type="button" class="btn" id="count-custom-apply" data-i18n="apply">Anwenden</button>
                     </div>
@@ -1053,7 +1056,8 @@
             </div>
             <div class="live-loading" id="live-loading" hidden aria-live="polite" aria-busy="false">
                 <div class="live-loading__spinner" aria-hidden="true"></div>
-                <p class="live-loading__text" id="live-loading-text" data-i18n="liveLoading">Live-Daten werden geladen…</p>
+                <p class="live-loading__text" id="live-loading-text" data-i18n="liveLoading">Live-Daten werden geladen…
+                </p>
             </div>
             <div class="drop-zone" id="drop-zone" data-i18n="dropZone">
                 CSV hier ablegen oder „CSV laden“ wählen
@@ -1068,15 +1072,21 @@
                         <div class="chart-card__actions">
                             <button type="button" class="btn btn-chart-height" data-chart-key="overview"
                                 aria-pressed="false" data-i18n="stretch">Stretch</button>
-                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="overview" data-i18n="zoomReset">Zoom
+                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="overview"
+                                data-i18n="zoomReset">Zoom
                                 zurücksetzen</button>
-                            <button type="button" class="btn" id="marker-add-overview" data-i18n="markerSet">Marker setzen</button>
-                            <button type="button" class="btn" data-marker-edit-current data-i18n="editCurrentMarker" disabled>Aktuelle Session bearbeiten</button>
+                            <button type="button" class="btn" id="marker-add-overview" data-i18n="markerSet">Marker
+                                setzen</button>
+                            <button type="button" class="btn" data-marker-edit-current data-i18n="editCurrentMarker"
+                                disabled>Aktuelle Session bearbeiten</button>
+                            <button type="button" class="btn btn--primary" id="live-refresh-btn"
+                                data-i18n="liveRefresh">Live aktualisieren</button>
                         </div>
                     </div>
                 </div>
                 <div class="chart-wrap chart-wrap--overview">
-                    <canvas id="chart-overview-daily" data-i18n-aria="overviewChartAria" aria-label="Tagesübersicht Tokens und Kosten"></canvas>
+                    <canvas id="chart-overview-daily" data-i18n-aria="overviewChartAria"
+                        aria-label="Tagesübersicht Tokens und Kosten"></canvas>
                 </div>
             </div>
             <p class="card-meta" id="status-line" data-i18n="loadingData">Lade Daten…</p>
@@ -1085,7 +1095,8 @@
 
         <section class="card">
             <h2 data-i18n="visualizations">Visualisierungen</h2>
-            <p class="chart-zoom-hint" data-i18n="chartZoomHint">Mausrad: Zoomen · Strg + Ziehen: Verschieben · Pinch auf Touch</p>
+            <p class="chart-zoom-hint" data-i18n="chartZoomHint">Mausrad: Zoomen · Strg + Ziehen: Verschieben · Pinch
+                auf Touch</p>
             <div class="chart-grid">
                 <div class="chart-card">
                     <div class="chart-card__header">
@@ -1093,7 +1104,8 @@
                         <div class="chart-card__actions">
                             <button type="button" class="btn btn-chart-height" data-chart-key="topCost"
                                 aria-pressed="false" data-i18n="stretch">Stretch</button>
-                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="topCost" data-i18n="zoomReset">Zoom
+                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="topCost"
+                                data-i18n="zoomReset">Zoom
                                 zurücksetzen</button>
                         </div>
                     </div>
@@ -1105,7 +1117,8 @@
                         <div class="chart-card__actions">
                             <button type="button" class="btn btn-chart-height" data-chart-key="topTokens"
                                 aria-pressed="false" data-i18n="stretch">Stretch</button>
-                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="topTokens" data-i18n="zoomReset">Zoom
+                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="topTokens"
+                                data-i18n="zoomReset">Zoom
                                 zurücksetzen</button>
                         </div>
                     </div>
@@ -1129,7 +1142,8 @@
                         <div class="chart-card__actions">
                             <button type="button" class="btn btn-chart-height" data-chart-key="modelFamily"
                                 aria-pressed="false" data-i18n="stretch">Stretch</button>
-                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="modelFamily" data-i18n="zoomReset">Zoom
+                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="modelFamily"
+                                data-i18n="zoomReset">Zoom
                                 zurücksetzen</button>
                         </div>
                     </div>
@@ -1141,7 +1155,8 @@
                         <div class="chart-card__actions">
                             <button type="button" class="btn btn-chart-height" data-chart-key="maxMode"
                                 aria-pressed="false" data-i18n="stretch">Stretch</button>
-                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="maxMode" data-i18n="zoomReset">Zoom
+                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="maxMode"
+                                data-i18n="zoomReset">Zoom
                                 zurücksetzen</button>
                         </div>
                     </div>
@@ -1153,7 +1168,8 @@
                         <div class="chart-card__actions">
                             <button type="button" class="btn btn-chart-height" data-chart-key="byHour"
                                 aria-pressed="false" data-i18n="stretch">Stretch</button>
-                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="byHour" data-i18n="zoomReset">Zoom
+                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="byHour"
+                                data-i18n="zoomReset">Zoom
                                 zurücksetzen</button>
                         </div>
                     </div>
@@ -1165,7 +1181,8 @@
                         <div class="chart-card__actions">
                             <button type="button" class="btn btn-chart-height" data-chart-key="inputOutput"
                                 aria-pressed="false" data-i18n="stretch">Stretch</button>
-                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="inputOutput" data-i18n="zoomReset">Zoom
+                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="inputOutput"
+                                data-i18n="zoomReset">Zoom
                                 zurücksetzen</button>
                         </div>
                     </div>
@@ -1189,7 +1206,8 @@
                         <div class="chart-card__actions">
                             <button type="button" class="btn btn-chart-height" data-chart-key="byWeekday"
                                 aria-pressed="false" data-i18n="stretch">Stretch</button>
-                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="byWeekday" data-i18n="zoomReset">Zoom
+                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="byWeekday"
+                                data-i18n="zoomReset">Zoom
                                 zurücksetzen</button>
                         </div>
                     </div>
@@ -1204,7 +1222,8 @@
                             <div class="chart-card__actions">
                                 <button type="button" class="btn btn-chart-height" data-chart-key="cumulative"
                                     aria-pressed="false" data-i18n="stretch">Stretch</button>
-                                <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="cumulative" data-i18n="zoomReset">Zoom
+                                <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="cumulative"
+                                    data-i18n="zoomReset">Zoom
                                     zurücksetzen</button>
                             </div>
                         </div>
@@ -1286,7 +1305,8 @@
                 <div class="toolbar-group">
                     <label class="toolbar-label">
                         <span data-i18n="minCost">Min. Kosten ($)</span>
-                        <input type="number" class="budget-input" id="events-min-cost" min="0" step="0.01" value="0" style="width:5rem;">
+                        <input type="number" class="budget-input" id="events-min-cost" min="0" step="0.01" value="0"
+                            style="width:5rem;">
                     </label>
                 </div>
                 <div class="toolbar-group">
@@ -1302,8 +1322,10 @@
                     </label>
                 </div>
                 <div class="toolbar-group">
-                    <button type="button" class="btn" id="events-export-csv-btn" data-i18n="exportCsv">Events CSV</button>
-                    <button type="button" class="btn" id="events-export-json-btn" data-i18n="exportEventsJson">Events JSON</button>
+                    <button type="button" class="btn" id="events-export-csv-btn" data-i18n="exportCsv">Events
+                        CSV</button>
+                    <button type="button" class="btn" id="events-export-json-btn" data-i18n="exportEventsJson">Events
+                        JSON</button>
                 </div>
                 <div class="toolbar-group">
                     <span class="toolbar-label" data-i18n="projectFilter">Projekt-Filter</span>
@@ -1314,8 +1336,10 @@
                 <div class="toolbar-group">
                     <span class="toolbar-label" data-i18n="grouping">Gruppierung</span>
                     <div class="toolbar-group">
-                        <button type="button" class="btn" data-events-group="marker" data-i18n="groupByMarker">Pro Marker</button>
-                        <button type="button" class="btn" data-events-group="task" data-i18n="groupByTask">Pro Aufgabe</button>
+                        <button type="button" class="btn" data-events-group="marker" data-i18n="groupByMarker">Pro
+                            Marker</button>
+                        <button type="button" class="btn" data-events-group="task" data-i18n="groupByTask">Pro
+                            Aufgabe</button>
                     </div>
                 </div>
                 <div class="toolbar-group">
@@ -1383,7 +1407,8 @@
                 </div>
                 <div class="toolbar-group">
                     <button type="button" class="btn" id="marker-add-table" data-i18n="markerSet">Marker setzen</button>
-                    <button type="button" class="btn" data-marker-edit-current data-i18n="editCurrentMarker" disabled>Aktuelle Session bearbeiten</button>
+                    <button type="button" class="btn" data-marker-edit-current data-i18n="editCurrentMarker"
+                        disabled>Aktuelle Session bearbeiten</button>
                 </div>
             </div>
             <p class="card-meta" id="marker-charts-intro" data-i18n="markerChartsIntro" hidden>
@@ -1396,7 +1421,8 @@
                         <div class="chart-card__actions">
                             <button type="button" class="btn btn-chart-height" data-chart-key="markerByProject"
                                 aria-pressed="false" data-i18n="stretch">Stretch</button>
-                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="markerByProject" data-i18n="zoomReset">Zoom
+                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="markerByProject"
+                                data-i18n="zoomReset">Zoom
                                 zurücksetzen</button>
                         </div>
                     </div>
@@ -1408,7 +1434,8 @@
                         <div class="chart-card__actions">
                             <button type="button" class="btn btn-chart-height" data-chart-key="markerByCategory"
                                 aria-pressed="false" data-i18n="stretch">Stretch</button>
-                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="markerByCategory" data-i18n="zoomReset">Zoom
+                            <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="markerByCategory"
+                                data-i18n="zoomReset">Zoom
                                 zurücksetzen</button>
                         </div>
                     </div>
@@ -1428,7 +1455,8 @@
                             <th data-sort-col="project" data-i18n="project">Projekt</th>
                             <th data-sort-col="task" data-i18n="task">Aufgabe</th>
                             <th data-sort-col="events" data-i18n="events">Events</th>
-                            <th class="usage-table__total" data-sort-col="total" data-i18n="totalTokens">Total Tokens</th>
+                            <th class="usage-table__total" data-sort-col="total" data-i18n="totalTokens">Total Tokens
+                            </th>
                             <th data-sort-col="output" data-i18n="output">Output</th>
                             <th data-sort-col="cost" data-i18n="cost">Kosten</th>
                             <th></th>
@@ -2940,12 +2968,12 @@
             const scopeHint =
                 displayMeta.shown < displayMeta.total
                     ? `<span class="events-stat__scope">${tf('shownOfTotal', {
-                          shown: numberFmt.format(displayMeta.shown),
-                          total: numberFmt.format(displayMeta.total),
-                      })}</span>`
+                        shown: numberFmt.format(displayMeta.shown),
+                        total: numberFmt.format(displayMeta.total),
+                    })}</span>`
                     : `<span class="events-stat__scope">${tf('shownRequests', {
-                          shown: numberFmt.format(displayMeta.shown),
-                      })}</span>`;
+                        shown: numberFmt.format(displayMeta.shown),
+                    })}</span>`;
             totalsEl.innerHTML = `
                 <div class="events-stat events-stat--scope">
                     <span class="events-stat__label">${t('displayed')}</span>
@@ -3002,8 +3030,8 @@
                         showRange && group.marker
                             ? `<td>${formatEventGroupRange(group.marker, api, filterEndMs)}</td>`
                             : showRange
-                              ? '<td>—</td>'
-                              : '';
+                                ? '<td>—</td>'
+                                : '';
                     return `<tr>
                         <td>${group.label}</td>
                         ${rangeCell}
@@ -3900,16 +3928,16 @@
 
             document.getElementById('budget-panel').innerHTML = `
                 <p class="card-meta">${tf('budgetSpent', {
-                    pct: pct.toFixed(1),
-                    spent: currencyFmt.format(spentUsd),
-                    budget: currencyFmt.format(budgetUsd),
-                })}</p>
+                pct: pct.toFixed(1),
+                spent: currencyFmt.format(spentUsd),
+                budget: currencyFmt.format(budgetUsd),
+            })}</p>
                 <div class="budget-bar">
                     <div class="budget-bar__fill ${fillClass}" style="width: ${pct}%"></div>
                 </div>
                 <p class="hint-text">${tf('budgetRemaining', {
-                    amount: currencyFmt.format(Math.max(0, budgetUsd - spentUsd)),
-                })}</p>
+                amount: currencyFmt.format(Math.max(0, budgetUsd - spentUsd)),
+            })}</p>
             `;
         }
 
@@ -3937,10 +3965,10 @@
             const projectLabel = grouped
                 ? marker?.task || marker?.project || '—'
                 : marker
-                  ? marker.task
-                      ? `${marker.project} — ${marker.task}`
-                      : marker.project
-                  : '—';
+                    ? marker.task
+                        ? `${marker.project} — ${marker.task}`
+                        : marker.project
+                    : '—';
             const markedClass = marker ? ' usage-table__row--marked' : '';
             const collapsed = groupKey && collapsedEventGroups.has(groupKey);
             const hiddenAttr = collapsed ? ' hidden' : '';
@@ -4082,10 +4110,10 @@
                 if (paginationInfo) {
                     paginationInfo.textContent = showPagination
                         ? tf('paginationRange', {
-                              start: pageStart + 1,
-                              end: pageStart + displayedEvents.length,
-                              total: sorted.length,
-                          })
+                            start: pageStart + 1,
+                            end: pageStart + displayedEvents.length,
+                            total: sorted.length,
+                        })
                         : '';
                 }
                 const prevBtn = document.getElementById('events-prev-btn');
@@ -4363,9 +4391,9 @@
             document.getElementById('load-hint').textContent =
                 loadedLabels.length
                     ? tf('loadHintCsv', {
-                          files: loadedLabels.join(' + '),
-                          counts: hintParts.join(' · '),
-                      })
+                        files: loadedLabels.join(' + '),
+                        counts: hintParts.join(' · '),
+                    })
                     : t('loadHintNoDefault');
 
             if (failed.length) {

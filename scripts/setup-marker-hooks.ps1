@@ -30,6 +30,9 @@ $pythonPath = if (Test-Path $venvPython) { $venvPython } else { "python" }
 
 $cmdLines = @(
     "@echo off"
+    "chcp 65001 >nul"
+    "set PYTHONIOENCODING=utf-8"
+    "set PYTHONUTF8=1"
     "`"$pythonPath`" `"$hookTarget`""
     "exit /b %ERRORLEVEL%"
 )
@@ -80,7 +83,12 @@ if (Test-Path $hooksJsonPath) {
     }
 }
 
-($hooksRoot | ConvertTo-Json -Depth 8) | Set-Content -Path $hooksJsonPath -Encoding utf8NoBOM
+function Write-Utf8NoBomFile([string]$Path, [string]$Content) {
+    $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+    [System.IO.File]::WriteAllText($Path, $Content, $utf8NoBom)
+}
+
+($hooksRoot | ConvertTo-Json -Depth 8) | ForEach-Object { Write-Utf8NoBomFile -Path $hooksJsonPath -Content $_ }
 Write-Host "hooks.json aktualisiert: $hooksJsonPath"
 
 if (-not (Test-Path $configTarget)) {
@@ -97,7 +105,7 @@ try {
     $config | Add-Member -NotePropertyName pythonPath -NotePropertyValue $pythonPath -Force
     $config | Add-Member -NotePropertyName dashboardRoot -NotePropertyValue $repoRoot -Force
     $config | Add-Member -NotePropertyName modes -NotePropertyValue @("agent", "edit", "chat") -Force
-    ($config | ConvertTo-Json -Depth 8) | Set-Content -Path $configTarget -Encoding utf8NoBOM
+    ($config | ConvertTo-Json -Depth 8) | ForEach-Object { Write-Utf8NoBomFile -Path $configTarget -Content $_ }
     Write-Host "Config aktualisiert: $configTarget"
 } catch {
     Write-Host "Warnung: marker-hook.json konnte pythonPath/dashboardRoot nicht setzen."
