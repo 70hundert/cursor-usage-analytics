@@ -306,7 +306,7 @@ Gemeinsame UI-Komponente in `markers.js` (`buildPopoverHtml`, `#marker-chart-pop
 
 **Chart-Marker-Anzeige:** Buttons `[data-marker-chart-visible]`, `[data-marker-labels-visible]`, Select `[data-marker-project-filter]` — ebenfalls in `cursor-marker-chart-display` (`showMarkers`, `showLabels`, `projectFilter`).
 
-**Gotcha Granularität:** Bei Wechsel der Granularität verschieben sich Bucket-Grenzen — Marker-Positionen in Overview/Cumulative (Zeitraum-Modus mit grober Granularität) sind Näherungen. Marker-Boxen nutzen `bucketIndexRangeForInterval` (Überlappung von Intervall und sichtbaren Buckets; bei Pro-Anfrage-Buckets optional User-Filter).
+**Gotcha Granularität:** Bei Wechsel der Granularität verschieben sich Bucket-Grenzen — Marker-Positionen in Overview/Cumulative (Zeitraum-Modus mit grober Granularität) sind Näherungen. Marker-Boxen nutzen `bucketIndexRangeForInterval`: bei **aggregierten** Buckets (Tag/Stunde/…) Überlappung von Marker-Intervall und Bucket-Zeitfenster; bei **Pro-Anfrage** (`events.length === buckets.length`) Zuordnung pro Event via `getMarkerForEvent` (wie in `aggregateEventsByMarkerDimension`) — nicht reiner Zeit-Overlap, damit lange Marker-Intervalle nicht alle sichtbaren Buckets überdecken. Optional zusätzlich User-Filter, wenn `marker.user !== 'all'`.
 
 **Anfragen-Modus:** `filterEventsByCount` liefert die neuesten N Events oder einen Von–Bis-Bereich (`countRange`, 1 = neueste). Live-Fetch nutzt heuristische Zeitfenster nach Anzahl (nicht mehr pauschal „gesamter Verlauf“), nur User mit Token (`/health`). Beim Wechsel zurück zu Zeitraum wird der Vollcache invalidiert.
 
