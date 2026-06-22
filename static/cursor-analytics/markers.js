@@ -509,11 +509,24 @@
         return bucket.sortKey;
     }
 
-    function bucketEndMs(buckets, index) {
+    function inferredBucketDurationMs(buckets, index, matchEvents = false) {
+        if (matchEvents) {
+            return 60_000;
+        }
+        if (index > 0) {
+            return Math.max(1, bucketStartMs(buckets[index]) - bucketStartMs(buckets[index - 1]));
+        }
+        if (buckets.length >= 2) {
+            return Math.max(1, bucketStartMs(buckets[1]) - bucketStartMs(buckets[0]));
+        }
+        return 24 * 60 * 60 * 1000;
+    }
+
+    function bucketEndMs(buckets, index, matchEvents = false) {
         if (index + 1 < buckets.length) {
             return bucketStartMs(buckets[index + 1]);
         }
-        return bucketStartMs(buckets[index]) + 1;
+        return bucketStartMs(buckets[index]) + inferredBucketDurationMs(buckets, index, matchEvents);
     }
 
     function bucketIndexRangeForInterval(buckets, startMs, endMs, options = {}) {
@@ -531,7 +544,7 @@
 
         for (let i = 0; i < buckets.length; i += 1) {
             const bucketStart = bucketStartMs(buckets[i]);
-            const bucketEnd = bucketEndMs(buckets, i);
+            const bucketEnd = bucketEndMs(buckets, i, matchEvents);
             if (bucketStart >= endMs || bucketEnd <= startMs) {
                 continue;
             }
@@ -547,6 +560,21 @@
                 xMin = i;
             }
             xMax = i;
+        }
+
+        if (xMin === null && marker) {
+            const lastIdx = buckets.length - 1;
+            if (matchEvents) {
+                const userLabel = events[lastIdx].userLabel ?? events[lastIdx].user;
+                if (marker.user !== 'all' && userLabel && userLabel !== marker.user) {
+                    return null;
+                }
+            }
+            const lastStart = bucketStartMs(buckets[lastIdx]);
+            if (startMs >= lastStart) {
+                return { xMin: lastIdx, xMax: lastIdx };
+            }
+            return null;
         }
 
         if (xMin === null) {

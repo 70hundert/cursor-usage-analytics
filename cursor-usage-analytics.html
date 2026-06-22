@@ -1900,9 +1900,10 @@
             if (!api) {
                 return null;
             }
-            const filterEndMs = events.length
+            const lastEventMs = events.length
                 ? events[events.length - 1].timestamp.getTime()
-                : Date.now();
+                : 0;
+            const filterEndMs = Math.max(lastEventMs, Date.now());
             return {
                 markers: api.getStore().markers,
                 user: userFilter,
@@ -5006,6 +5007,10 @@
 
             if (!usersToFetch.length) {
                 throw new Error(t('liveTokenMissing'));
+            }
+
+            if (force && window.CursorAnalytics?.markers?.syncFromServer) {
+                await window.CursorAnalytics.markers.syncFromServer(PROXY_BASE);
             }
 
             if (!force && liveCacheUsable(desiredBounds)) {
