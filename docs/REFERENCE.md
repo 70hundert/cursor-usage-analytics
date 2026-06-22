@@ -406,6 +406,7 @@ Voraussetzungen: `serve.py` läuft (`http://127.0.0.1:8060`); Cursor neu laden; 
 | `defaultUser` | Dashboard-User-ID aus `config/users.json` (**Pflicht**, sonst falscher User-Filter) |
 | `emailMap` | Cursor-E-Mail → Dashboard-User |
 | `modes` | Erlaubte `composer_mode`-Werte |
+| `defaultComposerMode` | Fallback wenn Cursor kein `composer_mode` sendet (Standard `agent`; nur erlaubte `modes`) |
 | `apiBase` | `serve.py`-URL; Alternative Env: `CURSOR_MARKER_API_BASE` |
 | `pythonPath` | Python für Hook (Setup setzt venv-Pfad) |
 | `dashboardRoot` | Offline-Fallback: schreibt nach `{dashboardRoot}/data/project-markers.json` wenn API down |
@@ -420,6 +421,7 @@ Voraussetzungen: `serve.py` läuft (`http://127.0.0.1:8060`); Cursor neu laden; 
 | Symptom | Prüfen |
 | ------- | ------ |
 | Kein neuer Marker | `serve.py` läuft? `defaultUser` = Dashboard-Filter? Cursor neu gestartet? |
+| Marker erst ab 2. Nachricht | Cursor feuert oft kein `sessionStart`; erste `beforeSubmitPrompt` kann ohne `composer_mode` kommen — Hook nutzt seit Fix `defaultComposerMode` (Standard `agent`) |
 | Hook-Fehler | **View → Output → Hooks** in Cursor |
 | Seite lädt nicht | Mehrere `serve.py` auf Port 8060 → `.\stop.ps1` dann `.\start.ps1` |
 | Umlaute falsch (`Ã¤`) | Setup erneut ausführen; alte Marker manuell korrigieren |

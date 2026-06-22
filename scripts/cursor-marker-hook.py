@@ -97,13 +97,40 @@ def _session_id(payload: dict[str, Any]) -> str:
     ).strip()
 
 
-def _composer_mode(payload: dict[str, Any], state: dict[str, Any], session_id: str) -> str:
-    mode = str(payload.get("composer_mode") or "").strip().lower()
-    if mode:
-        return mode
-    stored = state.get(session_id)
-    if isinstance(stored, dict):
-        return str(stored.get("composer_mode") or "").strip().lower()
+def _explicit_composer_mode(payload: dict[str, Any]) -> str:
+    return str(payload.get("composer_mode") or "").strip().lower()
+
+
+def _default_composer_mode(config: dict[str, Any], allowed: frozenset[str]) -> str:
+    default = str(config.get("defaultComposerMode") or "agent").strip().lower()
+    if default in allowed:
+        return default
+    return ""
+
+
+def _resolve_composer_mode(
+    payload: dict[str, Any],
+    config: dict[str, Any],
+    allowed: frozenset[str],
+    session_id: str,
+    *,
+    use_default: bool,
+) -> str:
+    """Payload → Hook-State → Config-Default (nur wenn use_default)."""
+    explicit = _explicit_composer_mode(payload)
+    if explicit:
+        if explicit == _PLAN_MODE or explicit not in allowed:
+            return ""
+        return explicit
+
+    if session_id:
+        stored = _read_state(session_id)
+        from_state = str(stored.get("composer_mode") or "").strip().lower()
+        if from_state in allowed:
+            return from_state
+
+    if use_default:
+        return _default_composer_mode(config, allowed)
     return ""
 
 
@@ -416,33 +443,31 @@ def _dispatch(payload: dict[str, Any]) -> None:
     config = _load_config()
     allowed = _allowed_modes(config)
     session_id = _session_id(payload)
-    composer_mode = _composer_mode(payload, _load_json(STATE_PATH), session_id)
     project = _resolve_project(payload)
 
     if event_name == "beforeSubmitPrompt":
-        prompt_mode = str(payload.get("composer_mode") or "").strip().lower()
-        if prompt_mode == _PLAN_MODE:
+        if _explicit_composer_mode(payload) == _PLAN_MODE:
             if session_id:
                 _capture_plan_task(payload, session_id, project)
             return
 
-    if event_name == "sessionStart":
-        if composer_mode and composer_mode not in allowed:
-            return
-        if composer_mode:
-            _update_state(session_id, composer_mode, project)
-    else:
-        if not composer_mode:
-            stored = _read_state(session_id)
-            composer_mode = str(stored.get("composer_mode") or "").strip().lower()
-            if not project or project == "Unknown":
-                stored_project = str(stored.get("project") or "").strip()
-                if stored_project:
-                    project = stored_project
-        if composer_mode and composer_mode not in allowed:
-            return
-        if not composer_mode:
-            return
+    composer_mode = _resolve_composer_mode(
+        payload,
+        config,
+        allowed,
+        session_id,
+        use_default=event_name in {"sessionStart", "beforeSubmitPrompt", "sessionEnd"},
+    )
+    if not composer_mode:
+        return
+
+    if (not project or project == "Unknown") and session_id:
+        stored_project = str(_read_state(session_id).get("project") or "").strip()
+        if stored_project:
+            project = stored_project
+
+    if event_name in {"sessionStart", "beforeSubmitPrompt"}:
+        _update_state(session_id, composer_mode, project)
 
     body = _build_request_body(
         action,

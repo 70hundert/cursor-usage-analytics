@@ -5,6 +5,7 @@
     "you@example.com": "primary"
   },
   "modes": ["agent", "edit", "chat"],
+  "defaultComposerMode": "agent",
   "pythonPath": null,
   "dashboardRoot": null,
   "fallbackWritePath": null
