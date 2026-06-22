@@ -1,10 +1,16 @@
 /**
- * Leaf-Service-Helfer: Zugriff auf die window.CursorAnalytics-Bridge (parser/metrics/
- * charts/usersConfig/i18n/markers), i18n-Kurzformen sowie reine DOM-/Datum-/CSV-Helfer.
+ * Leaf-Service-Helfer: Zugriff auf die Shared-Module (parser/metrics/charts/usersConfig/
+ * i18n/markers) per ESM-Import, i18n-Kurzformen sowie reine DOM-/Datum-/CSV-Helfer.
  *
- * Diese Funktionen haengen nur an Browser-Globals und der Bridge, nicht an anderen
+ * Diese Funktionen haengen nur an Browser-Globals und den Leaf-Modulen, nicht an anderen
  * app/*-Modulen -> unterste Schicht, von ueberall importierbar.
  */
+import { parser } from '../parser.js';
+import { metrics } from '../metrics.js';
+import { charts } from '../charts/index.js';
+import { usersConfig } from '../users-config.js';
+import { i18n } from '../i18n.js';
+import { markers } from '../markers/index.js';
 
 export function resolveToolPath(relativePath) {
     const cleaned = String(relativePath).replace(/^\.\//, '');
@@ -12,27 +18,27 @@ export function resolveToolPath(relativePath) {
 }
 
 export function getMarkersApi() {
-    return window.CursorAnalytics?.markers;
+    return markers;
 }
 
 export function getParser() {
-    return window.CursorAnalytics.parser;
+    return parser;
 }
 
 export function getMetrics() {
-    return window.CursorAnalytics.metrics;
+    return metrics;
 }
 
 export function getCharts() {
-    return window.CursorAnalytics.charts;
+    return charts;
 }
 
 export function getUsersConfig() {
-    return window.CursorAnalytics?.usersConfig;
+    return usersConfig;
 }
 
 export function getI18n() {
-    return window.CursorAnalytics?.i18n;
+    return i18n;
 }
 
 export function t(key) {

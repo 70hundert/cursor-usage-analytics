@@ -3,7 +3,7 @@
  */
 import { i18n } from './i18n.js';
 
-(function initCursorAnalyticsMetrics(global) {
+export const metrics = (function initCursorAnalyticsMetrics() {
     const DAY_NAMES = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 
     /** JavaScript getDay(): 0=So … 6=Sa → Index 0=Mo … 6=So */
@@ -724,8 +724,7 @@ import { i18n } from './i18n.js';
         return { cacheRead, inputNoCache, inputWithCacheWrite, totalInput, hitRate };
     }
 
-    global.CursorAnalytics = global.CursorAnalytics || {};
-    global.CursorAnalytics.metrics = {
+    return {
         DAY_NAMES,
         GRANULARITY_LABELS,
         GRANULARITY_OVERVIEW_TITLES,
@@ -754,7 +753,4 @@ import { i18n } from './i18n.js';
         cacheEfficiency,
         sumField,
     };
-})(typeof window !== 'undefined' ? window : globalThis);
-
-// ESM-Export (Bridge: window.CursorAnalytics.metrics bleibt fuer klassische Consumer erhalten)
-export const metrics = window.CursorAnalytics.metrics;
+})();

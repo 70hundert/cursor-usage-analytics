@@ -1,11 +1,19 @@
 > Letzte Verifikation: 2026-06-22
-> Geprüfte Dateien: 18
-> Projektstand: v0.1.0 (committed)
+> Geprüfte Dateien: 32
+> Projektstand: v0.1.0 (committed) — Frontend modularisiert (native ESM, `app/`-Schicht)
 > Cursor Rule: `.cursor/rules/cursor-usage-dashboard.mdc`
 
 # Cursor Usage Dashboard — Feature-Referenz
 
-Master-Referenz für AI-Chats. Abdeckung: Hub, Analytics (Thin-Shell), Shared-Module, Backend.
+Master-Referenz für AI-Chats. Abdeckung: Hub, Analytics (native ESM-App), Shared-Module, Backend.
+
+> **Architektur-Hinweis (ESM-Refactor):** Das Analytics-Frontend ist keine Inline-Script-Thin-Shell mehr.
+> Einstieg ist `static/cursor-analytics/main.js` (`<script type="module">`); die ehemaligen Monolithen
+> `app.js`/`charts.js`/`markers.js` sind in echte ES-Module unter `static/cursor-analytics/app/`,
+> `.../charts/` und `.../markers/` aufgeteilt. Es gibt **keine `window.CursorAnalytics`-Bridge** und
+> **kein `?v=`-Cache-Busting** mehr — Module importieren sich direkt per `import`. Wo unten noch
+> `charts.js` / `markers.js` / „inline JS“ steht, sind die gleichnamigen Ordner bzw. `app/*`-Module gemeint
+> (Funktionsnamen bleiben gültig).
 
 ---
 
@@ -16,9 +24,16 @@ Master-Referenz für AI-Chats. Abdeckung: Hub, Analytics (Thin-Shell), Shared-Mo
 | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | CSV/API-Parsing, Event-Modell, Dedupe                         | `static/cursor-analytics/parser.js`                                                            |
 | KPIs, Filter, Aggregationen, Granularität                     | `static/cursor-analytics/metrics.js`                                                           |
-| Chart-Rendering, Legend-Persistenz, Zoom, Marker-Annotationen | `static/cursor-analytics/charts.js`                                                            |
-| Projekt-Marker (CRUD, Statistik, Sync, Popover, Fokus)        | `static/cursor-analytics/markers.js`                                                           |
-| Analytics-UI, Live-Fetch, Toolbar, Budget                     | `cursor-usage-analytics.html` (inline `<script>`)                                              |
+| Chart-Rendering, Legend-Persistenz, Zoom, Marker-Annotationen | `static/cursor-analytics/charts/` (Einstieg `charts/index.js`)                                  |
+| Projekt-Marker (CRUD, Statistik, Sync, Popover, Fokus)        | `static/cursor-analytics/markers/` (Einstieg `markers/index.js`)                                |
+| App-Einstieg / Bootstrap, Live-/CSV-Load, Locale-Switch       | `static/cursor-analytics/main.js`                                                              |
+| Zentraler App-Zustand, Konstanten, Formatter                  | `static/cursor-analytics/app/state.js`                                                         |
+| Service-Helfer (Modul-Getter, i18n, DOM/Datum/CSV)            | `static/cursor-analytics/app/services.js`                                                      |
+| Event-Selektion / Lese-Schicht                                | `static/cursor-analytics/app/data.js`                                                          |
+| Rendering: KPIs, Budget, Tabellen, `renderAll`                | `static/cursor-analytics/app/render.js`                                                        |
+| Toolbar, Zeitbereich/Count/Custom, Pan, Chart-Controls        | `static/cursor-analytics/app/controls.js`                                                      |
+| Events-Tabelle, Filter, Gruppen, Export                       | `static/cursor-analytics/app/events-ui.js`                                                     |
+| Marker-UI (Fokus, Tabelle, Charts, Modal/Form)                | `static/cursor-analytics/app/markers-ui.js`                                                    |
 | Live-API, Static-Serving, Event-Cache                         | `serve.py`                                                                                     |
 | Multi-User-Konfiguration                                      | `users-config.js`, `serve.py` (`USER_TOKENS`), `.env`                                          |
 | Navigation Hub                                                | `index.html`                                                                                   |
@@ -29,45 +44,61 @@ Master-Referenz für AI-Chats. Abdeckung: Hub, Analytics (Thin-Shell), Shared-Mo
 
 ## 2. Architektur-Überblick
 
-**Muster:** Analytics Thin-Shell + optionaler Hub — ein Parser in `parser.js`, kein Fork.
+**Muster:** Native ESM-App + optionaler Hub — ein Parser in `parser.js`, kein Fork, kein Build-Step.
+
+`main.js` ist der einzige `<script type="module">`-Einstieg. Die `app/`-Schicht ist in Ebenen organisiert:
+`state` (Zustand) → `services` (Leaf-Helfer + Modul-Getter) → `data` (Selektion) → UI/Render-Module
+(`render`, `controls`, `events-ui`, `markers-ui`). Shared-Module (`parser`, `metrics`, `charts/`,
+`markers/`, `i18n`, `users-config`) werden direkt per `import` eingebunden — keine globale Bridge.
 
 ```mermaid
 flowchart LR
   subgraph entry [Einstiegspunkte]
     hub[index.html]
     analytics[cursor-usage-analytics.html]
+    main[main.js · type=module]
   end
-  subgraph shared [Shared Frontend]
+  subgraph app [app/ Schicht]
+    state[state.js]
+    services[services.js]
+    data[data.js]
+    render[render.js]
+    controls[controls.js]
+    eventsui[events-ui.js]
+    markersui[markers-ui.js]
+  end
+  subgraph shared [Shared-Module]
     parser[parser.js]
     metrics[metrics.js]
-    charts[charts.js]
-    markers[markers.js]
+    charts[charts/index.js]
+    markers[markers/index.js]
+    i18n[i18n.js]
+    usersconfig[users-config.js]
   end
   subgraph backend [Backend]
     serve[serve.py]
     cursorAPI[cursor.com API]
   end
   hub --> analytics
-  analytics --> parser
-  analytics --> metrics
-  analytics --> charts
-  analytics --> markers
-  analytics -->|Live CSV| serve
-  analytics -->|CSV| data[data/]
+  analytics --> main
+  main --> state & services & data & render & controls & eventsui & markersui
+  services --> parser & metrics & charts & markers & i18n & usersconfig
+  main -->|Live| serve
+  main -->|CSV| csvdata[data/]
   serve --> cursorAPI
 ```
 
 
 
 
-| Einstiegspunkt  | Muster               | Datenquellen                      | Shared-Module                  |
-| --------------- | -------------------- | --------------------------------- | ------------------------------ |
-| **Analytics**   | Thin-Shell           | CSV, Live (Proxy), Beides (Merge) | Ja — `window.CursorAnalytics`  |
-| **Hub**         | Static HTML          | —                                 | Nein                           |
-| **Backend**     | Python `http.server` | Proxy zu cursor.com               | —                              |
+| Einstiegspunkt  | Muster               | Datenquellen                      | Shared-Module                       |
+| --------------- | -------------------- | --------------------------------- | ----------------------------------- |
+| **Analytics**   | Native ESM-App       | CSV, Live (Proxy), Beides (Merge) | Ja — direkte ES-`import`s (`app/`)  |
+| **Hub**         | Static HTML          | —                                 | Nein                                |
+| **Backend**     | Python `http.server` | Proxy zu cursor.com               | —                                   |
 
 
-**Kein Build-Step:** Vanilla HTML/CSS/JS, Chart.js 4.4.7 + chartjs-plugin-zoom 2.2.0 + chartjs-plugin-annotation 3.1.0 + Hammer.js 2.0.8 (CDN, `defer`).
+**Kein Build-Step:** Vanilla HTML/CSS + native ES-Module, Chart.js 4.4.7 + chartjs-plugin-zoom 2.2.0 + chartjs-plugin-annotation 3.1.0 + Hammer.js 2.0.8 (CDN, `defer`).
 
 ---
 
@@ -76,26 +107,48 @@ flowchart LR
 ### Projektbaum (relevant)
 
 ```
-serve.py                          # Static + API-Proxy
+serve.py                          # Static + API-Proxy (Dev: Cache-Control: no-store)
 index.html                        # Hub
-cursor-usage-analytics.html       # Analytics Thin-Shell
+cursor-usage-analytics.html       # Analytics-HTML (lädt nur main.js als Modul)
 static/cursor-analytics/
-  parser.js                       # Event-Modell
-  metrics.js                      # Aggregationen
-  markers.js                      # Projekt-Marker
-  charts.js                       # Chart.js-Rendering
+  main.js                         # ESM-Einstieg (Bootstrap, Live/CSV-Load, Locale, init)
+  parser.js                       # Event-Modell (export const parser)
+  metrics.js                      # Aggregationen (export const metrics)
+  i18n.js                         # i18n de/en (export const i18n)
+  users-config.js                 # User-Konfiguration (export const usersConfig)
+  app/
+    state.js                      # Zentraler Zustand, Konstanten, Formatter (export let + Setter)
+    services.js                   # Leaf-Helfer + Modul-Getter (import der Shared-Module), i18n/DOM/CSV
+    data.js                       # Event-Selektion / Lese-Schicht
+    render.js                     # KPIs, Budget, Tabellen, renderAll
+    controls.js                   # Toolbar, Zeitbereich/Count/Custom, Pan, Chart-Controls
+    events-ui.js                  # Events-Tabelle, Filter, Gruppen, Export
+    markers-ui.js                 # Marker-UI (Fokus, Tabelle, Charts, Modal/Form)
+  charts/                         # Chart.js-Rendering (index.js bündelt Submodule)
+  markers/                        # Projekt-Marker (index.js bündelt Submodule)
 data/                             # CSV-Exports + project-markers.json (gitignored)
 .env                              # Session-Tokens (gitignored)
 ```
 
-### Analytics — Script-Ladereihenfolge
+### Analytics — Lade- & Init-Reihenfolge
 
 1. **Head (defer):** Hammer.js → Chart.js → chartjs-plugin-zoom → chartjs-plugin-annotation
-2. **DOMContentLoaded → `initWhenReady()`:** wartet auf `Chart` (Polling 50 ms)
-3. `**ensureModules()`:** sequentiell `parser.js?v=15` → `metrics.js?v=15` → `markers.js?v=15` → `charts.js?v=15`
-4. `**syncFromServer()`** (Marker) → `**initMarkerUi()**` → `**initToolbar()**` + `**loadDefaultCsvs()**`
+2. **`<script type="module" src="static/cursor-analytics/main.js">`** (am Body-Ende): Der Browser lädt
+   den statischen Modulgraphen auf — `main.js` → `app/*` → Shared-Module. Statische `import`s garantieren,
+   dass alle Module ausgewertet sind, bevor der `main.js`-Body läuft. **Kein Polling, kein `ensureModules`.**
+3. **`initWhenReady()` (main.js):** wartet nur noch darauf, dass das CDN-`window.Chart` verfügbar ist,
+   registriert das Annotation-Plugin, dann `getMarkersApi().syncFromServer()` → `getUsersConfig().loadUsersConfig()`.
+4. **Init:** Toolbar/Marker-UI/Controls verdrahten → Default-CSVs laden → `renderAll()`.
 
-Cache-Busting: Query `?v=16` auf Modul-URLs.
+**Kein Cache-Busting per `?v=`:** Module importieren sich mit relativen Pfaden ohne Query (eine Modul-Instanz
+pro URL). Frische Stände im Dev kommen stattdessen vom Server-Header (siehe unten).
+
+### Dev-Cache-Header (serve.py)
+
+`_serve_static()` setzt für **alle** statischen Assets `Cache-Control: no-store, must-revalidate`
+(`serve.py`, Funktion `_serve_static`). Ohne Build-Step stellt das sicher, dass ES-Modul-Änderungen
+sofort sichtbar sind, ohne `?v=`-Querys — die sonst doppelte Modul-Instanzen erzeugen würden, wenn
+interne Importe ohne Query laufen.
 
 ### Backend — Routen
 
@@ -225,15 +278,18 @@ Keine Monkey-Patches. CSV-Parsing ausschließlich in `parser.js` (`parseUsageEve
 ### Analytics
 
 ```
-DOMContentLoaded
-  → initWhenReady (poll Chart.js)
-    → ensureModules (parser → metrics → markers → charts)
-      → syncFromServer (Marker)
-      → initMarkerUi + initToolbar
-        → loadDefaultCsvs (fetch ./data/*.csv)
-          → renderAll
-            → filteredEvents (Basis) → eventsForDashboard (optional Marker-Fokus) → KPIs, Tabellen, charts.renderAll
+<script type="module" main.js>  (statischer Modulgraph: main.js → app/* → Shared-Module)
+  → initWhenReady (wartet nur auf CDN window.Chart, registriert Annotation-Plugin)
+    → getMarkersApi().syncFromServer (Marker)
+    → getUsersConfig().loadUsersConfig
+    → Marker-UI + Toolbar + Controls verdrahten
+      → loadDefaultCsvs (fetch ./data/*.csv)
+        → renderAll  (app/render.js)
+          → filteredEvents (Basis, app/data.js) → eventsForDashboard (optional Marker-Fokus) → KPIs, Tabellen, charts.renderAll
 ```
+
+Module-Auflösung (Imports, vereinfacht): `services.js` importiert `parser`/`metrics`/`charts`/`markers`/`i18n`/`usersConfig`
+direkt; `state.js` importiert `i18n`. Es gibt keine `window.CursorAnalytics`-Bridge und keinen `bootstrap.js`-Vorlauf mehr.
 
 Live-Pfad bei `dataSource === 'live'|'merge'`:
 
@@ -316,7 +372,7 @@ Optionaler Drill-down auf ein Marker-Intervall — **ohne** Zeitraum-/User-Filte
 | Charts (Overview/Kumulativ) | `chartEvents = baseEvents` | Voller Kontext; Auto-Zoom via `charts.applyMarkerFocusZoom()` (+3 Nachbar-Buckets) |
 | Marker-Tabelle | `renderMarkerTable(baseEvents)` | Alle Marker im Filter (Wechsel des Fokus) |
 
-State: `markerFocusId` (inline JS). Persistenz: **`cursor-marker-focus-id`** (`localStorage`). Gelöschter Marker → Fokus wird in `reconcileMarkerFocus()` entfernt.
+State: `markerFocusId` (`app/state.js`). Persistenz: **`cursor-marker-focus-id`** (`localStorage`). Gelöschter Marker → Fokus wird in `reconcileMarkerFocus()` entfernt.
 
 **Chart-Navigation bei Fokus:** Mausrad rauszoomen, **Strg+Ziehen** pan (nur Chart-Viewport). Hinweis im Banner (`markerFocusZoomHint`). Globales Zeitfenster verschieben: [Zeitraum-Fenster verschieben](#zeitraum-fenster-verschieben-shiftziehen).
 
@@ -601,11 +657,11 @@ Server-Datei: `data/project-markers.json` (liegt unter gitignored `data/`).
 | Design-Tokens / Theme      | `cursor-usage-analytics.html` (`:root`)                                      |
 | Chart.js-Version (CDN)     | `cursor-usage-analytics.html` Head                                           |
 | API-Response-Format        | `parser.js` `normalizeApiEvent`, `serve.py` Proxy                            |
-| `serve.py`-Routen          | Analytics `fetch()` (`PROXY_BASE` = `''`), Marker `/api/markers`             |
-| Marker-Schema / Sync       | `markers.js`, `serve.py`, `cursor-usage-analytics.html`                      |
-| Marker-Fokus / Drill-down  | `markers.js` (`filterEventsByMarkerInterval`), `charts.js` (`applyMarkerFocusZoom`), `cursor-usage-analytics.html` (`eventsForDashboard`, `markerFocusId`) |
-| Zeitfenster-Verschiebung   | `metrics.js` (`resolveFilterBoundsMs`, `filterEvents`, `liveFetchBoundsMs`), `cursor-usage-analytics.html` (`initTimeWindowPan`, `range.windowEndMs`) |
-| Marker-Popover / Tabellen-Hover | `markers.js`, `charts.js` (`markerTooltipLines`), `i18n.js`, `cursor-usage-analytics.html` |
+| `serve.py`-Routen          | Analytics `fetch()` (`PROXY_BASE` = `''`, in `main.js`), Marker `/api/markers`             |
+| Marker-Schema / Sync       | `markers/`, `serve.py`, `app/markers-ui.js`, `main.js`                       |
+| Marker-Fokus / Drill-down  | `markers/` (`filterEventsByMarkerInterval`), `charts/` (`applyMarkerFocusZoom`), `app/render.js` (`eventsForDashboard`), `app/state.js` (`markerFocusId`), `app/markers-ui.js` |
+| Zeitfenster-Verschiebung   | `metrics.js` (`resolveFilterBoundsMs`, `filterEvents`, `liveFetchBoundsMs`), `app/controls.js` (`initTimeWindowPan`), `app/state.js` (`range.windowEndMs`) |
+| Marker-Popover / Tabellen-Hover | `markers/`, `charts/` (`markerTooltipLines`), `i18n.js`, `app/markers-ui.js` |
 
 
 ---

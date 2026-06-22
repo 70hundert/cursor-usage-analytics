@@ -22,11 +22,11 @@ pip install -r requirements.txt
 python serve.py
 ```
 
-Or: `.\start.ps1`
+Or: `.\start.ps1` (uses venv if present)
 
 Open **http://127.0.0.1:8060/**
 
-> **Note:** Opening via `file://` does not work. Keep the server bound to `127.0.0.1` only.
+> **Note:** Opening via `file://` does not work (ES modules, fetch). Keep the server bound to `127.0.0.1` only.
 
 ## Demo without a live token
 
@@ -72,6 +72,8 @@ Get token: DevTools → Application → Cookies → `https://cursor.com` → `Wo
 Cursor Dashboard → Usage → export to `data/` — paths in `config/users.json`.
 
 Expected columns include: `Date`, `Model`, `Kind`, `Cost`, token columns.
+
+**Costs:** Not estimated from token counts — taken from the `Cost` column (or live API) and summed — **no warranty**, for orientation only; the Cursor billing is authoritative. Only the **monthly budget** for comparison is configurable. Details: [docs/REFERENCE.md — Cost calculation](docs/REFERENCE.md#kostenberechnung-analytics).
 
 ### Live API (unofficial)
 
@@ -130,16 +132,16 @@ With a time preset (e.g. **3 h**): **Shift + drag** on the overview chart moves 
 
 ```
 serve.py
-config/users.example.json
-samples/              # demo CSV + markers (committed)
+config/users.example.json   # copy to config/users.json
+samples/                    # demo CSV + markers (committed)
 scripts/generate_demo_data.py
 scripts/cursor-marker-hook.py
 scripts/run-marker-hook.ps1
 scripts/setup-marker-hooks.ps1
 config/marker-hook.example.json
 cursor-usage-analytics.html
-static/cursor-analytics/
-data/                 # gitignored CSV exports
+static/cursor-analytics/    # parser, metrics, charts, markers, users-config, i18n
+data/                       # gitignored CSV exports (create locally)
 docs/REFERENCE.md
 ```
 
@@ -164,7 +166,7 @@ Regenerate (README/demo): `python scripts/capture-screenshots.py --demo-markers`
 ## Known limitations
 
 - Python server required
-- Chart.js from jsDelivr CDN
+- Chart.js from jsDelivr (CDN) — offline only with a local vendor copy
 - No Enterprise Admin API
 - Large event sets may slow the browser
 
@@ -175,3 +177,7 @@ Early-stage side project (v0.1). Issues, bug reports, and ideas are welcome. For
 ## License
 
 [MIT](LICENSE)
+
+## Local setup
+
+Cloning, gitignored files, and releases: [docs/PUBLIC_REPO.md](docs/PUBLIC_REPO.md).

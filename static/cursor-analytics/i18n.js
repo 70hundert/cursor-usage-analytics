@@ -1,8 +1,9 @@
 /**
  * Lightweight i18n (de / en) for Cursor Usage Dashboard.
  */
-(function initCursorAnalyticsI18n(global) {
+export const i18n = (function initCursorAnalyticsI18n() {
     const STORAGE_KEY = 'cursor-usage-locale';
+    const localeListeners = [];
 
     const translations = {
         de: {
@@ -582,15 +583,12 @@
 
     function onLocaleChange(listener) {
         if (typeof listener === 'function') {
-            global.CursorAnalytics = global.CursorAnalytics || {};
-            global.CursorAnalytics._localeListeners = global.CursorAnalytics._localeListeners || [];
-            global.CursorAnalytics._localeListeners.push(listener);
+            localeListeners.push(listener);
         }
     }
 
     function notifyLocaleChange() {
-        const listeners = global.CursorAnalytics?._localeListeners || [];
-        for (const listener of listeners) {
+        for (const listener of localeListeners) {
             listener(locale);
         }
     }
@@ -610,8 +608,7 @@
         return WEEKDAY_KEYS.map((key) => t(key));
     }
 
-    global.CursorAnalytics = global.CursorAnalytics || {};
-    global.CursorAnalytics.i18n = {
+    return {
         t,
         tf,
         getLocale,
@@ -624,7 +621,4 @@
         onLocaleChange,
         translations,
     };
-})(typeof window !== 'undefined' ? window : globalThis);
-
-// ESM-Export (Bridge: window.CursorAnalytics.i18n bleibt fuer klassische Consumer erhalten)
-export const i18n = window.CursorAnalytics.i18n;
+})();

@@ -3,7 +3,7 @@
  */
 import { usersConfig } from './users-config.js';
 
-(function initCursorAnalyticsParser(global) {
+export const parser = (function initCursorAnalyticsParser() {
     function getUsersConfig() {
         return usersConfig;
     }
@@ -288,8 +288,7 @@ import { usersConfig } from './users-config.js';
         );
     }
 
-    global.CursorAnalytics = global.CursorAnalytics || {};
-    global.CursorAnalytics.parser = {
+    return {
         get USER_ORDER() {
             return getUserOrder();
         },
@@ -306,7 +305,4 @@ import { usersConfig } from './users-config.js';
         groupEventsByUser,
         parseCostCents,
     };
-})(typeof window !== 'undefined' ? window : globalThis);
-
-// ESM-Export (Bridge: window.CursorAnalytics.parser bleibt fuer klassische Consumer erhalten)
-export const parser = window.CursorAnalytics.parser;
+})();

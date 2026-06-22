@@ -5,6 +5,7 @@
  * andere Module lesen die Werte direkt (Imports spiegeln Aenderungen wider) und
  * schreiben ausschliesslich ueber die Setter-Funktionen.
  */
+import { i18n } from '../i18n.js';
 
 // --- Konfiguration / Konstanten -------------------------------------------------
 export const PROXY_BASE = '';
@@ -119,7 +120,7 @@ export let dateTimeFmt;
 export let monthFmt;
 
 export function rebuildFormatters() {
-    const intlLocale = window.CursorAnalytics?.i18n?.getIntlLocale() || 'de-DE';
+    const intlLocale = i18n?.getIntlLocale() || 'de-DE';
     numberFmt = new Intl.NumberFormat(intlLocale);
     currencyFmt = new Intl.NumberFormat(intlLocale, {
         style: 'currency',

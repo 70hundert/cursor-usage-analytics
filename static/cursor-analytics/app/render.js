@@ -223,7 +223,7 @@ function renderExpensiveTable(rows, filterEvents = []) {
 }
 
 export function renderAll() {
-    if (typeof window.Chart === 'undefined' || !window.CursorAnalytics) {
+    if (typeof window.Chart === 'undefined' || !getCharts()) {
         return;
     }
 

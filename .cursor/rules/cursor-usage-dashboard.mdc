@@ -10,17 +10,18 @@ alwaysApply: false
 
 # Cursor Usage Dashboard
 
-**Analytics** Thin-Shell (`cursor-usage-analytics.html` + `window.CursorAnalytics`) und optionaler Hub (`index.html`). Backend: `serve.py` (Static + Live-Proxy).
+**Analytics** native ESM-App (`cursor-usage-analytics.html` lädt nur `static/cursor-analytics/main.js` als `<script type="module">`; Logik in der `app/`-Schicht) und optionaler Hub (`index.html`). Backend: `serve.py` (Static + Live-Proxy).
 
 **Vollständige Referenz:** [`docs/REFERENCE.md`](../../docs/REFERENCE.md)
 
 Bei Änderungen an Shared-Impact (User-Pfade, CSV-Format, Design-Tokens) REFERENCE.md Abschnitt 10 lesen — auch wenn die bearbeitete Datei nicht in diesen globs liegt.
 
-## Top-3-Gotchas
+## Top-Gotchas
 
 1. **User-Konfiguration:** [`config/users.json`](config/users.json) (gitignored) + [`static/cursor-analytics/users-config.js`](static/cursor-analytics/users-config.js) + [`serve.py`](serve.py) (`load_user_ids`, `CURSOR_SESSION_TOKEN_<USER>` in `.env`).
 2. **Server erforderlich:** Modul-Laden und CSV-Fetch scheitern bei `file://` — `python serve.py` (Port 8060).
-3. **Kosten:** Werden aus CSV/API übernommen und summiert — nicht aus Tokens berechnet (siehe REFERENCE.md §10).
+3. **Kosten:** Werden aus CSV/API übernommen und summiert — nicht aus Tokens berechnet (siehe REFERENCE.md §9).
+4. **Native ESM, keine Bridge:** Es gibt **kein `window.CursorAnalytics`** und **kein `?v=`-Cache-Busting** mehr. Module importieren sich direkt (`import`). Dev-Frische über `serve.py`-Header `Cache-Control: no-store` (`_serve_static`), nicht über Query-Strings. Niemals Imports mit `?v=` versehen (erzeugt doppelte Modul-Instanzen).
 
 ## Task-Routing
 
@@ -29,12 +30,18 @@ Bei Änderungen an Shared-Impact (User-Pfade, CSV-Format, Design-Tokens) REFEREN
 | CSV/API-Parsing, Dedupe | `static/cursor-analytics/parser.js` |
 | User-Liste, CSV-Pfade | `static/cursor-analytics/users-config.js`, `config/users.example.json` |
 | KPIs, Filter, Granularität, Zeitfenster-Bounds | `static/cursor-analytics/metrics.js` |
-| Charts, Legend-Persistenz, Marker-Annotationen | `static/cursor-analytics/charts.js` |
-| Projekt-Marker | `static/cursor-analytics/markers.js` |
+| Charts, Legend-Persistenz, Marker-Annotationen | `static/cursor-analytics/charts/` (`charts/index.js`) |
+| Projekt-Marker | `static/cursor-analytics/markers/` (`markers/index.js`) |
+| App-Einstieg / Bootstrap, Live-/CSV-Load, Locale | `static/cursor-analytics/main.js` |
+| Zustand / Konstanten / Formatter | `static/cursor-analytics/app/state.js` |
+| Service-Helfer (Modul-Getter, i18n, DOM/CSV) | `static/cursor-analytics/app/services.js` |
+| Event-Selektion / Lese-Schicht | `static/cursor-analytics/app/data.js` |
+| Rendering (KPIs, Budget, Tabellen, `renderAll`) | `static/cursor-analytics/app/render.js` |
+| Toolbar, Zeitbereich/Count/Custom, Pan, Chart-Controls | `static/cursor-analytics/app/controls.js` |
+| Events-Tabelle, Filter, Gruppen, Export | `static/cursor-analytics/app/events-ui.js` |
 | Auto-Marker (Cursor Hooks) | `scripts/cursor-marker-hook.py`, `scripts/setup-marker-hooks.ps1`, `serve.py` (`/api/markers/session`) |
-| Marker-Popover (Charts/Tabellen), Anzeige-Prefs, Session-Fokus | `markers.js`, `charts.js` (`applyMarkerFocusZoom`), `cursor-usage-analytics.html` |
-| Zeitfenster verschieben (Shift+Ziehen) | `cursor-usage-analytics.html` (`initTimeWindowPan`), `metrics.js` (`resolveFilterBoundsMs`) |
-| Analytics-UI, Live-Fetch | `cursor-usage-analytics.html` |
-| API-Proxy, Static-Serving | `serve.py` |
+| Marker-Popover (Charts/Tabellen), Anzeige-Prefs, Session-Fokus | `markers/`, `charts/` (`applyMarkerFocusZoom`), `app/markers-ui.js` |
+| Zeitfenster verschieben (Shift+Ziehen) | `app/controls.js` (`initTimeWindowPan`), `metrics.js` (`resolveFilterBoundsMs`) |
+| API-Proxy, Static-Serving, Dev-Cache-Header | `serve.py` |
 
 Bei Shared-Änderungen mit Bezug zu diesem Scope: REFERENCE.md manuell lesen.

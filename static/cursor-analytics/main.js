@@ -1,7 +1,6 @@
-// ES-Modul-Bootstrap: laedt parser/metrics/markers/charts/usersConfig/i18n und
-// registriert sie auf window.CursorAnalytics (Bridge). Da dies ein statischer Import
-// ist, sind alle Module fertig geladen, bevor der restliche Code hier laeuft.
-import './bootstrap.js';
+// ESM-Entry der Dashboard-App. Die Shared-Module (parser/metrics/markers/charts/
+// usersConfig/i18n) werden ueber die app/*-Schicht (services.js, state.js) als echte
+// ES-Module importiert; statische Imports garantieren die Ladereihenfolge.
 import {
     PROXY_BASE,
     USER_FILTER_STORAGE_KEY,
@@ -33,6 +32,7 @@ import {
 import {
     resolveToolPath,
     getMarkersApi,
+    getUsersConfig,
     getParser,
     getMetrics,
     getI18n,
@@ -522,8 +522,8 @@ export async function fetchLiveEvents({ force = false, incremental = false } = {
         throw new Error(t('liveTokenMissing'));
     }
 
-    if (force && window.CursorAnalytics?.markers?.syncFromServer) {
-        await window.CursorAnalytics.markers.syncFromServer(PROXY_BASE);
+    if (force && getMarkersApi()?.syncFromServer) {
+        await getMarkersApi().syncFromServer(PROXY_BASE);
     }
 
     if (!force && liveCacheUsable(desiredBounds)) {
@@ -659,10 +659,10 @@ async function initWhenReady(attempt = 0) {
         window.Chart.register(annotationPlugin);
     }
 
-    await window.CursorAnalytics.markers.syncFromServer(PROXY_BASE);
+    await getMarkersApi().syncFromServer(PROXY_BASE);
     setMarkerFocusId(loadStoredMarkerFocusId());
     reconcileMarkerFocus();
-    await window.CursorAnalytics.usersConfig.loadUsersConfig();
+    await getUsersConfig().loadUsersConfig();
     setEventsByUser(emptyEventsByUser());
     setLiveEventsByUser(emptyEventsByUser());
     normalizeUserFilter();

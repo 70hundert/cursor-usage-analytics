@@ -1,8 +1,7 @@
 /**
  * Projekt-Marker — oeffentliche API.
  *
- * Buendelt die Marker-Submodule und registriert die API auf window.CursorAnalytics.markers
- * (Bridge fuer klassische Consumer wie app.js und charts.js). Zusaetzlich ESM-Export `markers`.
+ * Buendelt die Marker-Submodule und stellt sie als ESM-Export `markers` bereit.
  */
 import {
     STORAGE_KEY,
@@ -113,7 +112,3 @@ export const markers = {
     syncFromServer,
     pushToServer,
 };
-
-// Bridge: klassische Consumer (app.js, charts.js) lesen window.CursorAnalytics.markers
-window.CursorAnalytics = window.CursorAnalytics || {};
-window.CursorAnalytics.markers = markers;

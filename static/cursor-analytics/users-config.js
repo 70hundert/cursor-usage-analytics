@@ -1,7 +1,7 @@
 /**
  * Lädt config/users.json und stellt USER_ORDER / USERS für Parser und UI bereit.
  */
-(function initCursorAnalyticsUsersConfig(global) {
+export const usersConfig = (function initCursorAnalyticsUsersConfig() {
     const USER_PALETTE = ['#3ecf8e', '#a78bfa', '#f59e0b', '#38bdf8', '#f472b6', '#34d399'];
 
     const DEFAULT_CONFIG = {
@@ -138,8 +138,7 @@
         return ['all', ...USER_ORDER];
     }
 
-    global.CursorAnalytics = global.CursorAnalytics || {};
-    global.CursorAnalytics.usersConfig = {
+    return {
         get USER_ORDER() {
             return USER_ORDER;
         },
@@ -153,7 +152,4 @@
         getValidUserFilters,
         injectUserStyles,
     };
-})(typeof window !== 'undefined' ? window : globalThis);
-
-// ESM-Export (Bridge: window.CursorAnalytics.usersConfig bleibt fuer klassische Consumer erhalten)
-export const usersConfig = window.CursorAnalytics.usersConfig;
+})();
