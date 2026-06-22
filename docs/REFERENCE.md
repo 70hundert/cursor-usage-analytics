@@ -292,7 +292,7 @@ Marker sind **keine CSV-Daten** — manuell gesetzte Metadaten zu Zeitintervalle
 - **`composerMode`:** Cursor-Composer-Modus — `"agent"` (UI: **Agents**) | `"edit"` (UI: **Editor**) | `"chat"` (nur Auto-Marker). Im Marker-Dialog Pflicht-Radio (Agents/Editor). Legacy-Marker ohne Feld: Fallback aus `note` (`Modus: Agent` / `Modus: Edit`), sonst Default **Agents**. Hilfsfunktionen: `normalizeComposerMode`, `resolveComposerMode`, `composerModeLabel` in `markers.js`.
 - Statistik (`computeStats`): Events im Intervall — nicht persistiert.
 
-**Chart-Annotationen:** Overview + Cumulative nutzen Kategorie-Achse → Bucket-Index-Mapping via `sortKey`. Hover auf Annotationen öffnet `#marker-chart-popover` (`showChartPopover`). Timeline-Charts ergänzen den Chart.js-Tooltip um Projekt, Aufgabe und Notiz (`markerTooltipLines` in `charts.js`).
+**Chart-Annotationen:** Overview + Cumulative nutzen Kategorie-Achse → Bucket-Index-Mapping via `sortKey`. Hover auf den Marker-Bereich (farbige Box bzw. Timeline-Hit-Area) öffnet `#marker-chart-popover` (`showChartPopover`). Marker-Labels sind separate `type: 'label'`-Annotationen: **Klick auf Label** öffnet direkt `#marker-modal` (`onEditMarker`); bei ausgeblendeten Labels (`showLabels: false`) erscheint stattdessen ein kompaktes **✎** am Marker-Start mit gleichem Klick-Verhalten. Timeline-Charts ergänzen den Chart.js-Tooltip um Projekt, Aufgabe und Notiz (`markerTooltipLines` in `charts.js`).
 
 #### Marker-Info-Popover (Charts & Tabellen)
 
@@ -300,10 +300,11 @@ Gemeinsame UI-Komponente in `markers.js` (`buildPopoverHtml`, `#marker-chart-pop
 
 | Kontext | Auslöser | API |
 | ------- | -------- | --- |
-| **Charts** | Hover/Klick auf Marker-Annotation (Overview, Cumulative, Timeline) | `showChartPopover()` |
+| **Charts** | Hover auf Marker-Bereich; Hover auf Label zeigt ebenfalls Infos | `showChartPopover()` |
+| **Charts** | Klick auf Label (bzw. ✎ wenn Labels aus) | `onEditMarker` → `#marker-modal` |
 | **Tabellen** | Hover auf `tr[data-marker-id]` in `#expensive-table-body`, `#events-table-body`, `#marker-table-body` | `showTableMarkerPopover()` via `mountMarkerTableHover()` (Analytics-HTML) |
 
-**Popover-Inhalt:** Projekt, Aufgabe, Benutzer, **Modus** (`composerMode`), Von/Bis, Notiz (falls gesetzt), Intervall-Statistik (Events, Tokens, Kosten), Button „Bearbeiten“ → `#marker-modal`.
+**Popover-Inhalt:** Projekt, Aufgabe, Benutzer, **Modus** (`composerMode`), Von/Bis, Notiz (falls gesetzt), Intervall-Statistik (Events, Tokens, Kosten). Bearbeiten nur per Label-Klick im Chart (bzw. ✎ wenn Labels aus) oder über die Marker-Tabelle.
 
 **Tabellen abschalten:** Checkbox `[data-marker-table-popover]` (i18n: `showTableMarkerPopover`) — drei synchronisierte Instanzen in den Toolbars von Teuerste Events, Einzelne Anfragen und Projekt-Marker. Persistenz: `cursor-marker-chart-display` → Feld `showTablePopover` (Default `true`). Bei Deaktivierung wird ein sichtbarer Popover sofort geschlossen.
 

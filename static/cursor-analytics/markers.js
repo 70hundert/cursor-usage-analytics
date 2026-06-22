@@ -620,20 +620,6 @@
                 border-top: 1px solid #2d3a4a;
                 color: #8b9aab;
             }
-            .marker-chart-popover__edit {
-                margin-top: 0.5rem;
-                border: 1px solid #3ecf8e;
-                background: rgba(62, 207, 142, 0.12);
-                color: #3ecf8e;
-                border-radius: 8px;
-                padding: 0.28rem 0.65rem;
-                font-size: 0.75rem;
-                cursor: pointer;
-                width: 100%;
-            }
-            .marker-chart-popover__edit:hover {
-                background: rgba(62, 207, 142, 0.22);
-            }
         `;
         document.head.appendChild(style);
     }
@@ -647,25 +633,13 @@
         popoverEl.id = 'marker-chart-popover';
         popoverEl.className = 'marker-chart-popover';
         popoverEl.hidden = true;
-        popoverEl.innerHTML =
-            '<div class="marker-chart-popover__body"></div>' +
-            `<button type="button" class="marker-chart-popover__edit">${t('popoverEdit')}</button>`;
+        popoverEl.innerHTML = '<div class="marker-chart-popover__body"></div>';
         popoverEl.addEventListener('mouseenter', () => {
             clearPopoverHideTimer();
             popoverPinned = true;
         });
         popoverEl.addEventListener('mouseleave', () => {
             scheduleHidePopover(250);
-        });
-        popoverEl.querySelector('.marker-chart-popover__edit').addEventListener('mousedown', (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            const marker = getStore().markers.find((m) => m.id === popoverMarkerId);
-            const callback = popoverEl._onEdit;
-            if (marker && callback) {
-                callback(marker);
-            }
-            hideChartPopover(true);
         });
         document.body.appendChild(popoverEl);
         return popoverEl;
@@ -819,15 +793,7 @@
         const el = ensurePopover();
         popoverMarkerId = marker.id;
         popoverPinned = true;
-        el._onEdit = chartContext.onEditMarker || null;
         el.querySelector('.marker-chart-popover__body').innerHTML = buildPopoverHtml(marker, chartContext);
-        const editBtn = el.querySelector('.marker-chart-popover__edit');
-        editBtn.textContent = t('popoverEdit');
-        if (chartContext.onEditMarker) {
-            editBtn.hidden = false;
-        } else {
-            editBtn.hidden = true;
-        }
 
         el.hidden = false;
         positionPopoverStable(ctx, event);
@@ -924,10 +890,17 @@
 
     function collectMarkerLabelPlacements(visible, chartContext) {
         const { mode = 'time', buckets, markers, filterEndMs } = chartContext;
+        const showLabels = chartContext.showLabels !== false;
+        const canEdit = Boolean(chartContext.onEditMarker);
         const placements = [];
 
         for (const marker of visible) {
-            const content = chartLabelContent(marker);
+            let content = [];
+            if (showLabels) {
+                content = chartLabelContent(marker);
+            } else if (canEdit) {
+                content = ['✎'];
+            }
             if (!content.length) {
                 continue;
             }
@@ -966,11 +939,18 @@
         return 0;
     }
 
-    function chartAnnotationLabelOptions(content, laneIndex, color, variant = 'box') {
+    function chartMarkerLabelAnnotation({ content, laneIndex, color, xValue, labelInteraction = {} }) {
         const text = labelTextFromContent(content);
+        if (!text) {
+            return null;
+        }
         const laneOffset = CHART_LABEL_OFFSET_TOP + laneIndex * CHART_LABEL_LANE_HEIGHT;
-        const base = {
-            display: Boolean(text),
+        return {
+            type: 'label',
+            xScaleID: 'x',
+            yScaleID: 'y',
+            xValue,
+            yValue: (ctx) => ctx.chart.scales.y?.max ?? 0,
             content: text,
             color,
             backgroundColor: 'rgba(11, 17, 26, 0.94)',
@@ -982,22 +962,35 @@
             textAlign: 'start',
             clip: false,
             borderRadius: 3,
-        };
-
-        if (variant === 'box') {
-            return {
-                ...base,
-                position: { x: 'start', y: 'start' },
-                xAdjust: CHART_LABEL_OFFSET_LEFT,
-                yAdjust: laneOffset,
-            };
-        }
-
-        return {
-            ...base,
-            position: 'end',
+            position: { x: 'start', y: 'start' },
             xAdjust: CHART_LABEL_OFFSET_LEFT,
             yAdjust: laneOffset,
+            drawTime: 'afterDatasetsDraw',
+            ...labelInteraction,
+        };
+    }
+
+    function createLabelEditInteraction(marker, chartContext) {
+        const canEdit = Boolean(chartContext.onEditMarker);
+        return {
+            click(ctx, event) {
+                if (canEdit) {
+                    chartContext.onEditMarker(marker);
+                    hideChartPopover(true);
+                    return;
+                }
+                showChartPopover(marker, event, chartContext, ctx);
+            },
+            enter(ctx, event) {
+                showChartPopover(marker, event, chartContext, ctx);
+            },
+            leave() {
+                if (popoverPinned && popoverMarkerId === marker.id) {
+                    scheduleHidePopover(450);
+                    return;
+                }
+                scheduleHidePopover(300);
+            },
         };
     }
 
@@ -1062,9 +1055,8 @@
         const { mode = 'time', buckets, filterEndMs } = chartContext;
         const visible = filterChartMarkers(markers, chartContext);
         const colorMap = buildProjectColorMap(markers.map((marker) => marker.project));
-        const showLabels = chartContext.showLabels !== false;
         const interactive = Boolean(chartContext.onEditMarker || chartContext.showPopover);
-        const placements = showLabels ? collectMarkerLabelPlacements(visible, chartContext) : [];
+        const placements = collectMarkerLabelPlacements(visible, chartContext);
         const { lanes: labelLanes } = computeCollisionLabelLanes(placements);
         const contentById = new Map(placements.map((item) => [item.id, item.content]));
         const annotations = {};
@@ -1072,10 +1064,13 @@
         visible.forEach((marker, index) => {
             const color = projectColor(marker.project, colorMap);
             const laneIndex = labelLanes.get(marker.id) ?? 0;
-            const labelContent = showLabels ? contentById.get(marker.id) || [] : [];
+            const labelContent = contentById.get(marker.id);
             const key = `marker-${marker.id || index}`;
             const interaction = interactive
                 ? createAnnotationInteraction(marker, chartContext, 'box', colorMap)
+                : {};
+            const labelInteraction = interactive
+                ? createLabelEditInteraction(marker, chartContext)
                 : {};
 
             if (mode === 'category' && buckets?.length) {
@@ -1098,8 +1093,21 @@
                     borderColor: color,
                     borderWidth: 1,
                     ...interaction,
-                    label: chartAnnotationLabelOptions(labelContent, laneIndex, color, 'box'),
+                    label: { display: false },
                 };
+
+                if (labelContent) {
+                    const labelAnn = chartMarkerLabelAnnotation({
+                        content: labelContent,
+                        laneIndex,
+                        color,
+                        xValue: xMin,
+                        labelInteraction,
+                    });
+                    if (labelAnn) {
+                        annotations[`${key}-label`] = labelAnn;
+                    }
+                }
 
                 annotations[`${key}-line`] = {
                     type: 'line',
@@ -1142,8 +1150,21 @@
                 borderColor: color,
                 borderWidth: 2,
                 borderDash: [4, 4],
-                label: chartAnnotationLabelOptions(labelContent, laneIndex, color, 'line'),
+                label: { display: false },
             };
+
+            if (labelContent) {
+                const labelAnn = chartMarkerLabelAnnotation({
+                    content: labelContent,
+                    laneIndex,
+                    color,
+                    xValue,
+                    labelInteraction,
+                });
+                if (labelAnn) {
+                    annotations[`${key}-label`] = labelAnn;
+                }
+            }
         });
 
         return annotations;
