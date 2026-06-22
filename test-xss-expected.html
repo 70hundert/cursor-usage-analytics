@@ -1,0 +1,24 @@
+﻿<!DOCTYPE html>
+<html>
+<body>
+<h3>XSS-Test Erwartung:</h3>
+<table border="1">
+<tr>
+  <th>Wo</th>
+  <th>Erwartetes Ergebnis</th>
+</tr>
+<tr>
+  <td>Input-Feld "Aufgabe"</td>
+  <td>&lt;img src=x onerror=alert('XSS')&gt;</td>
+</tr>
+<tr>
+  <td>Marker-Tabelle (Spalte "Aufgabe")</td>
+  <td>&lt;img src=x onerror=alert('XSS')&gt; (als TEXT, kein Alert!)</td>
+</tr>
+<tr>
+  <td>Events-Tabelle (Spalte "Projekt")</td>
+  <td>&lt;img... (als TEXT)</td>
+</tr>
+</table>
+</body>
+</html>

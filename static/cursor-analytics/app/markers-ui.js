@@ -24,6 +24,7 @@ import {
     setMarkerSortDir,
     collapsedMarkerGroups,
 } from './state.js';
+import { escapeHtml } from '../markers/util.js';
 import {
     getMarkersApi,
     getParser,
@@ -641,7 +642,7 @@ export function renderMarkerTableRow({ marker, stats, userId }, colorMap, groupK
                 <td class="usage-table__user usage-table__user--${userId}">${userId}</td>
                 <td>${renderMarkerProjectBadge(marker.project, colorMap)}</td>
                 <td>${modeLabel}</td>
-                <td>${marker.task || '—'}</td>
+                <td>${escapeHtml(marker.task) || '—'}</td>
                 <td>${numberFmt.format(stats.calls)}</td>
                 <td class="usage-table__total">${numberFmt.format(stats.totalTokens)}</td>
                 <td>${numberFmt.format(stats.outputTokens)}</td>

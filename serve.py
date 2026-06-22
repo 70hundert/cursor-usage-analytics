@@ -503,14 +503,12 @@ class CursorUsageHandler(BaseHTTPRequestHandler):
         query = parse_qs(parsed.query)
 
         if parsed.path == "/health":
-            configured = {user: bool(token) for user, token in USER_TOKENS.items()}
             marker_hook_config = Path.home() / ".cursor" / "marker-hook.json"
             _json_response(
                 self,
                 200,
                 {
                     "ok": True,
-                    "users": configured,
                     "port": self.server.server_port,
                     "markerHooks": marker_hook_config.is_file(),
                 },

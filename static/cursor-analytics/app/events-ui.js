@@ -43,6 +43,7 @@ import {
     setEventsSortDir,
     collapsedEventGroups,
 } from './state.js';
+import { escapeHtml } from '../markers/util.js';
 import {
     t,
     tf,
@@ -633,9 +634,9 @@ export function renderEventTableRow(event, api, grouped, groupKey) {
     return `<tr class="${userRowClass(event.userLabel)}${markedClass} usage-table__row--group-member"${markerIdAttr}${memberAttr}${hiddenAttr ? ' hidden' : ''}>
             <td>${dateTimeFmt.format(event.timestamp)}</td>
             <td class="usage-table__user usage-table__user--${event.userLabel}">${event.userLabel}</td>
-            <td>${projectLabel}</td>
-            <td>${event.model}</td>
-            <td>${event.kind}</td>
+            <td>${escapeHtml(projectLabel)}</td>
+            <td>${escapeHtml(event.model)}</td>
+            <td>${escapeHtml(event.kind)}</td>
             <td>${numberFmt.format(event.inputWithCacheWrite)}</td>
             <td>${numberFmt.format(event.inputNoCache)}</td>
             <td>${numberFmt.format(event.cacheRead)}</td>

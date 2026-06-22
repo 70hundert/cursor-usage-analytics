@@ -45,12 +45,16 @@ async function fetchLiveUserConfig(force = false) {
         return liveUsersConfigured;
     }
     try {
-        const response = await fetch(`${PROXY_BASE}/health`, { cache: 'no-store' });
+        const response = await fetch(`${PROXY_BASE}/api/users`, { cache: 'no-store' });
         if (!response.ok) {
             return Object.fromEntries(getParser().USER_ORDER.map((id) => [id, false]));
         }
         const payload = await response.json();
-        setLiveUsersConfigured(payload.users || {});
+        const userTokenMap = {};
+        for (const user of payload.users || []) {
+            userTokenMap[user.id] = user.hasToken || false;
+        }
+        setLiveUsersConfigured(userTokenMap);
         return liveUsersConfigured;
     } catch {
         return Object.fromEntries(getParser().USER_ORDER.map((id) => [id, false]));
@@ -303,7 +307,15 @@ export async function fetchLiveEvents({ force = false, incremental = false } = {
                     }
                     const payload = await response.json();
                     const fetched = (payload.events || [])
-                        .map((raw) => normalizeApiEvent(raw, userId))
+                        .map((raw) => {
+                            try {
+                                return normalizeApiEvent(raw, userId);
+                            } catch (error) {
+                                console.warn('[load] Failed to normalize API event:', error);
+                                return null;
+                            }
+                        })
+                        .filter(Boolean)
                         .sort((a, b) => a.timestamp - b.timestamp);
                     const existing = liveEventsByUser[userId] || [];
                     const merged =

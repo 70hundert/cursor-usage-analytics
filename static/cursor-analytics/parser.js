@@ -200,7 +200,13 @@ export const parser = (function initCursorAnalyticsParser() {
     }
 
     function normalizeApiEvent(raw, userLabel) {
-        const tokenUsage = raw.tokenUsage || {};
+        if (!raw || typeof raw !== 'object') {
+            console.warn('[parser] Invalid API event (not an object):', raw);
+            return null;
+        }
+        const tokenUsage = typeof raw.tokenUsage === 'object' && raw.tokenUsage !== null 
+            ? raw.tokenUsage 
+            : {};
         const timestampMs = Number.parseInt(String(raw.timestamp ?? ''), 10);
         const timestamp = Number.isFinite(timestampMs) ? new Date(timestampMs) : new Date();
 
