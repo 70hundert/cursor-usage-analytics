@@ -2,11 +2,10 @@
  * ES-Modul-Bootstrap.
  *
  * Laedt alle Shared-Module als ES-Module. Sie registrieren ihre API zusaetzlich auf
- * window.CursorAnalytics (Bridge), damit der klassische Consumer app.js unveraendert
- * funktioniert.
+ * window.CursorAnalytics (Bridge), solange main.js diese Namespaces noch nutzt.
  *
- * Eingebunden via <script type="module">. app.js (klassisch) wartet in ensureModules()
- * per Polling, bis alle window.CursorAnalytics.*-Namespaces bereit sind.
+ * Wird per `import './bootstrap.js'` von main.js eingebunden; da dies ein statischer
+ * Import ist, sind alle Module fertig geladen, bevor der main.js-Code laeuft.
  */
 import './users-config.js';
 import './i18n.js';

@@ -469,6 +469,10 @@ def _serve_static(handler: BaseHTTPRequestHandler, file_path: Path) -> None:
     handler.send_response(200)
     handler.send_header("Content-Type", _guess_content_type(file_path))
     handler.send_header("Content-Length", str(len(data)))
+    # Dev-Setup ohne Build-Step: statische Assets nie cachen, damit ES-Module-Aenderungen
+    # sofort sichtbar sind und keine cache-bustenden ?v=-Querys noetig sind (die sonst
+    # doppelte Modul-Instanzen erzeugen, wenn interne Importe ohne Query laufen).
+    handler.send_header("Cache-Control", "no-store, must-revalidate")
     handler.end_headers()
     handler.wfile.write(data)
 
