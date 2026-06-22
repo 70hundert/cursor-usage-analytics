@@ -90,6 +90,68 @@
             font-size: 1.05rem;
         }
 
+        .card--collapsible {
+            padding-top: 0.65rem;
+        }
+
+        .card--collapsible.card--collapsed {
+            padding-bottom: 0.65rem;
+        }
+
+        .card--collapsible .card__header {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            flex-wrap: wrap;
+            margin-bottom: 0.5rem;
+        }
+
+        .card--collapsible.card--collapsed .card__header {
+            margin-bottom: 0;
+        }
+
+        .card__toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            flex: 1;
+            min-width: 0;
+            padding: 0;
+            border: none;
+            background: transparent;
+            color: var(--text);
+            font: inherit;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .card__toggle:hover .card__title,
+        .card__toggle:focus-visible .card__title {
+            color: var(--accent);
+        }
+
+        .card__chevron {
+            display: inline-block;
+            width: 1em;
+            flex-shrink: 0;
+            color: var(--muted);
+            text-align: center;
+        }
+
+        .card__chevron::before {
+            content: '▾';
+        }
+
+        .card--collapsed .card__chevron::before {
+            content: '▸';
+        }
+
+        .card__title {
+            margin: 0;
+            font-size: 1.05rem;
+            font-weight: 600;
+        }
+
         .card-meta {
             margin: 0 0 0.75rem;
             color: var(--muted);
@@ -1100,7 +1162,17 @@
     </header>
 
     <main class="dashboard-grid">
-        <section class="card card--main">
+        <section class="card card--main card--collapsible" data-card-id="main">
+            <button type="button" class="card__toggle" aria-expanded="true" aria-controls="card-body-main">
+                <span class="card__chevron" aria-hidden="true"></span>
+                <span class="card__title" data-i18n="mainCardTitle">Steuerung & Übersicht</span>
+            </button>
+            <div class="live-loading" id="live-loading" hidden aria-live="polite" aria-busy="false">
+                <div class="live-loading__spinner" aria-hidden="true"></div>
+                <p class="live-loading__text" id="live-loading-text" data-i18n="liveLoading">Live-Daten werden geladen…
+                </p>
+            </div>
+            <div class="card__body" id="card-body-main">
             <div class="toolbar" id="main-toolbar">
                 <div class="toolbar-group">
                     <span class="toolbar-label" data-i18n="dataSource">Datenquelle</span>
@@ -1213,11 +1285,6 @@
                     </div>
                 </div>
             </div>
-            <div class="live-loading" id="live-loading" hidden aria-live="polite" aria-busy="false">
-                <div class="live-loading__spinner" aria-hidden="true"></div>
-                <p class="live-loading__text" id="live-loading-text" data-i18n="liveLoading">Live-Daten werden geladen…
-                </p>
-            </div>
             <div class="drop-zone" id="drop-zone" data-i18n="dropZone">
                 CSV hier ablegen oder „CSV laden“ wählen
             </div>
@@ -1266,11 +1333,16 @@
             </div>
             <p class="card-meta" id="status-line" data-i18n="loadingData">Lade Daten…</p>
             <p class="hint-text" id="load-hint"></p>
+            </div>
         </section>
 
-        <section class="card">
-            <div class="chart-heading chart-heading--section">
-                <h2 data-i18n="visualizations">Visualisierungen</h2>
+        <section class="card card--collapsible" data-card-id="visualizations">
+            <button type="button" class="card__toggle" aria-expanded="true" aria-controls="card-body-visualizations">
+                <span class="card__chevron" aria-hidden="true"></span>
+                <span class="card__title" data-i18n="visualizations">Visualisierungen</span>
+            </button>
+            <div class="card__body" id="card-body-visualizations">
+            <div class="chart-heading" style="margin-bottom: 0.75rem; justify-content: flex-end;">
                 <button type="button" class="chart-help-btn" data-i18n-aria="chartZoomHelpAria"
                     aria-label="Chart-Bedienung" aria-expanded="false">
                     <span aria-hidden="true">?</span>
@@ -1411,10 +1483,15 @@
                     <div class="chart-wrap"><canvas id="chart-cumulative"></canvas></div>
                 </div>
             </div>
+            </div>
         </section>
 
-        <section class="card">
-            <h2 data-i18n="tokensPerDay">Tokens je Tag</h2>
+        <section class="card card--collapsible" data-card-id="tokens-per-day">
+            <button type="button" class="card__toggle" aria-expanded="true" aria-controls="card-body-tokens-per-day">
+                <span class="card__chevron" aria-hidden="true"></span>
+                <span class="card__title" data-i18n="tokensPerDay">Tokens je Tag</span>
+            </button>
+            <div class="card__body" id="card-body-tokens-per-day">
             <div class="usage-table-wrap">
                 <table class="usage-table">
                     <thead>
@@ -1430,10 +1507,15 @@
                     <tbody id="daily-table-body"></tbody>
                 </table>
             </div>
+            </div>
         </section>
 
-        <section class="card">
-            <h2 data-i18n="mostExpensiveEvents">Teuerste Events</h2>
+        <section class="card card--collapsible" data-card-id="expensive-events">
+            <button type="button" class="card__toggle" aria-expanded="true" aria-controls="card-body-expensive-events">
+                <span class="card__chevron" aria-hidden="true"></span>
+                <span class="card__title" data-i18n="mostExpensiveEvents">Teuerste Events</span>
+            </button>
+            <div class="card__body" id="card-body-expensive-events">
             <div class="toolbar" style="margin-bottom: 0.5rem;">
                 <div class="toolbar-group">
                     <label class="toolbar-label">
@@ -1459,10 +1541,15 @@
                     <tbody id="expensive-table-body"></tbody>
                 </table>
             </div>
+            </div>
         </section>
 
-        <section class="card">
-            <h2 data-i18n="individualRequests">Einzelne Anfragen</h2>
+        <section class="card card--collapsible" data-card-id="events">
+            <button type="button" class="card__toggle" aria-expanded="true" aria-controls="card-body-events">
+                <span class="card__chevron" aria-hidden="true"></span>
+                <span class="card__title" data-i18n="individualRequests">Einzelne Anfragen</span>
+            </button>
+            <div class="card__body" id="card-body-events">
             <div class="toolbar" style="margin-bottom: 0.5rem;">
                 <div class="toolbar-group">
                     <span class="toolbar-label" data-i18n="modelFilter">Modell</span>
@@ -1572,10 +1659,15 @@
                 <button type="button" class="btn" id="events-prev-btn" data-i18n="prevPage">Zurück</button>
                 <button type="button" class="btn" id="events-next-btn" data-i18n="nextPage">Weiter</button>
             </div>
+            </div>
         </section>
 
-        <section class="card" id="marker-card">
-            <h2 data-i18n="projectMarkers">Projekt-Marker</h2>
+        <section class="card card--collapsible" id="marker-card" data-card-id="markers">
+            <button type="button" class="card__toggle" aria-expanded="true" aria-controls="card-body-markers">
+                <span class="card__chevron" aria-hidden="true"></span>
+                <span class="card__title" data-i18n="projectMarkers">Projekt-Marker</span>
+            </button>
+            <div class="card__body" id="card-body-markers">
             <div class="toolbar" style="margin-bottom: 0.5rem;">
                 <div class="toolbar-group">
                     <span class="toolbar-label" data-i18n="projectFilter">Projekt-Filter</span>
@@ -1656,10 +1748,15 @@
                     <tbody id="marker-table-body"></tbody>
                 </table>
             </div>
+            </div>
         </section>
 
-        <section class="card">
-            <h2 data-i18n="budgetCurrentMonth">Budget (aktueller Monat)</h2>
+        <section class="card card--collapsible" data-card-id="budget">
+            <button type="button" class="card__toggle" aria-expanded="true" aria-controls="card-body-budget">
+                <span class="card__chevron" aria-hidden="true"></span>
+                <span class="card__title" data-i18n="budgetCurrentMonth">Budget (aktueller Monat)</span>
+            </button>
+            <div class="card__body" id="card-body-budget">
             <div class="toolbar" style="margin-bottom: 0.75rem;">
                 <label><span data-i18n="monthlyBudget">Monatsbudget ($)</span>
                     <input type="number" class="budget-input" id="budget-input" min="0" step="1" value="70">
@@ -1667,6 +1764,7 @@
                 <button type="button" class="btn" id="budget-save-btn" data-i18n="save">Speichern</button>
             </div>
             <div id="budget-panel"></div>
+            </div>
         </section>
     </main>
 
@@ -3629,10 +3727,77 @@
             syncEventGroupsToggleButton();
             syncMarkerGroupsToggleButton();
             syncMarkerFocusUi();
+            syncCardCollapseLabels();
             const locale = getI18n()?.getLocale() || 'de';
             document.querySelectorAll('[data-locale]').forEach((btn) => {
                 btn.classList.toggle('btn--active', btn.dataset.locale === locale);
             });
+        }
+
+        const CARD_COLLAPSE_STORAGE_KEY = 'cursor-analytics-collapsed-cards';
+
+        function loadCollapsedCards() {
+            try {
+                const raw = localStorage.getItem(CARD_COLLAPSE_STORAGE_KEY);
+                return raw ? JSON.parse(raw) : {};
+            } catch {
+                return {};
+            }
+        }
+
+        function saveCollapsedCards(state) {
+            localStorage.setItem(CARD_COLLAPSE_STORAGE_KEY, JSON.stringify(state));
+        }
+
+        function getCardToggleTitle(toggle) {
+            return toggle.querySelector('.card__title')?.textContent?.trim() || '';
+        }
+
+        function syncCardCollapseToggleLabel(toggle, collapsed) {
+            const title = getCardToggleTitle(toggle);
+            toggle.setAttribute(
+                'aria-label',
+                tf(collapsed ? 'expandCard' : 'collapseCard', { title })
+            );
+        }
+
+        function syncCardCollapseLabels() {
+            document.querySelectorAll('.card--collapsible .card__toggle').forEach((toggle) => {
+                const card = toggle.closest('.card--collapsible');
+                syncCardCollapseToggleLabel(toggle, card?.classList.contains('card--collapsed') === true);
+            });
+        }
+
+        function setCardCollapsed(card, toggle, body, collapsed) {
+            card.classList.toggle('card--collapsed', collapsed);
+            body.hidden = collapsed;
+            toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+            syncCardCollapseToggleLabel(toggle, collapsed);
+        }
+
+        function initCardCollapse() {
+            const collapsedState = loadCollapsedCards();
+            document.querySelectorAll('.dashboard-grid > .card--collapsible').forEach((card) => {
+                const cardId = card.dataset.cardId;
+                const toggle = card.querySelector('.card__toggle');
+                const body = card.querySelector('.card__body');
+                if (!cardId || !toggle || !body) {
+                    return;
+                }
+
+                setCardCollapsed(card, toggle, body, collapsedState[cardId] === true);
+
+                toggle.addEventListener('click', () => {
+                    const collapsed = card.classList.contains('card--collapsed');
+                    setCardCollapsed(card, toggle, body, !collapsed);
+                    collapsedState[cardId] = !collapsed;
+                    saveCollapsedCards(collapsedState);
+                    if (collapsed) {
+                        resizeAllCharts();
+                    }
+                });
+            });
+            syncCardCollapseLabels();
         }
 
         function initLocaleSwitcher() {
@@ -5666,6 +5831,7 @@
             buildUserFilterToolbar();
             buildMarkerUserSelect();
             initLocaleSwitcher();
+            initCardCollapse();
             updateProjectFilterOptions();
             initMarkerUi();
             initMarkerChartDisplayUi();
