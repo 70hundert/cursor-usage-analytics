@@ -36,6 +36,7 @@ import { getDefaultUserId, filteredEvents } from './data.js';
 import {
     syncMarkerGroupsToggleButton,
     toggleAllMarkerGroups,
+    persistCollapsedMarkerGroups,
 } from './table-groups.js';
 import { updateProjectFilterOptions } from './events-ui.js';
 import { renderAll } from './render.js';
@@ -880,6 +881,7 @@ export function initMarkerUi() {
                     member.hidden = collapsedMarkerGroups.has(key);
                 });
             syncMarkerGroupsToggleButton();
+            persistCollapsedMarkerGroups();
             return;
         }
 

@@ -1,13 +1,66 @@
 /**
  * Collapse/expand all rows in grouped usage tables (events + markers).
  */
-import { collapsedEventGroups, collapsedMarkerGroups } from './state.js';
+import {
+    collapsedEventGroups,
+    collapsedMarkerGroups,
+    eventsGroupMode,
+    EVENTS_COLLAPSED_GROUPS_STORAGE_KEY,
+    MARKER_COLLAPSED_GROUPS_STORAGE_KEY,
+} from './state.js';
 import { t } from './services.js';
 
 function getTableGroupHeaderKeys(tableSelector, keyAttr) {
     return [...document.querySelectorAll(`${tableSelector} .usage-table__group-header--toggle[${keyAttr}]`)]
         .map((row) => row.getAttribute(keyAttr))
         .filter(Boolean);
+}
+
+function readStoredEventCollapsedGroups() {
+    try {
+        const raw = localStorage.getItem(EVENTS_COLLAPSED_GROUPS_STORAGE_KEY);
+        if (!raw) {
+            return {};
+        }
+        const parsed = JSON.parse(raw);
+        return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    } catch {
+        return {};
+    }
+}
+
+function loadCollapsedKeysForEventMode(mode) {
+    const stored = readStoredEventCollapsedGroups();
+    const keys = stored[mode];
+    return Array.isArray(keys) ? keys.filter((item) => typeof item === 'string') : [];
+}
+
+export function persistCollapsedEventGroups() {
+    try {
+        const stored = readStoredEventCollapsedGroups();
+        stored[eventsGroupMode] = [...collapsedEventGroups];
+        localStorage.setItem(EVENTS_COLLAPSED_GROUPS_STORAGE_KEY, JSON.stringify(stored));
+    } catch {
+        /* ignore */
+    }
+}
+
+export function persistCollapsedMarkerGroups() {
+    try {
+        localStorage.setItem(
+            MARKER_COLLAPSED_GROUPS_STORAGE_KEY,
+            JSON.stringify([...collapsedMarkerGroups])
+        );
+    } catch {
+        /* ignore */
+    }
+}
+
+export function reloadCollapsedEventGroupsForMode(mode) {
+    collapsedEventGroups.clear();
+    for (const key of loadCollapsedKeysForEventMode(mode)) {
+        collapsedEventGroups.add(key);
+    }
 }
 
 function setAllTableGroupsCollapsed({ tableSelector, keyAttr, memberAttr, collapsedSet }) {
@@ -74,6 +127,7 @@ export function toggleAllEventGroups() {
         collapsedSet: collapsedEventGroups,
     });
     syncEventGroupsToggleButton();
+    persistCollapsedEventGroups();
 }
 
 export function toggleAllMarkerGroups() {
@@ -84,4 +138,5 @@ export function toggleAllMarkerGroups() {
         collapsedSet: collapsedMarkerGroups,
     });
     syncMarkerGroupsToggleButton();
+    persistCollapsedMarkerGroups();
 }

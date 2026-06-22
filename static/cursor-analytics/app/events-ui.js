@@ -56,6 +56,8 @@ import { eventsForDashboard } from './markers-ui.js';
 import {
     syncEventGroupsToggleButton,
     toggleAllEventGroups,
+    persistCollapsedEventGroups,
+    reloadCollapsedEventGroupsForMode,
 } from './table-groups.js';
 import { userRowClass } from './render.js';
 
@@ -319,7 +321,7 @@ export function initEventsSectionUi() {
             setEventsGroupMode(btn.dataset.eventsGroup);
             localStorage.setItem('events-group-mode', eventsGroupMode);
             syncEventsGroupModeButtons();
-            collapsedEventGroups.clear();
+            reloadCollapsedEventGroupsForMode(eventsGroupMode);
             renderEventsTable(eventsForTable());
         });
     });
@@ -393,6 +395,7 @@ export function initEventsSectionUi() {
                 member.hidden = collapsedEventGroups.has(key);
             });
         syncEventGroupsToggleButton();
+        persistCollapsedEventGroups();
     });
 }
 

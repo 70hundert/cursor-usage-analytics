@@ -19,6 +19,8 @@ export const MARKER_FOCUS_STORAGE_KEY = 'cursor-marker-focus-id';
 export const DATA_SOURCE_STORAGE_KEY = 'cursor-analytics-data-source';
 export const USER_FILTER_STORAGE_KEY = 'cursor-analytics-user-filter';
 export const CARD_COLLAPSE_STORAGE_KEY = 'cursor-analytics-collapsed-cards';
+export const EVENTS_COLLAPSED_GROUPS_STORAGE_KEY = 'cursor-analytics-collapsed-event-groups';
+export const MARKER_COLLAPSED_GROUPS_STORAGE_KEY = 'cursor-analytics-collapsed-marker-groups';
 export const EVENTS_PAGE_SIZE_STORAGE_KEY = 'events-page-size';
 export const VALID_DATA_SOURCES = ['csv', 'live', 'merge'];
 export const DEFAULT_TIME_RANGE_HOURS = 24;
@@ -211,8 +213,38 @@ export let markerSortDir = 'asc';
 
 export let resizeChartsFrame = null;
 
-export const collapsedEventGroups = new Set();
-export const collapsedMarkerGroups = new Set();
+function loadMarkerCollapsedGroupKeys() {
+    try {
+        const raw = localStorage.getItem(MARKER_COLLAPSED_GROUPS_STORAGE_KEY);
+        if (!raw) {
+            return [];
+        }
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed.filter((item) => typeof item === 'string') : [];
+    } catch {
+        return [];
+    }
+}
+
+function loadEventCollapsedGroupKeys(mode) {
+    try {
+        const raw = localStorage.getItem(EVENTS_COLLAPSED_GROUPS_STORAGE_KEY);
+        if (!raw) {
+            return [];
+        }
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+            return [];
+        }
+        const keys = parsed[mode];
+        return Array.isArray(keys) ? keys.filter((item) => typeof item === 'string') : [];
+    } catch {
+        return [];
+    }
+}
+
+export const collapsedEventGroups = new Set(loadEventCollapsedGroupKeys(eventsGroupMode));
+export const collapsedMarkerGroups = new Set(loadMarkerCollapsedGroupKeys());
 
 // --- Setter ---------------------------------------------------------------------
 export function setEventsByUser(value) { eventsByUser = value; }
