@@ -133,6 +133,13 @@ def _truncate_task(text: str, max_len: int = 120) -> str:
     return cleaned[: max_len - 1].rstrip() + "…"
 
 
+_PLAN_MODE = "plan"
+_PLAN_BOILERPLATE_PREFIXES = (
+    "implement the plan as specified",
+    "to-do's from the plan have already been created",
+    "todos from the plan have already been created",
+)
+_PLACEHOLDER_TASKS = frozenset({"", "Neuer Chat", "New chat"})
 _VALID_COMPOSER_MODES = frozenset({"agent", "edit", "chat"})
 
 
@@ -149,22 +156,61 @@ def _apply_composer_mode(marker: dict[str, Any], composer_mode: str) -> None:
         marker["composerMode"] = normalized
 
 
-def _first_prompt_line(prompt: str) -> str:
+def _is_boilerplate_task(text: str) -> bool:
+    normalized = " ".join(_repair_text(str(text or "")).split()).lower()
+    if not normalized:
+        return True
+    return any(normalized.startswith(prefix) for prefix in _PLAN_BOILERPLATE_PREFIXES)
+
+
+def _is_replaceable_task(text: str) -> bool:
+    cleaned = str(text or "").strip()
+    return cleaned in _PLACEHOLDER_TASKS or _is_boilerplate_task(cleaned)
+
+
+def _task_from_prompt(prompt: str) -> str:
     for line in str(prompt or "").splitlines():
         cleaned = line.strip()
-        if cleaned:
+        if cleaned and not _is_boilerplate_task(cleaned):
             return _truncate_task(cleaned)
     return ""
 
 
-def _update_state(session_id: str, composer_mode: str, project: str) -> None:
+def _read_pending_task(session_id: str) -> str:
+    stored = _read_state(session_id)
+    pending = _truncate_task(str(stored.get("pending_task") or ""))
+    if pending and not _is_boilerplate_task(pending):
+        return pending
+    return ""
+
+
+def _resolve_task(session_id: str, prompt: str) -> str:
+    task = _task_from_prompt(prompt)
+    if task:
+        return task
+    return _read_pending_task(session_id)
+
+
+def _update_state(
+    session_id: str,
+    composer_mode: str,
+    project: str,
+    *,
+    pending_task: str | None = None,
+) -> None:
     if not session_id:
         return
     state = _load_json(STATE_PATH)
-    state[session_id] = {
-        "composer_mode": composer_mode,
-        "project": project,
-    }
+    entry = state.get(session_id)
+    if not isinstance(entry, dict):
+        entry = {}
+    if composer_mode:
+        entry["composer_mode"] = composer_mode
+    if project:
+        entry["project"] = project
+    if pending_task:
+        entry["pending_task"] = _truncate_task(pending_task)
+    state[session_id] = entry
     _save_json(STATE_PATH, state)
 
 
@@ -200,8 +246,9 @@ def _build_request_body(
         "note": _mode_note(composer_mode),
         "composerMode": composer_mode,
     }
-    if action == "prompt":
-        body["task"] = _first_prompt_line(str(payload.get("prompt") or ""))
+    if action in {"start", "prompt"}:
+        prompt = str(payload.get("prompt") or "")
+        body["task"] = _resolve_task(session_id, prompt) if action == "prompt" else _read_pending_task(session_id)
     return body
 
 
@@ -266,7 +313,6 @@ def _apply_marker_session_local(
     note = str(body.get("note") or "").strip()
     task = _truncate_task(str(body.get("task") or ""))
     composer_mode = str(body.get("composerMode") or "").strip().lower()
-    placeholder_tasks = {"", "Neuer Chat", "New chat"}
 
     if action not in {"start", "prompt", "end"}:
         return store, {"error": "Unbekannte action"}
@@ -305,6 +351,8 @@ def _apply_marker_session_local(
             )
             if note:
                 existing["note"] = note
+            if task and _is_replaceable_task(str(existing.get("task") or "")):
+                existing["task"] = task
             _apply_composer_mode(existing, composer_mode)
         else:
             marker = {
@@ -338,7 +386,7 @@ def _apply_marker_session_local(
             }
             _apply_composer_mode(marker, composer_mode)
             markers.append(marker)
-        elif task and existing.get("task") in placeholder_tasks:
+        elif task and _is_replaceable_task(str(existing.get("task") or "")):
             existing["task"] = task
             existing["updatedAt"] = now
             if not existing.get("composerMode"):
@@ -352,6 +400,13 @@ def _apply_marker_session_local(
     return {"version": int(store.get("version") or 1), "markers": markers}, None
 
 
+def _capture_plan_task(payload: dict[str, Any], session_id: str, project: str) -> None:
+    composer_mode = str(payload.get("composer_mode") or _PLAN_MODE).strip().lower()
+    task = _task_from_prompt(str(payload.get("prompt") or ""))
+    if task:
+        _update_state(session_id, composer_mode, project, pending_task=task)
+
+
 def _dispatch(payload: dict[str, Any]) -> None:
     event_name = str(payload.get("hook_event_name") or "").strip()
     action = EVENT_ACTIONS.get(event_name)
@@ -363,6 +418,13 @@ def _dispatch(payload: dict[str, Any]) -> None:
     session_id = _session_id(payload)
     composer_mode = _composer_mode(payload, _load_json(STATE_PATH), session_id)
     project = _resolve_project(payload)
+
+    if event_name == "beforeSubmitPrompt":
+        prompt_mode = str(payload.get("composer_mode") or "").strip().lower()
+        if prompt_mode == _PLAN_MODE:
+            if session_id:
+                _capture_plan_task(payload, session_id, project)
+            return
 
     if event_name == "sessionStart":
         if composer_mode and composer_mode not in allowed:

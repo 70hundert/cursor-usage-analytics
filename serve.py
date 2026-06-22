@@ -235,7 +235,24 @@ def _truncate_task(text: str, max_len: int = 120) -> str:
 
 
 _PLACEHOLDER_TASKS = frozenset({"", "Neuer Chat", "New chat"})
+_PLAN_BOILERPLATE_PREFIXES = (
+    "implement the plan as specified",
+    "to-do's from the plan have already been created",
+    "todos from the plan have already been created",
+)
 _VALID_COMPOSER_MODES = frozenset({"agent", "edit", "chat"})
+
+
+def _is_boilerplate_task(text: str) -> bool:
+    normalized = " ".join(str(text or "").split()).lower()
+    if not normalized:
+        return True
+    return any(normalized.startswith(prefix) for prefix in _PLAN_BOILERPLATE_PREFIXES)
+
+
+def _is_replaceable_task(text: str) -> bool:
+    cleaned = str(text or "").strip()
+    return cleaned in _PLACEHOLDER_TASKS or _is_boilerplate_task(cleaned)
 
 
 def _normalize_composer_mode(value: str) -> str | None:
@@ -313,7 +330,7 @@ def _apply_marker_session(
             existing["updatedAt"] = now
             if note:
                 existing["note"] = note
-            if task and existing.get("task") in _PLACEHOLDER_TASKS:
+            if task and _is_replaceable_task(str(existing.get("task") or "")):
                 existing["task"] = task
             _apply_composer_mode(existing, composer_mode)
         else:
@@ -349,7 +366,7 @@ def _apply_marker_session(
             }
             _apply_composer_mode(marker, composer_mode)
             markers.append(marker)
-        elif task and existing.get("task") in _PLACEHOLDER_TASKS:
+        elif task and _is_replaceable_task(str(existing.get("task") or "")):
             existing["task"] = task
             existing["updatedAt"] = now
             if note and not existing.get("note"):

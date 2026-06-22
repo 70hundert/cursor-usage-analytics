@@ -341,7 +341,7 @@ Native Cursor **User-Hooks** (`~/.cursor/hooks.json`) können Projekt-Marker aut
 | Hook-Event | API-Action | Wirkung |
 | ---------- | ---------- | ------- |
 | `sessionStart` | `start` | Neuer Marker `id = m-cursor-{conversation_id}`; **alle offenen Marker desselben Users** werden geschlossen (`end = now`) |
-| `beforeSubmitPrompt` | `prompt` | `task` aus erster Prompt-Zeile (max. 120 Zeichen, Umlaute repariert unter Windows) |
+| `beforeSubmitPrompt` | `prompt` | `task` aus erster **sinnvoller** Prompt-Zeile (Plan-Boilerplate wird übersprungen; Plan-Mode-Titel zwischengespeichert) |
 | `sessionEnd` | `end` | `end = now` für diesen Chat |
 
 **POST `/api/markers/session`** — Body:
@@ -363,7 +363,8 @@ Native Cursor **User-Hooks** (`~/.cursor/hooks.json`) können Projekt-Marker aut
 | Hook / Quelle | Marker-Feld |
 | ------------- | ----------- |
 | `workspace_roots[0]` (Ordnername) | `project` |
-| Erste Prompt-Zeile | `task` |
+| Erste sinnvolle Prompt-Zeile (ohne Plan-Boilerplate) | `task` |
+| Plan-Mode-Prompts (`composer_mode: plan`) | Zwischengespeichert als `pending_task`, übernommen beim Wechsel in Agent/Edit/Chat |
 | `composer_mode` | `composerMode` (`agent` / `edit` / `chat`) und `note` als `Modus: Agent` / `Modus: Edit` / `Modus: Chat` |
 | `conversation_id` | `id` = `m-cursor-{uuid}` |
 
@@ -422,7 +423,8 @@ Voraussetzungen: `serve.py` läuft (`http://127.0.0.1:8060`); Cursor neu laden; 
 | Hook-Fehler | **View → Output → Hooks** in Cursor |
 | Seite lädt nicht | Mehrere `serve.py` auf Port 8060 → `.\stop.ps1` dann `.\start.ps1` |
 | Umlaute falsch (`Ã¤`) | Setup erneut ausführen; alte Marker manuell korrigieren |
-| `invalid stdin JSON` | Setup erneut — nutzt `run-marker-hook.cmd`, nicht PowerShell `-File` allein |
+| Aufgabe = „Implement the plan…“ | Plan→Build-Boilerplate; Hook überspringt das und nutzt Plan-Titel aus `pending_task` — `setup-marker-hooks.ps1` erneut ausführen |
+| Chat-Titel nachträglich geändert | Wird **nicht** übernommen — nur `beforeSubmitPrompt`, nicht Sidebar-Titel |
 
 **Einschränkungen:** Cloud Agents (keine Session-Hooks); Hook-Fehler blockieren den Chat nicht (Exit 0); nur ein offenes Intervall pro User gleichzeitig.
 
