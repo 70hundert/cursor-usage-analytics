@@ -96,17 +96,8 @@
         return 8760;
     }
 
-    function liveFetchBoundsMs(range, referenceEndMs = Date.now(), selectionMode = 'time') {
-        if (selectionMode === 'count') {
-            const hours = countFetchHours(range);
-            if (hours == null) {
-                return null;
-            }
-            const endMs = referenceEndMs;
-            return { startMs: endMs - hours * 60 * 60 * 1000, endMs };
-        }
-
-        const { mode, hours, customFrom, customTo } = range;
+    function resolveFilterBoundsMs(range, events = [], referenceEndMs = Date.now()) {
+        const { mode, hours, customFrom, customTo, windowEndMs } = range;
 
         if (mode === 'all') {
             return null;
@@ -118,12 +109,39 @@
                 return null;
             }
             const [startMs, endMs] = bounds;
-            return { startMs, endMs };
+            return { startMs, endMs, durationMs: endMs - startMs };
         }
 
-        const endMs = referenceEndMs;
-        const startMs = endMs - hours * 60 * 60 * 1000;
-        return { startMs, endMs };
+        const hourMs = Number(hours) * 60 * 60 * 1000;
+        if (!Number.isFinite(hourMs) || hourMs <= 0) {
+            return null;
+        }
+
+        const endMs =
+            windowEndMs != null && Number.isFinite(windowEndMs)
+                ? windowEndMs
+                : events.length
+                  ? getReferenceEndMs(events)
+                  : referenceEndMs;
+        const startMs = endMs - hourMs;
+        return { startMs, endMs, durationMs: hourMs };
+    }
+
+    function liveFetchBoundsMs(range, referenceEndMs = Date.now(), selectionMode = 'time', events = []) {
+        if (selectionMode === 'count') {
+            const hours = countFetchHours(range);
+            if (hours == null) {
+                return null;
+            }
+            const endMs = referenceEndMs;
+            return { startMs: endMs - hours * 60 * 60 * 1000, endMs };
+        }
+
+        const bounds = resolveFilterBoundsMs(range, events, referenceEndMs);
+        if (!bounds) {
+            return null;
+        }
+        return { startMs: bounds.startMs, endMs: bounds.endMs };
     }
 
     function liveBoundsContains(loadedBounds, desiredBounds) {
@@ -213,29 +231,19 @@
             return events;
         }
 
-        const { mode, hours, customFrom, customTo } = range;
-
-        if (mode === 'all') {
+        if (range.mode === 'all') {
             return events;
         }
 
-        if (mode === 'custom') {
-            const bounds = customRangeBoundsMs(customFrom, customTo);
-            if (!bounds) {
-                return events;
-            }
-            const [startMs, endMs] = bounds;
-            return events.filter((event) => {
-                const time = event.timestamp.getTime();
-                return time >= startMs && time <= endMs;
-            });
+        const bounds = resolveFilterBoundsMs(range, events);
+        if (!bounds) {
+            return events;
         }
 
-        const referenceEnd = getReferenceEndMs(events);
-        const cutoff = referenceEnd - hours * 60 * 60 * 1000;
+        const { startMs, endMs } = bounds;
         return events.filter((event) => {
             const time = event.timestamp.getTime();
-            return time >= cutoff && time <= referenceEnd;
+            return time >= startMs && time <= endMs;
         });
     }
 
@@ -722,6 +730,9 @@
         filterEvents,
         filterEventsByCount,
         filterByUser,
+        resolveFilterBoundsMs,
+        getEventTimeBoundsMs,
+        getReferenceEndMs,
         liveFetchBoundsMs,
         liveBoundsContains,
         mergeLiveBounds,

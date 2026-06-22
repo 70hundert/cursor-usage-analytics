@@ -701,6 +701,14 @@
             height: 320px;
         }
 
+        .chart-wrap--overview.chart-wrap--time-pan-ready {
+            cursor: grab;
+        }
+
+        .chart-wrap--overview.chart-wrap--time-pan-dragging {
+            cursor: grabbing;
+        }
+
         .chart-wrap--overview.chart-wrap--expanded {
             height: calc(90vh - 4rem) !important;
             min-height: 320px;
@@ -1130,8 +1138,7 @@
 
         <section class="card">
             <h2 data-i18n="visualizations">Visualisierungen</h2>
-            <p class="chart-zoom-hint" data-i18n="chartZoomHint">Mausrad: Zoomen · Strg + Ziehen: Verschieben · Pinch
-                auf Touch</p>
+            <p class="chart-zoom-hint" data-i18n="chartZoomHint">Mausrad: Zoomen · Strg + Ziehen: Verschieben · Umschalt + Ziehen: Zeitraum verschieben · Pinch auf Touch</p>
             <div class="chart-grid">
                 <div class="chart-card">
                     <div class="chart-card__header">
@@ -1740,6 +1747,7 @@
             hours: initialTimeRange.hours,
             customFrom: initialTimeRange.customFrom,
             customTo: initialTimeRange.customTo,
+            windowEndMs: null,
             count: Number.isFinite(storedCount) && storedCount > 0 ? storedCount : 50,
             countFrom: 1,
             countTo: Number.isFinite(storedCount) && storedCount > 0 ? storedCount : 50,
@@ -3772,13 +3780,56 @@
             return presetLabels[range.hours] || tf('presetHours', { hours: range.hours });
         }
 
+        function canPanTimeWindow() {
+            if (selectionMode !== 'time') {
+                return false;
+            }
+            if (range.mode !== 'hours' && range.mode !== 'custom') {
+                return false;
+            }
+            const metrics = getMetrics();
+            const events = metrics.filterByUser(activeEvents(), userFilter);
+            return events.length > 0 && Boolean(metrics.resolveFilterBoundsMs(range, events));
+        }
+
+        function clampTimeWindowEndMs(endMs, durationMs) {
+            const metrics = getMetrics();
+            const events = metrics.filterByUser(activeEvents(), userFilter);
+            const dataBounds = metrics.getEventTimeBoundsMs(events);
+            if (!dataBounds || !durationMs) {
+                return endMs;
+            }
+            const minEnd = dataBounds.minMs + durationMs;
+            const maxEnd = dataBounds.maxMs;
+            return Math.min(maxEnd, Math.max(minEnd, endMs));
+        }
+
+        function applyShiftedTimeWindow(endMs, durationMs) {
+            const clampedEnd = clampTimeWindowEndMs(endMs, durationMs);
+            const clampedStart = clampedEnd - durationMs;
+
+            if (range.mode === 'hours') {
+                range.windowEndMs = clampedEnd;
+                return;
+            }
+
+            if (range.mode === 'custom') {
+                range.customFrom = toDateTimeLocalValue(new Date(clampedStart));
+                range.customTo = toDateTimeLocalValue(new Date(clampedEnd));
+                setCustomRangeInputs(range.customFrom, range.customTo);
+            }
+        }
+
         function applyPresetRange(hours, activeButton) {
             range = {
                 mode: 'hours',
                 hours,
                 customFrom: '',
                 customTo: '',
+                windowEndMs: null,
                 count: range.count,
+                countFrom: range.countFrom,
+                countTo: range.countTo,
             };
             savedTimeRange = { mode: 'hours', hours, customFrom: '', customTo: '' };
             saveStoredTimeRange(savedTimeRange);
@@ -3795,6 +3846,7 @@
                 hours: 720,
                 customFrom: '',
                 customTo: '',
+                windowEndMs: null,
                 count,
                 countFrom: 1,
                 countTo: count,
@@ -3820,6 +3872,7 @@
                 hours: 720,
                 customFrom: '',
                 customTo: '',
+                windowEndMs: null,
                 count: range.count,
                 countFrom: 1,
                 countTo: range.countTo ?? range.count ?? 50,
@@ -3853,6 +3906,7 @@
                 hours: 720,
                 customFrom: '',
                 customTo: '',
+                windowEndMs: null,
                 count: countTo - countFrom + 1,
                 countFrom,
                 countTo,
@@ -3905,6 +3959,7 @@
                     hours: 720,
                     customFrom: '',
                     customTo: '',
+                    windowEndMs: null,
                     count: saved.count || 50,
                     countFrom: saved.countFrom || 1,
                     countTo: saved.countTo || saved.count || 50,
@@ -3912,6 +3967,7 @@
             } else {
                 range = {
                     ...savedTimeRange,
+                    windowEndMs: null,
                     count: range.count,
                     countFrom: range.countFrom,
                     countTo: range.countTo,
@@ -3943,7 +3999,10 @@
                 hours: DEFAULT_TIME_RANGE_HOURS,
                 customFrom: fromEl.value,
                 customTo: toEl.value,
+                windowEndMs: null,
                 count: range.count,
+                countFrom: range.countFrom,
+                countTo: range.countTo,
             };
             savedTimeRange = {
                 mode: 'custom',
@@ -4533,7 +4592,9 @@
         }
 
         function desiredLiveBounds() {
-            return getMetrics().liveFetchBoundsMs(range, Date.now(), selectionMode);
+            const metrics = getMetrics();
+            const events = metrics.filterByUser(activeEvents(), userFilter);
+            return metrics.liveFetchBoundsMs(range, Date.now(), selectionMode, events);
         }
 
         function liveCacheUsable(desiredBounds) {
@@ -4775,6 +4836,114 @@
             wrap.addEventListener('transitionend', () => resizeAllCharts(), { once: true });
         }
 
+        function initTimeWindowPan() {
+            const canvas = document.getElementById('chart-overview-daily');
+            const wrap = canvas?.closest('.chart-wrap--overview');
+            if (!canvas || !wrap) {
+                return;
+            }
+
+            let dragging = false;
+            let startX = 0;
+            let startEndMs = 0;
+            let durationMs = 0;
+            let rafId = 0;
+            let pendingEndMs = null;
+
+            function flushPendingPan() {
+                if (pendingEndMs == null) {
+                    return;
+                }
+                const endMs = pendingEndMs;
+                pendingEndMs = null;
+                applyShiftedTimeWindow(endMs, durationMs);
+                if (dataSource === 'live' || dataSource === 'merge') {
+                    applyRangeAndRender();
+                } else {
+                    renderAll();
+                }
+            }
+
+            function schedulePanRender() {
+                if (rafId) {
+                    return;
+                }
+                rafId = requestAnimationFrame(() => {
+                    rafId = 0;
+                    flushPendingPan();
+                });
+            }
+
+            function endDrag() {
+                if (!dragging) {
+                    return;
+                }
+                dragging = false;
+                wrap.classList.remove('chart-wrap--time-pan-dragging');
+                if (rafId) {
+                    cancelAnimationFrame(rafId);
+                    rafId = 0;
+                }
+                flushPendingPan();
+            }
+
+            canvas.addEventListener('pointerdown', (event) => {
+                if (!event.shiftKey || !canPanTimeWindow()) {
+                    return;
+                }
+
+                const metrics = getMetrics();
+                const events = metrics.filterByUser(activeEvents(), userFilter);
+                const bounds = metrics.resolveFilterBoundsMs(range, events);
+                if (!bounds) {
+                    return;
+                }
+
+                dragging = true;
+                startX = event.clientX;
+                startEndMs = bounds.endMs;
+                durationMs = bounds.durationMs;
+                wrap.classList.add('chart-wrap--time-pan-dragging');
+                canvas.setPointerCapture(event.pointerId);
+                event.preventDefault();
+                event.stopPropagation();
+            });
+
+            canvas.addEventListener('pointermove', (event) => {
+                if (!dragging) {
+                    return;
+                }
+
+                const chart = chartInstances.overview;
+                const chartWidth = chart?.chartArea?.width;
+                if (!chartWidth) {
+                    return;
+                }
+
+                const dx = event.clientX - startX;
+                const deltaMs = -(dx / chartWidth) * durationMs;
+                pendingEndMs = clampTimeWindowEndMs(startEndMs + deltaMs, durationMs);
+                schedulePanRender();
+                event.preventDefault();
+            });
+
+            canvas.addEventListener('pointerup', endDrag);
+            canvas.addEventListener('pointercancel', endDrag);
+
+            window.addEventListener('keydown', (event) => {
+                if (event.key === 'Shift' && canPanTimeWindow()) {
+                    wrap.classList.add('chart-wrap--time-pan-ready');
+                }
+            });
+
+            window.addEventListener('keyup', (event) => {
+                if (event.key === 'Shift') {
+                    wrap.classList.remove('chart-wrap--time-pan-ready', 'chart-wrap--time-pan-dragging');
+                    endDrag();
+                }
+            });
+        }
+
         function initChartControls() {
             document.querySelectorAll('.btn-chart-height').forEach((btn) => {
                 btn.addEventListener('click', () => {
@@ -4798,6 +4967,8 @@
                     layoutObserver.observe(el);
                 });
             }
+
+            initTimeWindowPan();
         }
 
         function initToolbar() {
@@ -4836,7 +5007,10 @@
                     hours: DEFAULT_TIME_RANGE_HOURS,
                     customFrom: '',
                     customTo: '',
+                    windowEndMs: null,
                     count: range.count,
+                    countFrom: range.countFrom,
+                    countTo: range.countTo,
                 };
                 savedTimeRange = {
                     mode: 'all',
@@ -4887,6 +5061,7 @@
                     hours: 720,
                     customFrom: '',
                     customTo: '',
+                    windowEndMs: null,
                     count: saved.count || 50,
                     countFrom: saved.countFrom || 1,
                     countTo: saved.countTo || saved.count || 50,
