@@ -31,6 +31,7 @@ Bei Änderungen an Shared-Impact (User-Pfade, CSV-Format, Design-Tokens) REFEREN
 | KPIs, Filter, Granularität | `static/cursor-analytics/metrics.js` |
 | Charts, Legend-Persistenz, Marker-Annotationen | `static/cursor-analytics/charts.js` |
 | Projekt-Marker | `static/cursor-analytics/markers.js` |
+| Auto-Marker (Cursor Hooks) | `scripts/cursor-marker-hook.py`, `scripts/setup-marker-hooks.ps1`, `serve.py` (`/api/markers/session`) |
 | Marker-Popover (Charts/Tabellen), Anzeige-Prefs | `markers.js`, `cursor-usage-analytics.html` |
 | Analytics-UI, Live-Fetch | `cursor-usage-analytics.html` |
 | API-Proxy, Static-Serving | `serve.py` |

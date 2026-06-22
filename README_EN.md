@@ -84,22 +84,25 @@ In analytics: **Live (proxy)** or **Both**. Health: http://127.0.0.1:8060/health
 
 ## Optional: Auto-markers (Cursor Hooks)
 
-Project markers can be created automatically from Composer chats — **no third-party extension**, only native [Cursor Hooks](https://cursor.com/docs/hooks.md).
+Project markers can be created automatically from Composer chats — **no third-party extension**, only native [Cursor Hooks](https://cursor.com/docs/hooks.md). Installation is **user-local** (`~/.cursor/`), not committed to the repo.
 
-**Requirements:** `python serve.py` running; user id from `config/users.json`.
+**Requirements:** `python serve.py` running (`.\start.ps1`); user id from `config/users.json`; **`defaultUser` in hook config must match the dashboard user filter** (e.g. `info`).
 
 ```powershell
 .\scripts\setup-marker-hooks.ps1
 ```
 
-Then edit `%USERPROFILE%\.cursor\marker-hook.json` (`defaultUser`, optional `dashboardRoot` for offline fallback). Reload Cursor; check **Settings → Hooks**.
+Then check `%USERPROFILE%\.cursor\marker-hook.json` (`defaultUser`, optional `emailMap`, `dashboardRoot`). **Restart Cursor**; check **Settings → Hooks**. After a new chat, **reload the dashboard (F5)** — no live push.
 
 | Composer mode | Auto-marker |
 | ------------- | ----------- |
 | Agent | Yes |
 | Edit | Yes |
+| Chat (Cursor 3.8) | Yes |
 | Ask | No (default) |
 | Tab (inline) | No |
+
+**Manual markers** still work. Starting a **new auto-chat** closes all **open** markers for the same user — including manual ones without `end`.
 
 Works the same in the **Agents window** and the **editor** (same Composer pipeline). Details: [docs/REFERENCE.md — Auto-Marker](docs/REFERENCE.md#auto-marker-cursor-hooks-optional).
 
@@ -123,6 +126,7 @@ config/users.example.json
 samples/              # demo CSV + markers (committed)
 scripts/generate_demo_data.py
 scripts/cursor-marker-hook.py
+scripts/run-marker-hook.ps1
 scripts/setup-marker-hooks.ps1
 config/marker-hook.example.json
 cursor-usage-analytics.html

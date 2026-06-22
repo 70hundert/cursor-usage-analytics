@@ -1,5 +1,5 @@
 > Letzte Verifikation: 2026-06-22
-> Geprüfte Dateien: 14
+> Geprüfte Dateien: 18
 > Projektstand: v0.1.0 (committed)
 > Cursor Rule: `.cursor/rules/cursor-usage-dashboard.mdc`
 
@@ -103,7 +103,7 @@ Cache-Busting: Query `?v=16` auf Modul-URLs.
 | Route                                   | Methode | Zweck                                                           |
 | --------------------------------------- | ------- | --------------------------------------------------------------- |
 | `/`                                     | GET     | Static → `index.html`                                           |
-| `/health`                               | GET     | Token-Status, Port                                              |
+| `/health`                               | GET     | Token-Status, Port; optional `markerHooks: true` wenn `~/.cursor/marker-hook.json` existiert |
 | `/api/summary?user=`                    | GET     | Proxy → `cursor.com/api/usage-summary`                          |
 | `/api/events?user=&startDate=&endDate=` | GET     | Proxy → Events (paginiert, gecacht)                             |
 | `/api/events`                           | POST    | JSON-Body: `{ user, startDate?, endDate? }`                     |
@@ -335,9 +335,9 @@ Native Cursor **User-Hooks** (`~/.cursor/hooks.json`) können Projekt-Marker aut
 
 | Hook-Event | API-Action | Wirkung |
 | ---------- | ---------- | ------- |
-| `sessionStart` | `start` | Neuer Marker `id = m-cursor-{conversation_id}`; offener Marker desselben Users wird geschlossen |
-| `beforeSubmitPrompt` | `prompt` | `task` aus erster Prompt-Zeile (max. 120 Zeichen) |
-| `sessionEnd` | `end` | `end = now` |
+| `sessionStart` | `start` | Neuer Marker `id = m-cursor-{conversation_id}`; **alle offenen Marker desselben Users** werden geschlossen (`end = now`) |
+| `beforeSubmitPrompt` | `prompt` | `task` aus erster Prompt-Zeile (max. 120 Zeichen, Umlaute repariert unter Windows) |
+| `sessionEnd` | `end` | `end = now` für diesen Chat |
 
 **POST `/api/markers/session`** — Body:
 
@@ -345,21 +345,83 @@ Native Cursor **User-Hooks** (`~/.cursor/hooks.json`) können Projekt-Marker aut
 {
   "action": "start",
   "sessionId": "668320d2-...",
-  "user": "primary",
+  "user": "info",
   "project": "Cursor-Usage-Dashboard-Public",
   "task": "Optional",
-  "note": "agent",
+  "note": "Modus: Agent",
   "composerMode": "agent"
 }
 ```
 
-**Modus-Filter (Standard):** nur Composer-Modi `agent` und `edit`. **Ask** und **Tab** (Inline-Vervollständigung) erzeugen keine Marker. Cursor unterscheidet Hooks nicht nach Agents Window vs. Editor Window — beide nutzen dieselbe Composer-Pipeline.
+**Feld-Mapping (Auto-Marker):**
 
-**Setup:** `.\scripts\setup-marker-hooks.ps1` → kopiert Hook nach `%USERPROFILE%\.cursor\hooks\`, legt `marker-hook.json` an (Vorlage: `config/marker-hook.example.json`). `serve.py` muss laufen (`http://127.0.0.1:8060`). Optional: `dashboardRoot` oder `fallbackWritePath` in Config für Schreiben ohne laufenden Server.
+| Hook / Quelle | Marker-Feld |
+| ------------- | ----------- |
+| `workspace_roots[0]` (Ordnername) | `project` |
+| Erste Prompt-Zeile | `task` |
+| `composer_mode` | `note` als `Modus: Agent` / `Modus: Edit` / `Modus: Chat` |
+| `conversation_id` | `id` = `m-cursor-{uuid}` |
 
-**Config:** `defaultUser` (Dashboard-User-ID), `emailMap`, `modes`, `apiBase`. Alternative Env: `CURSOR_MARKER_DEFAULT_USER`, `CURSOR_MARKER_API_BASE`.
+**Modus-Filter (Standard in `modes`):** `agent`, `edit`, `chat`. **Ask** und **Tab** (Inline-Vervollständigung) erzeugen keine Marker. Cursor unterscheidet Hooks nicht nach Agents Window vs. Editor Window — beide nutzen dieselbe Composer-Pipeline.
 
-**Einschränkungen:** Cloud Agents (keine Session-Hooks); Hook-Fehler blockieren den Chat nicht (Exit 0).
+**Setup (Windows, empfohlen):**
+
+```powershell
+.\scripts\setup-marker-hooks.ps1
+```
+
+Installiert lokal (nicht im Git):
+
+| Datei | Zweck |
+| ----- | ----- |
+| `%USERPROFILE%\.cursor\hooks\cursor-marker-hook.py` | Hook-Logik |
+| `%USERPROFILE%\.cursor\hooks\run-marker-hook.cmd` | Wrapper (UTF-8, stdin → Python) |
+| `%USERPROFILE%\.cursor\hooks.json` | Cursor Hook-Registrierung |
+| `%USERPROFILE%\.cursor\marker-hook.json` | Config (Vorlage: `config/marker-hook.example.json`) |
+
+Voraussetzungen: `serve.py` läuft (`http://127.0.0.1:8060`); Cursor neu laden; Hooks unter **Settings → Hooks** prüfen. Dashboard nach neuem Chat **neu laden (F5)** — kein Live-Push.
+
+**Beispiel-Config** (`~/.cursor/marker-hook.json`):
+
+```json
+{
+  "apiBase": "http://127.0.0.1:8060",
+  "defaultUser": "info",
+  "emailMap": { "you@example.com": "info" },
+  "modes": ["agent", "edit", "chat"],
+  "pythonPath": "C:/path/to/venv/Scripts/python.exe",
+  "dashboardRoot": "C:/path/to/cursor-usage-analytics",
+  "fallbackWritePath": null
+}
+```
+
+| Config-Schlüssel | Bedeutung |
+| ---------------- | --------- |
+| `defaultUser` | Dashboard-User-ID aus `config/users.json` (**Pflicht**, sonst falscher User-Filter) |
+| `emailMap` | Cursor-E-Mail → Dashboard-User |
+| `modes` | Erlaubte `composer_mode`-Werte |
+| `apiBase` | `serve.py`-URL; Alternative Env: `CURSOR_MARKER_API_BASE` |
+| `pythonPath` | Python für Hook (Setup setzt venv-Pfad) |
+| `dashboardRoot` | Offline-Fallback: schreibt nach `{dashboardRoot}/data/project-markers.json` wenn API down |
+| `fallbackWritePath` | Alternativer JSON-Pfad für Offline-Fallback |
+
+**Manuelle + Auto-Marker parallel:** Ja — unterschiedliche IDs (`m-uuid` vs. `m-cursor-{session}`). Beim **Start eines neuen Auto-Chats** werden jedoch **alle offenen Marker desselben Users** geschlossen — auch manuelle ohne `end`. Manuelle Marker mit gesetztem `end` sind unkritisch.
+
+**Chat-Wechsel:** Pro Chat ein Marker. Wechsel zu neuem Chat → vorheriger offener Marker wird geschlossen. Rückkehr zu altem Chat → meist **kein** neues `sessionStart`; der alte Marker bleibt geschlossen, neue Events dort werden nicht zugeordnet (manuell `end` leeren oder neuen Marker setzen).
+
+**Troubleshooting:**
+
+| Symptom | Prüfen |
+| ------- | ------ |
+| Kein neuer Marker | `serve.py` läuft? `defaultUser` = Dashboard-Filter? Cursor neu gestartet? |
+| Hook-Fehler | **View → Output → Hooks** in Cursor |
+| Seite lädt nicht | Mehrere `serve.py` auf Port 8060 → `.\stop.ps1` dann `.\start.ps1` |
+| Umlaute falsch (`Ã¤`) | Setup erneut ausführen; alte Marker manuell korrigieren |
+| `invalid stdin JSON` | Setup erneut — nutzt `run-marker-hook.cmd`, nicht PowerShell `-File` allein |
+
+**Einschränkungen:** Cloud Agents (keine Session-Hooks); Hook-Fehler blockieren den Chat nicht (Exit 0); nur ein offenes Intervall pro User gleichzeitig.
+
+**Repo-Dateien:** `scripts/cursor-marker-hook.py`, `scripts/setup-marker-hooks.ps1`, `scripts/run-marker-hook.ps1`, `config/marker-hook.example.json`, `POST /api/markers/session` in `serve.py`. Beim Setup wird zusätzlich `%USERPROFILE%\.cursor\hooks\run-marker-hook.cmd` erzeugt (Windows-Wrapper, nicht im Git).
 
 ### Normalisiertes Event (Analytics)
 

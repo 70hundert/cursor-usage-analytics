@@ -86,22 +86,25 @@ Im Analytics-Dashboard: **Live (Proxy)** oder **Beides**. Health: http://127.0.0
 
 ## Optional: Auto-Marker (Cursor Hooks)
 
-Projekt-Marker können automatisch aus Composer-Chats erzeugt werden — **ohne Drittanbieter-Extension**, nur mit nativen [Cursor Hooks](https://cursor.com/docs/hooks.md).
+Projekt-Marker können automatisch aus Composer-Chats erzeugt werden — **ohne Drittanbieter-Extension**, nur mit nativen [Cursor Hooks](https://cursor.com/docs/hooks.md). Installation ist **User-lokal** (`~/.cursor/`), nicht Teil des Git-Repos.
 
-**Voraussetzungen:** `python serve.py` läuft, User-ID in `config/users.json` bekannt.
+**Voraussetzungen:** `python serve.py` läuft (`.\start.ps1`); User-ID in `config/users.json` bekannt; **`defaultUser` in der Hook-Config muss zum Dashboard-Filter passen** (z. B. `info`).
 
 ```powershell
 .\scripts\setup-marker-hooks.ps1
 ```
 
-Danach `%USERPROFILE%\.cursor\marker-hook.json` anpassen (`defaultUser`, optional `dashboardRoot` für Offline-Fallback). Cursor neu laden; Hooks unter **Settings → Hooks** prüfen.
+Danach `%USERPROFILE%\.cursor\marker-hook.json` prüfen (`defaultUser`, optional `emailMap`, `dashboardRoot`). Cursor **neu starten**; Hooks unter **Settings → Hooks** prüfen. Nach neuem Chat Dashboard **F5** (kein Live-Push).
 
 | Composer-Modus | Auto-Marker |
 | -------------- | ----------- |
 | Agent | Ja |
 | Edit | Ja |
+| Chat (Cursor 3.8) | Ja |
 | Ask | Nein (Standard) |
 | Tab (Inline) | Nein |
+
+**Manuelle Marker** weiterhin möglich. Beim Start eines **neuen Auto-Chats** werden jedoch alle **offenen** Marker desselben Users geschlossen — auch manuelle ohne `end`.
 
 Gilt in **Agents Window** und **Editor** gleichermaßen (dieselbe Composer-Pipeline). Details: [docs/REFERENCE.md — Auto-Marker](docs/REFERENCE.md#auto-marker-cursor-hooks-optional).
 
@@ -125,6 +128,7 @@ config/users.example.json   # nach config/users.json kopieren
 samples/                    # Demo-CSV + Marker (committed)
 scripts/generate_demo_data.py
 scripts/cursor-marker-hook.py
+scripts/run-marker-hook.ps1
 scripts/setup-marker-hooks.ps1
 config/marker-hook.example.json
 cursor-usage-analytics.html

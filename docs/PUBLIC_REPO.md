@@ -19,6 +19,8 @@ cd cursor-usage-analytics
 
 **Demo out-of-the-box:** `users.example.json` enthält einen Demo-User mit `./samples/usage-events-demo.csv`. Projekt-Marker: `samples/project-markers-demo.json` wird beim ersten `python serve.py` nach `data/project-markers.json` kopiert, falls diese Datei noch fehlt.
 
+**Optional — Auto-Marker:** `.\scripts\setup-marker-hooks.ps1` (Cursor User-Hooks, nur lokal unter `%USERPROFILE%\.cursor\`). Siehe [README.md](README.md#optional-auto-marker-cursor-hooks).
+
 ## Lokale Dateien (nicht im Git)
 
 Diese Dateien sind in `.gitignore` und bleiben nur auf deinem Rechner:
@@ -26,6 +28,8 @@ Diese Dateien sind in `.gitignore` und bleiben nur auf deinem Rechner:
 - `config/users.json`
 - `docs/ROADMAP.md`, `docs/PROMPT-feature-reference.md`, `docs/VORLAGE-PROMPT-feature-reference.md`
 - `.cursor/rules/feature-reference-workflow.mdc`
+
+**Auto-Marker (optional, außerhalb des Repos):** `%USERPROFILE%\.cursor\hooks.json`, `marker-hook.json`, `hooks\` — werden von `setup-marker-hooks.ps1` angelegt, nicht committed.
 
 ## Releases
 

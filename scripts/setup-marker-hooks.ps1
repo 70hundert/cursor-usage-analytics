@@ -116,4 +116,4 @@ Write-Host "Naechste Schritte:"
 Write-Host ('  1. ' + $configTarget + ' pruefen (defaultUser, pythonPath, dashboardRoot)')
 Write-Host "  2. python serve.py starten (Port 8060)"
 Write-Host "  3. Cursor komplett neu laden (Hooks unter Settings - Hooks pruefen)"
-Write-Host "  4. Neuer Composer-Chat im Agent- oder Edit-Modus, dann Dashboard neu laden"
+Write-Host "  4. Neuer Composer-Chat (Agent-, Edit- oder Chat-Modus), dann Dashboard neu laden (F5)"
