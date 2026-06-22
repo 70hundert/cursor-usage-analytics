@@ -72,6 +72,44 @@
         }
     }
 
+    const COMPOSER_MODES = Object.freeze({
+        agent: 'markerModeAgents',
+        edit: 'markerModeEditor',
+    });
+
+    const LEGACY_MODE_NOTE_RE = /^Modus:\s*(Agent|Edit)\b/i;
+
+    function normalizeComposerMode(raw, note = '') {
+        const mode = String(raw ?? '').trim().toLowerCase();
+        if (mode === 'agent' || mode === 'edit' || mode === 'chat') {
+            return mode;
+        }
+        const noteMatch = String(note ?? '').trim().match(LEGACY_MODE_NOTE_RE);
+        if (noteMatch) {
+            return noteMatch[1].toLowerCase() === 'edit' ? 'edit' : 'agent';
+        }
+        return null;
+    }
+
+    function resolveComposerMode(marker) {
+        if (!marker || typeof marker !== 'object') {
+            return 'agent';
+        }
+        const mode = normalizeComposerMode(marker.composerMode, marker.note);
+        return mode === 'edit' ? 'edit' : 'agent';
+    }
+
+    function composerModeLabel(mode) {
+        const normalized = normalizeComposerMode(mode);
+        if (normalized === 'edit') {
+            return t(COMPOSER_MODES.edit);
+        }
+        if (normalized === 'agent' || normalized === 'chat') {
+            return t(COMPOSER_MODES.agent);
+        }
+        return '—';
+    }
+
     function normalizeMarker(raw) {
         if (!raw || typeof raw !== 'object') {
             return null;
@@ -92,18 +130,24 @@
             }
         }
         const user = String(raw.user ?? 'info').trim() || 'info';
+        const note = String(raw.note ?? '').trim();
+        const composerMode = normalizeComposerMode(raw.composerMode, note);
         const now = new Date().toISOString();
-        return {
+        const marker = {
             id: String(raw.id || generateId()),
             user,
             start: start.toISOString(),
             end,
             project,
             task: String(raw.task ?? '').trim(),
-            note: String(raw.note ?? '').trim(),
+            note,
             createdAt: raw.createdAt || now,
             updatedAt: raw.updatedAt || now,
         };
+        if (composerMode) {
+            marker.composerMode = composerMode;
+        }
+        return marker;
     }
 
     function migrateLegacyStore(legacy) {
@@ -711,11 +755,14 @@
             ? `<div class="marker-chart-popover__row">${t('popoverNote')}: <strong>${escapeHtml(marker.note)}</strong></div>`
             : '';
         const userLabel = marker.user === 'all' ? t('usersAll') : escapeHtml(marker.user);
+        const modeLabel = composerModeLabel(resolveComposerMode(marker));
+        const modeRow = `<div class="marker-chart-popover__row">${t('popoverComposerMode')}: <strong>${escapeHtml(modeLabel)}</strong></div>`;
 
         return `
             <div class="marker-chart-popover__title">${escapeHtml(marker.project)}</div>
             ${taskRow}
             <div class="marker-chart-popover__row">${t('users')}: <strong>${userLabel}</strong></div>
+            ${modeRow}
             <div class="marker-chart-popover__row">${t('from')}: <strong>${formatPopoverDate(marker.start, formatters)}</strong></div>
             <div class="marker-chart-popover__row">${t('colEnd')}: <strong>${endLabel}</strong></div>
             ${noteRow}
@@ -1265,6 +1312,10 @@
         computeIntervalRows,
         parseTaskCategory,
         MARKER_CATEGORY_SUGGESTIONS,
+        COMPOSER_MODES,
+        normalizeComposerMode,
+        resolveComposerMode,
+        composerModeLabel,
         UNMARKED_DIMENSION_KEY,
         aggregateEventsByMarkerDimension,
         toChartAnnotations,

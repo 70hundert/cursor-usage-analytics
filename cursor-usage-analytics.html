@@ -493,6 +493,39 @@
             resize: vertical;
         }
 
+        .marker-form__mode {
+            border: 0;
+            margin: 0 0 0.55rem;
+            padding: 0;
+        }
+
+        .marker-form__mode legend {
+            font-size: 0.78rem;
+            color: var(--muted);
+            margin-bottom: 0.35rem;
+        }
+
+        .marker-form__mode-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .marker-form__mode-option {
+            display: inline-flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.85rem;
+            color: var(--text);
+            margin-bottom: 0;
+            cursor: pointer;
+        }
+
+        .marker-form__mode-option input {
+            margin: 0;
+        }
+
         .marker-form__actions {
             display: flex;
             gap: 0.5rem;
@@ -1453,6 +1486,7 @@
                             <th data-sort-col="end" data-i18n="colEnd">Bis</th>
                             <th data-sort-col="user" data-i18n="users">Benutzer</th>
                             <th data-sort-col="project" data-i18n="project">Projekt</th>
+                            <th data-sort-col="composerMode" data-i18n="colComposerMode">Modus</th>
                             <th data-sort-col="task" data-i18n="task">Aufgabe</th>
                             <th data-sort-col="events" data-i18n="events">Events</th>
                             <th class="usage-table__total" data-sort-col="total" data-i18n="totalTokens">Total Tokens
@@ -1497,6 +1531,19 @@
                 <label><span data-i18n="project">Projekt</span>
                     <input type="text" id="marker-project" required maxlength="120">
                 </label>
+                <fieldset class="marker-form__mode" id="marker-mode-group">
+                    <legend data-i18n="markerCursorMode">Cursor-Modus</legend>
+                    <div class="marker-form__mode-options">
+                        <label class="marker-form__mode-option">
+                            <input type="radio" name="marker-composer-mode" value="agent" required>
+                            <span data-i18n="markerModeAgents">Agents</span>
+                        </label>
+                        <label class="marker-form__mode-option">
+                            <input type="radio" name="marker-composer-mode" value="edit" required>
+                            <span data-i18n="markerModeEditor">Editor</span>
+                        </label>
+                    </div>
+                </fieldset>
                 <label><span data-i18n="taskOptional">Aufgabe (optional)</span>
                     <input type="text" id="marker-task" maxlength="120" list="marker-category-suggestions"
                         data-i18n-placeholder="markerTaskPlaceholder">
@@ -2192,6 +2239,11 @@
                 ? api.toDatetimeLocalValue(marker.end)
                 : '';
 
+            const composerMode = api.resolveComposerMode(marker);
+            document.querySelectorAll('input[name="marker-composer-mode"]').forEach((input) => {
+                input.checked = input.value === composerMode;
+            });
+
             document.getElementById('marker-modal-title').textContent = marker
                 ? t('editMarker')
                 : t('setProjectMarker');
@@ -2248,6 +2300,12 @@
                 return;
             }
 
+            const modeInput = document.querySelector('input[name="marker-composer-mode"]:checked');
+            if (!modeInput) {
+                document.getElementById('marker-mode-group')?.reportValidity?.();
+                return;
+            }
+
             const existing = id ? api.getStore().markers.find((m) => m.id === id) : null;
             api.upsertMarker({
                 id: id || undefined,
@@ -2255,6 +2313,7 @@
                 start,
                 end,
                 project: document.getElementById('marker-project').value,
+                composerMode: modeInput.value,
                 task: document.getElementById('marker-task').value,
                 note: document.getElementById('marker-note').value,
                 createdAt: existing?.createdAt,
@@ -2302,6 +2361,7 @@
         }
 
         function sortMarkersForTable(rows) {
+            const api = getMarkersApi();
             const dir = markerSortDir === 'asc' ? 1 : -1;
             return [...rows].sort((a, b) => {
                 let av;
@@ -2318,6 +2378,10 @@
                     case 'project':
                         av = a.marker.project || '';
                         bv = b.marker.project || '';
+                        break;
+                    case 'composerMode':
+                        av = api?.resolveComposerMode(a.marker) || '';
+                        bv = api?.resolveComposerMode(b.marker) || '';
                         break;
                     case 'task':
                         av = a.marker.task || '';
@@ -2405,7 +2469,7 @@
             const badge = renderMarkerProjectBadge(group.label, colorMap);
             const markerLabel = t('markerLabel');
             return `<tr class="usage-table__group-header usage-table__group-header--toggle${collapsedClass}" data-marker-group-key="${safeKey}" role="button" tabindex="0">
-                    <td colspan="5"><span class="usage-table__group-chevron" aria-hidden="true"></span>${badge} · ${numberFmt.format(group.stats.count)} ${markerLabel}</td>
+                    <td colspan="6"><span class="usage-table__group-chevron" aria-hidden="true"></span>${badge} · ${numberFmt.format(group.stats.count)} ${markerLabel}</td>
                     <td>${numberFmt.format(group.stats.calls)}</td>
                     <td class="usage-table__total">${numberFmt.format(group.stats.totalTokens)}</td>
                     <td>${numberFmt.format(group.stats.outputTokens)}</td>
@@ -2425,11 +2489,13 @@
                 ? ` data-marker-group-member="${String(groupKey).replace(/"/g, '&quot;')}"`
                 : '';
             const hiddenAttr = collapsed ? ' hidden' : '';
+            const modeLabel = api?.composerModeLabel(api.resolveComposerMode(marker)) ?? '—';
             return `<tr class="usage-table__row--clickable usage-table__row--group-member" data-marker-id="${marker.id}" style="--project-color: ${color}"${memberAttr}${hiddenAttr}>
                         <td>${dateTimeFmt.format(new Date(marker.start))}</td>
                         <td>${endLabel}</td>
                         <td class="usage-table__user usage-table__user--${userId}">${userId}</td>
                         <td>${renderMarkerProjectBadge(marker.project, colorMap)}</td>
+                        <td>${modeLabel}</td>
                         <td>${marker.task || '—'}</td>
                         <td>${numberFmt.format(stats.calls)}</td>
                         <td class="usage-table__total">${numberFmt.format(stats.totalTokens)}</td>

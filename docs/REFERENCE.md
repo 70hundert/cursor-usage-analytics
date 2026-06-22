@@ -130,9 +130,9 @@ Event-Cache: In-Memory, TTL `CURSOR_EVENTS_CACHE_TTL` (Default 120 s), Key `user
 | Section             | ID / Selektor                                                      | Inhalt                                                                                                                                                   |
 | ------------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Toolbar             | `#main-toolbar`                                                    | Datenquelle, User, CSV, Live, Export, Marker Export/Import                                                                                               |
-| Projekt-Marker      | `#marker-card`, `#marker-table-body`, `#marker-charts-section`     | Intervall-Statistik, Breakdown-Charts (Projekt/Kategorie), optionaler Hover-Popover (`[data-marker-table-popover]`)                                    |
+| Projekt-Marker      | `#marker-card`, `#marker-table-body`, `#marker-charts-section`     | Intervall-Statistik, Spalte **Modus** (`composerMode`), Breakdown-Charts (Projekt/Kategorie), optionaler Hover-Popover (`[data-marker-table-popover]`) |
 | Projekt-Filter      | `#project-filter`                                                  | Filter für Einzelanfragen-Tabelle                                                                                                                        |
-| Marker-Dialog       | `#marker-modal`, `#marker-form`                                    | CRUD (Von/Bis/Projekt/Aufgabe/Notiz)                                                                                                                     |
+| Marker-Dialog       | `#marker-modal`, `#marker-form`                                    | CRUD (Von/Bis/Projekt/**Cursor-Modus** Agents/Editor, Aufgabe/Notiz)                                                                                     |
 | Zeitraum / Anfragen | `#date-range-panel`                                                | Modus-Umschalter (`data-selection-mode`), Zeitraum-Presets (`#time-range-group`), Anfragen-Presets (`#count-range-group`, `data-count`), Custom datetime |
 | Granularität        | `#granularity-select` (nur Zeitraum-Modus)                         | event / quarter / hour / day / week / month                                                                                                              |
 | Drop-Zone           | `#drop-zone`                                                       | Drag-and-Drop CSV (wird nach Load versteckt)                                                                                                             |
@@ -166,6 +166,7 @@ Event-Cache: In-Memory, TTL `CURSOR_EVENTS_CACHE_TTL` (Default 120 s), Key `user
 | `#status-line`                                    | `<p>`           | Haupt-Status                                                     |
 | `#load-hint`                                      | `<p>`           | Lade-Details                                                     |
 | `#marker-add-overview` / `[data-marker-add]`      | Button          | Marker-Dialog (aktuelle Datum/Uhrzeit als Start)                 |
+| `input[name="marker-composer-mode"]`              | Radio           | Pflicht: Cursor-Modus **Agents** (`agent`) / **Editor** (`edit`) |
 | `#marker-export-btn`, `#marker-import-input`      | Button / File   | Marker JSON Export/Import                                        |
 | `[data-marker-table-popover]`                     | Checkbox        | Tabellen-Hover-Popover ein/aus (3× synchron: Teuerste Events, Einzelanfragen, Projekt-Marker) |
 | `[data-marker-display-host]`                      | Container       | Chart-Marker-Steuerung (Anzeigen, Beschriftungen, Projekt-Filter) |
@@ -278,6 +279,7 @@ Marker sind **keine CSV-Daten** — manuell gesetzte Metadaten zu Zeitintervalle
       "project": "Cursor-Usage-Dashboard",
       "task": "REFERENCE.md",
       "note": "",
+      "composerMode": "agent",
       "createdAt": "...",
       "updatedAt": "..."
     }
@@ -285,8 +287,9 @@ Marker sind **keine CSV-Daten** — manuell gesetzte Metadaten zu Zeitintervalle
 }
 ```
 
-- `**end: null`:** Intervall `[start, nächster Marker)` oder bis Filter-Ende (in UI mit `*` gekennzeichnet).
-- `**user`:** `info` | `slope` | `all`
+- **`end: null`:** Intervall `[start, nächster Marker)` oder bis Filter-Ende (in UI mit `*` gekennzeichnet).
+- **`user`:** `info` | `slope` | `all`
+- **`composerMode`:** Cursor-Composer-Modus — `"agent"` (UI: **Agents**) | `"edit"` (UI: **Editor**) | `"chat"` (nur Auto-Marker). Im Marker-Dialog Pflicht-Radio (Agents/Editor). Legacy-Marker ohne Feld: Fallback aus `note` (`Modus: Agent` / `Modus: Edit`), sonst Default **Agents**. Hilfsfunktionen: `normalizeComposerMode`, `resolveComposerMode`, `composerModeLabel` in `markers.js`.
 - Statistik (`computeStats`): Events im Intervall — nicht persistiert.
 
 **Chart-Annotationen:** Overview + Cumulative nutzen Kategorie-Achse → Bucket-Index-Mapping via `sortKey`. Hover auf Annotationen öffnet `#marker-chart-popover` (`showChartPopover`). Timeline-Charts ergänzen den Chart.js-Tooltip um Projekt, Aufgabe und Notiz (`markerTooltipLines` in `charts.js`).
@@ -300,7 +303,7 @@ Gemeinsame UI-Komponente in `markers.js` (`buildPopoverHtml`, `#marker-chart-pop
 | **Charts** | Hover/Klick auf Marker-Annotation (Overview, Cumulative, Timeline) | `showChartPopover()` |
 | **Tabellen** | Hover auf `tr[data-marker-id]` in `#expensive-table-body`, `#events-table-body`, `#marker-table-body` | `showTableMarkerPopover()` via `mountMarkerTableHover()` (Analytics-HTML) |
 
-**Popover-Inhalt:** Projekt, Aufgabe, Benutzer, Von/Bis, Notiz (falls gesetzt), Intervall-Statistik (Events, Tokens, Kosten), Button „Bearbeiten“ → `#marker-modal`.
+**Popover-Inhalt:** Projekt, Aufgabe, Benutzer, **Modus** (`composerMode`), Von/Bis, Notiz (falls gesetzt), Intervall-Statistik (Events, Tokens, Kosten), Button „Bearbeiten“ → `#marker-modal`.
 
 **Tabellen abschalten:** Checkbox `[data-marker-table-popover]` (i18n: `showTableMarkerPopover`) — drei synchronisierte Instanzen in den Toolbars von Teuerste Events, Einzelne Anfragen und Projekt-Marker. Persistenz: `cursor-marker-chart-display` → Feld `showTablePopover` (Default `true`). Bei Deaktivierung wird ein sichtbarer Popover sofort geschlossen.
 
@@ -316,14 +319,15 @@ Marker sind manuell — ohne einheitliche Benennung lassen sich Projekt- und Kat
 
 | Feld | Bedeutung | Beispiele |
 | ---- | --------- | --------- |
-| **`project`** | Repo, Modul, Cursor-Modus oder Projektphase | `Cursor-Usage-Dashboard`, `Grow-Tagebuch/API`, `Agent`, `Editor` |
+| **`project`** | Repo, Modul oder Projektphase | `Cursor-Usage-Dashboard`, `Grow-Tagebuch/API` |
+| **`composerMode`** | Cursor-Modus (Agents vs. Editor) | `agent`, `edit` — Pflicht im Marker-Dialog; Auto-Marker zusätzlich `chat` |
 | **`task`** | Kategorie + Kurzbeschreibung (`Kategorie: Aufgabe`) | `Feature: Marker-Charts`, `Bugfix: Login-Timeout`, `Analyse: fullEntryService.js` |
-| **`note`** | Freitext, Scope-Hinweise, Effizienz; Auto-Marker: `Modus: Agent` / `Modus: Edit` / `Modus: Chat` | `nur 2 Dateien`, `Modus: Agent` |
+| **`note`** | Freitext, Scope-Hinweise, Effizienz; Auto-Marker spiegelt Modus zusätzlich | `nur 2 Dateien`, `Modus: Agent` |
 | **`start` / `end`** | Arbeitsintervall | Bei Task-Start setzen, bei Task-Ende `end` setzen oder nächsten Marker starten |
 
 **Kategorie-Prefix in `task`:** Parser `parseTaskCategory()` erkennt Präfixe vor `:`, `-`, `–` oder `—`. Empfohlene Werte: `Bugfix`, `Feature`, `Refactoring`, `Analyse`, `Dokumentation`, `Suche`. Ohne Prefix → Gruppe „Ohne Kategorie“ in den Charts.
 
-**Modus (Agent vs. Editor):** Cursor exportiert kein Agent/Editor-Feld in Events. Modus als **`project`** markieren (z. B. `Agent`, `Editor`) oder in `note` festhalten — dann über Marker-Statistik und Projekt-Charts auswertbar.
+**Modus (Agents vs. Editor):** Cursor exportiert kein Agent/Editor-Feld in Usage-Events. Stattdessen **`composerMode`** am Marker setzen (Radio im `#marker-modal`, Spalte **Modus** in `#marker-table`, Popover). Auswertung über Marker-Statistik und Tabellenfilter; kein separates Modus-Chart.
 
 **Workflow:** Vor größeren Aufgaben Marker setzen (`Marker setzen` / Overview-Chart), nach Abschluss `end` setzen. 2–3 Wochen konsequent → belastbare Vergleiche (Modus, Kategorie, Projektphase).
 
@@ -359,7 +363,7 @@ Native Cursor **User-Hooks** (`~/.cursor/hooks.json`) können Projekt-Marker aut
 | ------------- | ----------- |
 | `workspace_roots[0]` (Ordnername) | `project` |
 | Erste Prompt-Zeile | `task` |
-| `composer_mode` | `note` als `Modus: Agent` / `Modus: Edit` / `Modus: Chat` |
+| `composer_mode` | `composerMode` (`agent` / `edit` / `chat`) und `note` als `Modus: Agent` / `Modus: Edit` / `Modus: Chat` |
 | `conversation_id` | `id` = `m-cursor-{uuid}` |
 
 **Modus-Filter (Standard in `modes`):** `agent`, `edit`, `chat`. **Ask** und **Tab** (Inline-Vervollständigung) erzeugen keine Marker. Cursor unterscheidet Hooks nicht nach Agents Window vs. Editor Window — beide nutzen dieselbe Composer-Pipeline.

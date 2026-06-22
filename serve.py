@@ -235,6 +235,20 @@ def _truncate_task(text: str, max_len: int = 120) -> str:
 
 
 _PLACEHOLDER_TASKS = frozenset({"", "Neuer Chat", "New chat"})
+_VALID_COMPOSER_MODES = frozenset({"agent", "edit", "chat"})
+
+
+def _normalize_composer_mode(value: str) -> str | None:
+    mode = str(value or "").strip().lower()
+    if mode in _VALID_COMPOSER_MODES:
+        return mode
+    return None
+
+
+def _apply_composer_mode(marker: dict[str, Any], composer_mode: str) -> None:
+    normalized = _normalize_composer_mode(composer_mode)
+    if normalized:
+        marker["composerMode"] = normalized
 
 
 def _find_marker(markers: list[dict[str, Any]], marker_id: str) -> dict[str, Any] | None:
@@ -272,6 +286,7 @@ def _apply_marker_session(
     project = str(body.get("project") or "").strip()
     note = str(body.get("note") or "").strip()
     task = _truncate_task(str(body.get("task") or ""))
+    composer_mode = str(body.get("composerMode") or "").strip().lower()
 
     if action not in {"start", "prompt", "end"}:
         return store, {"error": "Unbekannte action"}
@@ -300,44 +315,47 @@ def _apply_marker_session(
                 existing["note"] = note
             if task and existing.get("task") in _PLACEHOLDER_TASKS:
                 existing["task"] = task
+            _apply_composer_mode(existing, composer_mode)
         else:
-            markers.append(
-                {
-                    "id": marker_id,
-                    "user": user,
-                    "start": now,
-                    "end": None,
-                    "project": project,
-                    "task": task or "Neuer Chat",
-                    "note": note,
-                    "createdAt": now,
-                    "updatedAt": now,
-                }
-            )
+            marker = {
+                "id": marker_id,
+                "user": user,
+                "start": now,
+                "end": None,
+                "project": project,
+                "task": task or "Neuer Chat",
+                "note": note,
+                "createdAt": now,
+                "updatedAt": now,
+            }
+            _apply_composer_mode(marker, composer_mode)
+            markers.append(marker)
 
     elif action == "prompt":
         existing = _find_marker(markers, marker_id)
         if not existing:
             if not project:
                 return store, {"error": "Marker nicht gefunden und project fehlt"}
-            markers.append(
-                {
-                    "id": marker_id,
-                    "user": user,
-                    "start": now,
-                    "end": None,
-                    "project": project,
-                    "task": task or "Neuer Chat",
-                    "note": note,
-                    "createdAt": now,
-                    "updatedAt": now,
-                }
-            )
+            marker = {
+                "id": marker_id,
+                "user": user,
+                "start": now,
+                "end": None,
+                "project": project,
+                "task": task or "Neuer Chat",
+                "note": note,
+                "createdAt": now,
+                "updatedAt": now,
+            }
+            _apply_composer_mode(marker, composer_mode)
+            markers.append(marker)
         elif task and existing.get("task") in _PLACEHOLDER_TASKS:
             existing["task"] = task
             existing["updatedAt"] = now
             if note and not existing.get("note"):
                 existing["note"] = note
+            if not existing.get("composerMode"):
+                _apply_composer_mode(existing, composer_mode)
 
     elif action == "end":
         existing = _find_marker(markers, marker_id)
