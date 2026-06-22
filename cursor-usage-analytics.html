@@ -1443,6 +1443,10 @@
                     </div>
                 </div>
                 <div class="toolbar-group">
+                    <button type="button" class="btn" id="events-groups-toggle-all" disabled
+                        aria-pressed="false">Alle Gruppen schließen</button>
+                </div>
+                <div class="toolbar-group">
                     <span class="toolbar-label" data-i18n="perPage">Pro Seite</span>
                     <div class="toolbar-group">
                         <button type="button" class="btn" data-events-page-size="10">10</button>
@@ -1498,6 +1502,10 @@
                     <select class="project-filter-select" id="marker-project-filter" aria-label="Marker-Projekt-Filter">
                         <option value="all" data-i18n="allProjects">Alle Projekte</option>
                     </select>
+                </div>
+                <div class="toolbar-group">
+                    <button type="button" class="btn" id="marker-groups-toggle-all" disabled
+                        aria-pressed="false">Alle Gruppen schließen</button>
                 </div>
                 <div class="toolbar-group">
                     <label class="toolbar-label">
@@ -2812,6 +2820,7 @@
                             : emptyMessage;
                 }
                 syncMarkerSortHeaders();
+                syncMarkerGroupsToggleButton();
                 return;
             }
 
@@ -2841,6 +2850,7 @@
                 })} ${t('markerTableFocusHint')}`;
             }
             syncMarkerSortHeaders();
+            syncMarkerGroupsToggleButton();
         }
 
         function initMarkerCategoryDatalist() {
@@ -2875,6 +2885,10 @@
             document.getElementById('marker-form')?.addEventListener('submit', handleMarkerFormSubmit);
             document.getElementById('marker-cancel-btn')?.addEventListener('click', closeMarkerModal);
             document.getElementById('marker-modal-backdrop')?.addEventListener('click', closeMarkerModal);
+
+            document.getElementById('marker-groups-toggle-all')?.addEventListener('click', () => {
+                toggleAllMarkerGroups();
+            });
 
             document.getElementById('marker-project-filter')?.addEventListener('change', (event) => {
                 markerTableProjectFilter = event.target.value;
@@ -2919,9 +2933,10 @@
                     }
                     document
                         .querySelectorAll(`[data-marker-group-member="${CSS.escape(key)}"]`)
-                        .forEach((member) => {
-                            member.hidden = collapsedMarkerGroups.has(key);
-                        });
+                    .forEach((member) => {
+                        member.hidden = collapsedMarkerGroups.has(key);
+                    });
+                    syncMarkerGroupsToggleButton();
                     return;
                 }
 
@@ -3045,6 +3060,10 @@
                 exportFilteredEventsJson();
             });
 
+            document.getElementById('events-groups-toggle-all')?.addEventListener('click', () => {
+                toggleAllEventGroups();
+            });
+
             document.querySelectorAll('[data-events-group]').forEach((btn) => {
                 btn.addEventListener('click', () => {
                     eventsGroupMode = btn.dataset.eventsGroup;
@@ -3123,6 +3142,7 @@
                     .forEach((member) => {
                         member.hidden = collapsedEventGroups.has(key);
                     });
+                syncEventGroupsToggleButton();
             });
         }
 
@@ -3525,6 +3545,8 @@
             syncChartHeightLabels();
             syncEventsSortHeaders();
             syncMarkerSortHeaders();
+            syncEventGroupsToggleButton();
+            syncMarkerGroupsToggleButton();
             syncMarkerFocusUi();
             const locale = getI18n()?.getLocale() || 'de';
             document.querySelectorAll('[data-locale]').forEach((btn) => {
@@ -3562,6 +3584,88 @@
         const collapsedMarkerGroups = new Set();
         let markerSortColumn = 'start';
         let markerSortDir = 'asc';
+
+        function getTableGroupHeaderKeys(tableSelector, keyAttr) {
+            return [...document.querySelectorAll(`${tableSelector} .usage-table__group-header--toggle[${keyAttr}]`)]
+                .map((row) => row.getAttribute(keyAttr))
+                .filter(Boolean);
+        }
+
+        function setAllTableGroupsCollapsed({ tableSelector, keyAttr, memberAttr, collapsedSet }) {
+            const keys = getTableGroupHeaderKeys(tableSelector, keyAttr);
+            if (!keys.length) {
+                return;
+            }
+            const collapse = !keys.every((key) => collapsedSet.has(key));
+            for (const key of keys) {
+                if (collapse) {
+                    collapsedSet.add(key);
+                } else {
+                    collapsedSet.delete(key);
+                }
+                const header = document.querySelector(
+                    `${tableSelector} .usage-table__group-header--toggle[${keyAttr}="${CSS.escape(key)}"]`
+                );
+                header?.classList.toggle('usage-table__group-header--collapsed', collapse);
+                document
+                    .querySelectorAll(`${tableSelector} [${memberAttr}="${CSS.escape(key)}"]`)
+                    .forEach((member) => {
+                        member.hidden = collapse;
+                    });
+            }
+        }
+
+        function syncTableGroupsToggleButton(btn, tableSelector, keyAttr, collapsedSet) {
+            if (!btn) {
+                return;
+            }
+            const keys = getTableGroupHeaderKeys(tableSelector, keyAttr);
+            btn.disabled = keys.length === 0;
+            if (!keys.length) {
+                return;
+            }
+            const allCollapsed = keys.every((key) => collapsedSet.has(key));
+            btn.textContent = allCollapsed ? t('expandAllGroups') : t('collapseAllGroups');
+            btn.setAttribute('aria-pressed', allCollapsed ? 'true' : 'false');
+        }
+
+        function syncEventGroupsToggleButton() {
+            syncTableGroupsToggleButton(
+                document.getElementById('events-groups-toggle-all'),
+                '.usage-table--events',
+                'data-group-key',
+                collapsedEventGroups
+            );
+        }
+
+        function syncMarkerGroupsToggleButton() {
+            syncTableGroupsToggleButton(
+                document.getElementById('marker-groups-toggle-all'),
+                '.usage-table--markers',
+                'data-marker-group-key',
+                collapsedMarkerGroups
+            );
+        }
+
+        function toggleAllEventGroups() {
+            setAllTableGroupsCollapsed({
+                tableSelector: '.usage-table--events',
+                keyAttr: 'data-group-key',
+                memberAttr: 'data-group-member',
+                collapsedSet: collapsedEventGroups,
+            });
+            syncEventGroupsToggleButton();
+        }
+
+        function toggleAllMarkerGroups() {
+            setAllTableGroupsCollapsed({
+                tableSelector: '.usage-table--markers',
+                keyAttr: 'data-marker-group-key',
+                memberAttr: 'data-marker-group-member',
+                collapsedSet: collapsedMarkerGroups,
+            });
+            syncMarkerGroupsToggleButton();
+        }
 
         function allCsvEvents() {
             const { USER_ORDER } = getParser();
@@ -4401,6 +4505,7 @@
                     paginationEl.hidden = true;
                 }
                 syncEventsSortHeaders();
+                syncEventGroupsToggleButton();
                 return;
             }
 
@@ -4449,6 +4554,7 @@
             }
             body.innerHTML = html;
             syncEventsSortHeaders();
+            syncEventGroupsToggleButton();
 
             if (statusEl) {
                 const filterHint =
