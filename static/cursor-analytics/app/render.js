@@ -20,6 +20,7 @@ import {
     markerFocusId,
     setLastAggregated,
 } from './state.js';
+import { escapeHtml } from '../markers/util.js';
 import {
     t,
     tf,
@@ -212,9 +213,9 @@ function renderExpensiveTable(rows, filterEvents = []) {
             <td>${dateTimeFmt.format(row.timestamp)}</td>
             <td class="usage-table__user usage-table__user--${row.userLabel}">${row.userLabel}</td>
             <td>${projectCell}</td>
-            <td>${taskCell}</td>
+            <td>${escapeHtml(taskCell)}</td>
             <td>${rangeCell}</td>
-            <td>${row.model}</td>
+            <td>${escapeHtml(row.model)}</td>
             <td>${numberFmt.format(row.totalTokens)}</td>
             <td>${currencyFmt.format(row.costCents / 100)}</td>
         </tr>`;

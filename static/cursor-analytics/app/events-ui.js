@@ -43,6 +43,7 @@ import {
     setEventsSortDir,
     collapsedEventGroups,
 } from './state.js';
+import { escapeHtml } from '../markers/util.js';
 import {
     t,
     tf,
@@ -591,7 +592,7 @@ export function renderEventsStatsHeader(groups, totalStats, mode, api, filterEnd
                         ? '<td>—</td>'
                         : '';
             return `<tr>
-                <td>${group.label}</td>
+                <td>${escapeHtml(group.label)}</td>
                 ${rangeCell}
                 <td>${numberFmt.format(group.stats.calls)}</td>
                 <td class="usage-table__total">${numberFmt.format(group.stats.totalTokens)}</td>
@@ -633,9 +634,9 @@ export function renderEventTableRow(event, api, grouped, groupKey) {
     return `<tr class="${userRowClass(event.userLabel)}${markedClass} usage-table__row--group-member"${markerIdAttr}${memberAttr}${hiddenAttr ? ' hidden' : ''}>
             <td>${dateTimeFmt.format(event.timestamp)}</td>
             <td class="usage-table__user usage-table__user--${event.userLabel}">${event.userLabel}</td>
-            <td>${projectLabel}</td>
-            <td>${event.model}</td>
-            <td>${event.kind}</td>
+            <td>${escapeHtml(projectLabel)}</td>
+            <td>${escapeHtml(event.model)}</td>
+            <td>${escapeHtml(event.kind)}</td>
             <td>${numberFmt.format(event.inputWithCacheWrite)}</td>
             <td>${numberFmt.format(event.inputNoCache)}</td>
             <td>${numberFmt.format(event.cacheRead)}</td>
@@ -650,7 +651,7 @@ export function renderEventGroupHeaderRow(group, mode, api, filterEndMs) {
         mode === 'marker' && group.marker
             ? `<br><span class="usage-table__group-range">${formatEventGroupRange(group.marker, api, filterEndMs)}</span>`
             : '';
-    const title = `<strong>${group.label}</strong>${rangeHtml} · ${tf('requestsInGroup', { count: numberFmt.format(group.stats.calls) })}`;
+    const title = `<strong>${escapeHtml(group.label)}</strong>${rangeHtml} · ${tf('requestsInGroup', { count: numberFmt.format(group.stats.calls) })}`;
     const collapsed = collapsedEventGroups.has(group.key);
     const collapsedClass = collapsed ? ' usage-table__group-header--collapsed' : '';
     const safeKey = String(group.key).replace(/"/g, '&quot;');
