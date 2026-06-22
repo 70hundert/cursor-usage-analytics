@@ -1112,6 +1112,8 @@
                                 setzen</button>
                             <button type="button" class="btn" data-marker-edit-current data-i18n="editCurrentMarker"
                                 disabled>Aktuelle Session bearbeiten</button>
+                            <button type="button" class="btn" data-marker-end-current data-i18n="endCurrentMarker"
+                                disabled>Session beenden</button>
                             <button type="button" class="btn btn--primary" id="live-refresh-btn"
                                 data-i18n="liveRefresh">Live aktualisieren</button>
                         </div>
@@ -1442,6 +1444,8 @@
                     <button type="button" class="btn" id="marker-add-table" data-i18n="markerSet">Marker setzen</button>
                     <button type="button" class="btn" data-marker-edit-current data-i18n="editCurrentMarker"
                         disabled>Aktuelle Session bearbeiten</button>
+                    <button type="button" class="btn" data-marker-end-current data-i18n="endCurrentMarker"
+                        disabled>Session beenden</button>
                 </div>
             </div>
             <p class="card-meta" id="marker-charts-intro" data-i18n="markerChartsIntro" hidden>
@@ -2269,11 +2273,15 @@
             return api.getActiveOpenMarker(resolveMarkerUserIdForEdit());
         }
 
-        function syncActiveMarkerEditButtons() {
+        function syncActiveMarkerSessionButtons() {
             const marker = getActiveOpenMarkerForUi();
             document.querySelectorAll('[data-marker-edit-current]').forEach((btn) => {
                 btn.disabled = !marker;
                 btn.title = marker ? t('editCurrentMarker') : t('editCurrentMarkerNone');
+            });
+            document.querySelectorAll('[data-marker-end-current]').forEach((btn) => {
+                btn.disabled = !marker;
+                btn.title = marker ? t('endCurrentMarker') : t('endCurrentMarkerNone');
             });
         }
 
@@ -2282,6 +2290,23 @@
             if (marker) {
                 openMarkerModal({ marker });
             }
+        }
+
+        async function endActiveMarkerSession() {
+            const marker = getActiveOpenMarkerForUi();
+            const api = getMarkersApi();
+            if (!marker || !api) {
+                return;
+            }
+            api.upsertMarker({
+                ...marker,
+                end: new Date().toISOString(),
+            });
+            await persistMarkers();
+            updateProjectFilterOptions();
+            updateMarkerTableProjectFilterOptions();
+            syncActiveMarkerSessionButtons();
+            renderAll();
         }
 
         async function handleMarkerFormSubmit(event) {
@@ -2323,7 +2348,7 @@
             closeMarkerModal();
             updateProjectFilterOptions();
             updateMarkerTableProjectFilterOptions();
-            syncActiveMarkerEditButtons();
+            syncActiveMarkerSessionButtons();
             renderAll();
         }
 
@@ -2336,7 +2361,7 @@
             await persistMarkers();
             updateProjectFilterOptions();
             updateMarkerTableProjectFilterOptions();
-            syncActiveMarkerEditButtons();
+            syncActiveMarkerSessionButtons();
             renderAll();
         }
 
@@ -2661,6 +2686,11 @@
             document.querySelectorAll('[data-marker-edit-current]').forEach((btn) => {
                 btn.addEventListener('click', () => {
                     openActiveMarkerForEdit();
+                });
+            });
+            document.querySelectorAll('[data-marker-end-current]').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    endActiveMarkerSession();
                 });
             });
             document.getElementById('marker-form')?.addEventListener('submit', handleMarkerFormSubmit);
@@ -4276,7 +4306,7 @@
                 renderEventsTable([]);
                 renderMarkerTable([]);
                 renderMarkerCharts([]);
-                syncActiveMarkerEditButtons();
+                syncActiveMarkerSessionButtons();
                 setStatus(
                     selectionMode === 'count' ? t('noEventsCount') : t('noEvents')
                 );
@@ -4329,7 +4359,7 @@
             renderMarkerCharts(events);
             updateProjectFilterOptions();
             updateMarkerChartProjectFilterOptions();
-            syncActiveMarkerEditButtons();
+            syncActiveMarkerSessionButtons();
 
             const first = events[0].timestamp;
             const last = events[events.length - 1].timestamp;
