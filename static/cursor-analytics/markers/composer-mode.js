@@ -24,7 +24,7 @@ export function normalizeComposerMode(raw, note = '') {
 
 export function resolveComposerMode(marker) {
     if (!marker || typeof marker !== 'object') {
-        return 'agent';
+        return 'edit';
     }
     const mode = normalizeComposerMode(marker.composerMode, marker.note);
     return mode === 'edit' ? 'edit' : 'agent';
