@@ -759,19 +759,69 @@ export function renderMarkerTable(events) {
         return;
     }
 
-    let html = '';
-    let lastGroupKey = null;
+    const projectOrder = [];
+    const seenProjects = new Set();
     for (const row of sorted) {
-        const groupKey = row.marker.project || '—';
-        if (groupKey !== lastGroupKey) {
-            const group = projectGroups.get(groupKey);
-            if (group) {
-                html += renderMarkerProjectGroupHeader(group, colorMap);
-            }
-            lastGroupKey = groupKey;
+        const key = row.marker.project || '—';
+        if (!seenProjects.has(key)) {
+            seenProjects.add(key);
+            projectOrder.push(key);
         }
-        html += renderMarkerTableRow(row, colorMap, groupKey);
     }
+
+    let html = '';
+    // #region agent log
+    const dbgHeadersEmitted = [];
+    const dbgProjectKeyRuns = [];
+    // #endregion
+    for (const groupKey of projectOrder) {
+        const group = projectGroups.get(groupKey);
+        if (group) {
+            html += renderMarkerProjectGroupHeader(group, colorMap);
+            // #region agent log
+            dbgHeadersEmitted.push(groupKey);
+            // #endregion
+        }
+        const groupRows = sorted.filter((row) => (row.marker.project || '—') === groupKey);
+        // #region agent log
+        dbgProjectKeyRuns.push({ project: groupKey, consecutiveRows: groupRows.length });
+        // #endregion
+        for (const row of groupRows) {
+            html += renderMarkerTableRow(row, colorMap, groupKey);
+        }
+    }
+    // #region agent log
+    const dbgHeaderCounts = {};
+    for (const k of dbgHeadersEmitted) {
+        dbgHeaderCounts[k] = (dbgHeaderCounts[k] || 0) + 1;
+    }
+    const dbgDuplicateHeaders = Object.entries(dbgHeaderCounts).filter(([, c]) => c > 1);
+    const dbgUniqueMarkerIds = new Set(sorted.map((r) => r.marker.id));
+    fetch('http://127.0.0.1:7803/ingest/c4b97fa4-b31e-47bb-9fb4-1129e0020fad', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'ca9231' },
+        body: JSON.stringify({
+            sessionId: 'ca9231',
+            runId: 'post-fix',
+            location: 'markers-ui.js:renderMarkerTable',
+            message: 'marker table group render',
+            data: {
+                hypothesisId: 'H1-H5',
+                sortColumn: markerSortColumn,
+                sortDir: markerSortDir,
+                rowCount: sorted.length,
+                uniqueMarkerIds: dbgUniqueMarkerIds.size,
+                duplicateMarkerRows: sorted.length - dbgUniqueMarkerIds.size,
+                uniqueProjects: projectGroups.size,
+                headerCount: dbgHeadersEmitted.length,
+                duplicateHeaderProjects: dbgDuplicateHeaders,
+                projectKeyRuns: dbgProjectKeyRuns,
+                userFilter,
+            },
+            timestamp: Date.now(),
+        }),
+    }).catch(() => {});
+    // #endregion
     bodyEl.innerHTML = html;
 
     if (statusEl) {
