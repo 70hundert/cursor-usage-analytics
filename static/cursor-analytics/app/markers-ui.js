@@ -35,7 +35,7 @@ import { getDefaultUserId, filteredEvents } from './data.js';
 import {
     syncMarkerGroupsToggleButton,
     toggleAllMarkerGroups,
-} from '../main.js';
+} from './table-groups.js';
 import { updateProjectFilterOptions } from './events-ui.js';
 import { renderAll } from './render.js';
 

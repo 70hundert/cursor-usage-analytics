@@ -55,7 +55,7 @@ import { eventsForDashboard } from './markers-ui.js';
 import {
     syncEventGroupsToggleButton,
     toggleAllEventGroups,
-} from '../main.js';
+} from './table-groups.js';
 import { userRowClass } from './render.js';
 
 export function updateProjectFilterOptions() {

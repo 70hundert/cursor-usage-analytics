@@ -26,7 +26,10 @@ Master-Referenz für AI-Chats. Abdeckung: Hub, Analytics (native ESM-App), Share
 | KPIs, Filter, Aggregationen, Granularität                     | `static/cursor-analytics/metrics.js`                                                           |
 | Chart-Rendering, Legend-Persistenz, Zoom, Marker-Annotationen | `static/cursor-analytics/charts/` (Einstieg `charts/index.js`)                                  |
 | Projekt-Marker (CRUD, Statistik, Sync, Popover, Fokus)        | `static/cursor-analytics/markers/` (Einstieg `markers/index.js`)                                |
-| App-Einstieg / Bootstrap, Live-/CSV-Load, Locale-Switch       | `static/cursor-analytics/main.js`                                                              |
+| App-Einstieg / Bootstrap, Locale, Card-Collapse, Init           | `static/cursor-analytics/main.js`                                                              |
+| CSV/Live-Load, JSON-Export                                    | `static/cursor-analytics/app/load.js`                                                          |
+| Custom-Zeitraum-Inputs (min/max, Persistenz)                  | `static/cursor-analytics/app/custom-range.js`                                                  |
+| Tabellen-Gruppen Collapse/Expand                              | `static/cursor-analytics/app/table-groups.js`                                                  |
 | Zentraler App-Zustand, Konstanten, Formatter                  | `static/cursor-analytics/app/state.js`                                                         |
 | Service-Helfer (Modul-Getter, i18n, DOM/Datum/CSV)            | `static/cursor-analytics/app/services.js`                                                      |
 | Event-Selektion / Lese-Schicht                                | `static/cursor-analytics/app/data.js`                                                          |
@@ -120,6 +123,9 @@ static/cursor-analytics/
     state.js                      # Zentraler Zustand, Konstanten, Formatter (export let + Setter)
     services.js                   # Leaf-Helfer + Modul-Getter (import der Shared-Module), i18n/DOM/CSV
     data.js                       # Event-Selektion / Lese-Schicht
+    load.js                       # CSV/Live-Load, applyRangeAndRender, exportJson
+    custom-range.js               # Custom datetime inputs (min/max, persist)
+    table-groups.js               # Collapse/expand grouped table rows
     render.js                     # KPIs, Budget, Tabellen, renderAll
     controls.js                   # Toolbar, Zeitbereich/Count/Custom, Pan, Chart-Controls
     events-ui.js                  # Events-Tabelle, Filter, Gruppen, Export
@@ -283,7 +289,7 @@ Keine Monkey-Patches. CSV-Parsing ausschließlich in `parser.js` (`parseUsageEve
     → getMarkersApi().syncFromServer (Marker)
     → getUsersConfig().loadUsersConfig
     → Marker-UI + Toolbar + Controls verdrahten
-      → loadDefaultCsvs (fetch ./data/*.csv)
+      → loadDefaultCsvs (app/load.js, fetch ./data/*.csv)
         → renderAll  (app/render.js)
           → filteredEvents (Basis, app/data.js) → eventsForDashboard (optional Marker-Fokus) → KPIs, Tabellen, charts.renderAll
 ```

@@ -32,10 +32,16 @@ Bei Änderungen an Shared-Impact (User-Pfade, CSV-Format, Design-Tokens) REFEREN
 | KPIs, Filter, Granularität, Zeitfenster-Bounds | `static/cursor-analytics/metrics.js` |
 | Charts, Legend-Persistenz, Marker-Annotationen | `static/cursor-analytics/charts/` (`charts/index.js`) |
 | Projekt-Marker | `static/cursor-analytics/markers/` (`markers/index.js`) |
-| App-Einstieg / Bootstrap, Live-/CSV-Load, Locale | `static/cursor-analytics/main.js` |
+| App-Einstieg / Bootstrap, Locale, Card-Collapse, Init | `static/cursor-analytics/main.js` |
+| CSV/Live-Load, JSON-Export | `static/cursor-analytics/app/load.js` |
+| Custom-Zeitraum-Inputs | `static/cursor-analytics/app/custom-range.js` |
+| Tabellen-Gruppen Collapse/Expand | `static/cursor-analytics/app/table-groups.js` |
 | Zustand / Konstanten / Formatter | `static/cursor-analytics/app/state.js` |
 | Service-Helfer (Modul-Getter, i18n, DOM/CSV) | `static/cursor-analytics/app/services.js` |
 | Event-Selektion / Lese-Schicht | `static/cursor-analytics/app/data.js` |
+| CSV/Live-Load, JSON-Export | `static/cursor-analytics/app/load.js` |
+| Custom-Zeitraum-Inputs | `static/cursor-analytics/app/custom-range.js` |
+| Tabellen-Gruppen Collapse/Expand | `static/cursor-analytics/app/table-groups.js` |
 | Rendering (KPIs, Budget, Tabellen, `renderAll`) | `static/cursor-analytics/app/render.js` |
 | Toolbar, Zeitbereich/Count/Custom, Pan, Chart-Controls | `static/cursor-analytics/app/controls.js` |
 | Events-Tabelle, Filter, Gruppen, Export | `static/cursor-analytics/app/events-ui.js` |

@@ -140,7 +140,12 @@ scripts/run-marker-hook.ps1
 scripts/setup-marker-hooks.ps1
 config/marker-hook.example.json
 cursor-usage-analytics.html
-static/cursor-analytics/    # parser, metrics, charts, markers, users-config, i18n
+static/cursor-analytics/
+  main.js                 # ESM entry (bootstrap + init)
+  parser.js, metrics.js, i18n.js, users-config.js
+  app/                    # state, data, load, render, controls, events-ui, markers-ui, …
+  charts/                 # Chart.js rendering
+  markers/                # project markers
 data/                       # gitignored CSV exports (create locally)
 docs/REFERENCE.md
 ```
