@@ -544,6 +544,27 @@
         return { xMin, xMax };
     }
 
+    /** Must stay in sync with renderOverviewBuckets datasets.bar in charts.js */
+    function categoryBarHalfWidth(buckets, events) {
+        const isPerEvent = Boolean(events?.length && events.length === buckets.length);
+        const categoryPct = isPerEvent ? 1 : 0.75;
+        const barPct = isPerEvent ? 0.95 : 0.85;
+        return (categoryPct * barPct) / 2;
+    }
+
+    function expandCategoryRangeForBars(range, buckets, events) {
+        const half = categoryBarHalfWidth(buckets, events);
+        return { xMin: range.xMin - half, xMax: range.xMax + half };
+    }
+
+    function categoryAnnotationRange(buckets, startMs, endMs, events, marker) {
+        const range = bucketIndexRangeForInterval(buckets, startMs, endMs, { events, marker });
+        if (!range) {
+            return null;
+        }
+        return expandCategoryRangeForBars(range, buckets, events);
+    }
+
     /** @deprecated use bucketIndexRangeForInterval */
     function bucketIndexForTimestamp(buckets, timestampMs) {
         if (!buckets?.length) {
@@ -903,10 +924,13 @@
 
             if (mode === 'category' && buckets?.length) {
                 const { startMs, endMs } = markerIntervalMs(marker, markers, filterEndMs);
-                const range = bucketIndexRangeForInterval(buckets, startMs, endMs, {
-                    events: chartContext.events,
-                    marker,
-                });
+                const range = categoryAnnotationRange(
+                    buckets,
+                    startMs,
+                    endMs,
+                    chartContext.events,
+                    marker
+                );
                 if (!range) {
                     continue;
                 }
@@ -1070,10 +1094,13 @@
 
             if (mode === 'category' && buckets?.length) {
                 const { startMs, endMs } = markerIntervalMs(marker, markers, filterEndMs);
-                const range = bucketIndexRangeForInterval(buckets, startMs, endMs, {
-                    events: chartContext.events,
-                    marker,
-                });
+                const range = categoryAnnotationRange(
+                    buckets,
+                    startMs,
+                    endMs,
+                    chartContext.events,
+                    marker
+                );
                 if (!range) {
                     return;
                 }
