@@ -222,6 +222,21 @@
             .sort((a, b) => new Date(a.start) - new Date(b.start));
     }
 
+    /** Neuester Marker ohne `end` für einen User (laufende Session). */
+    function getActiveOpenMarker(userId) {
+        const userMarkers = markersForUser(getStore().markers, userId);
+        let active = null;
+        for (const marker of userMarkers) {
+            if (marker.end) {
+                continue;
+            }
+            if (!active || new Date(marker.start) > new Date(active.start)) {
+                active = marker;
+            }
+        }
+        return active;
+    }
+
     function loadMarkerChartDisplay() {
         try {
             const raw = global.localStorage?.getItem(MARKER_CHART_DISPLAY_STORAGE_KEY);
@@ -1222,6 +1237,7 @@
         listMarkers,
         upsertMarker,
         removeMarker,
+        getActiveOpenMarker,
         computeStats,
         computeIntervalRows,
         parseTaskCategory,

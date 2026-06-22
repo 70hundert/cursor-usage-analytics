@@ -1071,6 +1071,7 @@
                             <button type="button" class="btn btn-chart-zoom-reset" data-chart-key="overview" data-i18n="zoomReset">Zoom
                                 zurücksetzen</button>
                             <button type="button" class="btn" id="marker-add-overview" data-i18n="markerSet">Marker setzen</button>
+                            <button type="button" class="btn" data-marker-edit-current data-i18n="editCurrentMarker" disabled>Aktuelle Session bearbeiten</button>
                         </div>
                     </div>
                 </div>
@@ -1359,6 +1360,10 @@
                     <select class="project-filter-select" id="marker-project-filter" aria-label="Marker-Projekt-Filter">
                         <option value="all" data-i18n="allProjects">Alle Projekte</option>
                     </select>
+                </div>
+                <div class="toolbar-group">
+                    <button type="button" class="btn" id="marker-add-table" data-i18n="markerSet">Marker setzen</button>
+                    <button type="button" class="btn" data-marker-edit-current data-i18n="editCurrentMarker" disabled>Aktuelle Session bearbeiten</button>
                 </div>
             </div>
             <p class="card-meta" id="marker-charts-intro" data-i18n="markerChartsIntro" hidden>
@@ -2093,6 +2098,33 @@
             }
         }
 
+        function resolveMarkerUserIdForEdit() {
+            return userFilter === 'all' ? getDefaultUserId() : userFilter;
+        }
+
+        function getActiveOpenMarkerForUi() {
+            const api = getMarkersApi();
+            if (!api?.getActiveOpenMarker) {
+                return null;
+            }
+            return api.getActiveOpenMarker(resolveMarkerUserIdForEdit());
+        }
+
+        function syncActiveMarkerEditButtons() {
+            const marker = getActiveOpenMarkerForUi();
+            document.querySelectorAll('[data-marker-edit-current]').forEach((btn) => {
+                btn.disabled = !marker;
+                btn.title = marker ? t('editCurrentMarker') : t('editCurrentMarkerNone');
+            });
+        }
+
+        function openActiveMarkerForEdit() {
+            const marker = getActiveOpenMarkerForUi();
+            if (marker) {
+                openMarkerModal({ marker });
+            }
+        }
+
         async function handleMarkerFormSubmit(event) {
             event.preventDefault();
             const api = getMarkersApi();
@@ -2125,6 +2157,7 @@
             closeMarkerModal();
             updateProjectFilterOptions();
             updateMarkerTableProjectFilterOptions();
+            syncActiveMarkerEditButtons();
             renderAll();
         }
 
@@ -2137,6 +2170,7 @@
             await persistMarkers();
             updateProjectFilterOptions();
             updateMarkerTableProjectFilterOptions();
+            syncActiveMarkerEditButtons();
             renderAll();
         }
 
@@ -2447,6 +2481,14 @@
             initMarkerCategoryDatalist();
             document.getElementById('marker-add-overview')?.addEventListener('click', () => {
                 openMarkerModal();
+            });
+            document.getElementById('marker-add-table')?.addEventListener('click', () => {
+                openMarkerModal();
+            });
+            document.querySelectorAll('[data-marker-edit-current]').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    openActiveMarkerForEdit();
+                });
             });
             document.getElementById('marker-form')?.addEventListener('submit', handleMarkerFormSubmit);
             document.getElementById('marker-cancel-btn')?.addEventListener('click', closeMarkerModal);
@@ -4054,6 +4096,7 @@
                 renderEventsTable([]);
                 renderMarkerTable([]);
                 renderMarkerCharts([]);
+                syncActiveMarkerEditButtons();
                 setStatus(
                     selectionMode === 'count' ? t('noEventsCount') : t('noEvents')
                 );
@@ -4106,6 +4149,7 @@
             renderMarkerCharts(events);
             updateProjectFilterOptions();
             updateMarkerChartProjectFilterOptions();
+            syncActiveMarkerEditButtons();
 
             const first = events[0].timestamp;
             const last = events[events.length - 1].timestamp;
