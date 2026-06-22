@@ -109,6 +109,7 @@ Cache-Busting: Query `?v=16` auf Modul-URLs.
 | `/api/events`                           | POST    | JSON-Body: `{ user, startDate?, endDate? }`                     |
 | `/api/markers`                          | GET     | Projekt-Marker (`data/project-markers.json`), optional `?user=` |
 | `/api/markers`                          | PUT     | Marker-Store speichern (JSON-Body `{ version, markers }`)       |
+| `/api/markers/session`                  | POST    | Session-Marker (Hook): `{ action, sessionId, user, project, … }` |
 | `/*` (Datei existiert)                  | GET     | Static aus `PROJECT_DIR`                                        |
 
 
@@ -255,6 +256,8 @@ python serve.py
 
 Marker-Sync: `GET/PUT /api/markers` → `data/project-markers.json` (atomisches Schreiben). Client: `localStorage` + Server-Merge bei Start; Server gewinnt bei gleicher `id` und neuerem `updatedAt`.
 
+**Auto-Marker (optional):** Native Cursor User-Hooks → `POST /api/markers/session`. Skript: [`scripts/cursor-marker-hook.py`](../scripts/cursor-marker-hook.py), Setup: [`scripts/setup-marker-hooks.ps1`](../scripts/setup-marker-hooks.ps1), Config-Vorlage: [`config/marker-hook.example.json`](../config/marker-hook.example.json). Keine Drittanbieter-Extension nötig.
+
 ---
 
 ## 9. Datenmodell & APIs
@@ -325,6 +328,38 @@ Marker sind manuell — ohne einheitliche Benennung lassen sich Projekt- und Kat
 **Workflow:** Vor größeren Aufgaben Marker setzen (`Marker setzen` / Overview-Chart), nach Abschluss `end` setzen. 2–3 Wochen konsequent → belastbare Vergleiche (Modus, Kategorie, Projektphase).
 
 **Charts:** `aggregateEventsByMarkerDimension()` gruppiert gefilterte Events per `getMarkerForEvent` (keine Doppelzählung bei überlappenden Intervallen). UI: Doughnut/Bar „Tokens & Kosten nach Projekt/Kategorie“ in `#marker-charts-section`.
+
+#### Auto-Marker (Cursor Hooks, optional)
+
+Native Cursor **User-Hooks** (`~/.cursor/hooks.json`) können Projekt-Marker automatisch setzen — ohne SpecStory oder andere Extensions.
+
+| Hook-Event | API-Action | Wirkung |
+| ---------- | ---------- | ------- |
+| `sessionStart` | `start` | Neuer Marker `id = m-cursor-{conversation_id}`; offener Marker desselben Users wird geschlossen |
+| `beforeSubmitPrompt` | `prompt` | `task` aus erster Prompt-Zeile (max. 120 Zeichen) |
+| `sessionEnd` | `end` | `end = now` |
+
+**POST `/api/markers/session`** — Body:
+
+```json
+{
+  "action": "start",
+  "sessionId": "668320d2-...",
+  "user": "primary",
+  "project": "Cursor-Usage-Dashboard-Public",
+  "task": "Optional",
+  "note": "agent",
+  "composerMode": "agent"
+}
+```
+
+**Modus-Filter (Standard):** nur Composer-Modi `agent` und `edit`. **Ask** und **Tab** (Inline-Vervollständigung) erzeugen keine Marker. Cursor unterscheidet Hooks nicht nach Agents Window vs. Editor Window — beide nutzen dieselbe Composer-Pipeline.
+
+**Setup:** `.\scripts\setup-marker-hooks.ps1` → kopiert Hook nach `%USERPROFILE%\.cursor\hooks\`, legt `marker-hook.json` an (Vorlage: `config/marker-hook.example.json`). `serve.py` muss laufen (`http://127.0.0.1:8060`). Optional: `dashboardRoot` oder `fallbackWritePath` in Config für Schreiben ohne laufenden Server.
+
+**Config:** `defaultUser` (Dashboard-User-ID), `emailMap`, `modes`, `apiBase`. Alternative Env: `CURSOR_MARKER_DEFAULT_USER`, `CURSOR_MARKER_API_BASE`.
+
+**Einschränkungen:** Cloud Agents (keine Session-Hooks); Hook-Fehler blockieren den Chat nicht (Exit 0).
 
 ### Normalisiertes Event (Analytics)
 

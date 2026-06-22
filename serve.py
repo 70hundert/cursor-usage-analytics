@@ -12,6 +12,7 @@ Session-Tokens in .env (optional, nur für Live-Modus), pro User in config/users
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 import json
 import mimetypes
 import os
@@ -218,6 +219,135 @@ def _validate_markers_store(store: dict[str, Any]) -> dict[str, Any] | None:
     return {"version": int(store.get("version") or 1), "markers": markers}
 
 
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _marker_id_for_session(session_id: str) -> str:
+    return f"m-cursor-{session_id}"
+
+
+def _truncate_task(text: str, max_len: int = 120) -> str:
+    cleaned = " ".join(str(text or "").split())
+    if len(cleaned) <= max_len:
+        return cleaned
+    return cleaned[: max_len - 1].rstrip() + "…"
+
+
+_PLACEHOLDER_TASKS = frozenset({"", "Neuer Chat", "New chat"})
+
+
+def _find_marker(markers: list[dict[str, Any]], marker_id: str) -> dict[str, Any] | None:
+    for marker in markers:
+        if marker.get("id") == marker_id:
+            return marker
+    return None
+
+
+def _close_open_markers_for_user(
+    markers: list[dict[str, Any]],
+    user: str,
+    now: str,
+    *,
+    except_id: str | None = None,
+) -> None:
+    for marker in markers:
+        if marker.get("user") != user:
+            continue
+        if marker.get("end") is not None:
+            continue
+        if except_id and marker.get("id") == except_id:
+            continue
+        marker["end"] = now
+        marker["updatedAt"] = now
+
+
+def _apply_marker_session(
+    store: dict[str, Any],
+    body: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any] | None]:
+    action = str(body.get("action") or "").strip()
+    session_id = str(body.get("sessionId") or "").strip()
+    user = _sanitize_user_id(str(body.get("user") or load_user_ids()[0]))
+    project = str(body.get("project") or "").strip()
+    note = str(body.get("note") or "").strip()
+    task = _truncate_task(str(body.get("task") or ""))
+
+    if action not in {"start", "prompt", "end"}:
+        return store, {"error": "Unbekannte action"}
+    if not session_id:
+        return store, {"error": "sessionId fehlt"}
+    if not user:
+        return store, {"error": "user fehlt"}
+
+    marker_id = _marker_id_for_session(session_id)
+    now = _now_iso()
+    markers = [dict(marker) for marker in store.get("markers", [])]
+
+    if action == "start":
+        if not project:
+            return store, {"error": "project fehlt"}
+
+        _close_open_markers_for_user(markers, user, now, except_id=marker_id)
+        existing = _find_marker(markers, marker_id)
+        if existing:
+            existing["start"] = now
+            existing["end"] = None
+            existing["project"] = project
+            existing["user"] = user
+            existing["updatedAt"] = now
+            if note:
+                existing["note"] = note
+            if task and existing.get("task") in _PLACEHOLDER_TASKS:
+                existing["task"] = task
+        else:
+            markers.append(
+                {
+                    "id": marker_id,
+                    "user": user,
+                    "start": now,
+                    "end": None,
+                    "project": project,
+                    "task": task or "Neuer Chat",
+                    "note": note,
+                    "createdAt": now,
+                    "updatedAt": now,
+                }
+            )
+
+    elif action == "prompt":
+        existing = _find_marker(markers, marker_id)
+        if not existing:
+            if not project:
+                return store, {"error": "Marker nicht gefunden und project fehlt"}
+            markers.append(
+                {
+                    "id": marker_id,
+                    "user": user,
+                    "start": now,
+                    "end": None,
+                    "project": project,
+                    "task": task or "Neuer Chat",
+                    "note": note,
+                    "createdAt": now,
+                    "updatedAt": now,
+                }
+            )
+        elif task and existing.get("task") in _PLACEHOLDER_TASKS:
+            existing["task"] = task
+            existing["updatedAt"] = now
+            if note and not existing.get("note"):
+                existing["note"] = note
+
+    elif action == "end":
+        existing = _find_marker(markers, marker_id)
+        if existing and existing.get("end") is None:
+            existing["end"] = now
+            existing["updatedAt"] = now
+
+    return {"version": int(store.get("version") or 1), "markers": markers}, None
+
+
 def fetch_usage_summary(token: str) -> dict[str, Any]:
     session = _session_for_token(token)
     response = session.get(USAGE_SUMMARY_URL, timeout=30)
@@ -335,10 +465,16 @@ class CursorUsageHandler(BaseHTTPRequestHandler):
 
         if parsed.path == "/health":
             configured = {user: bool(token) for user, token in USER_TOKENS.items()}
+            marker_hook_config = Path.home() / ".cursor" / "marker-hook.json"
             _json_response(
                 self,
                 200,
-                {"ok": True, "users": configured, "port": self.server.server_port},
+                {
+                    "ok": True,
+                    "users": configured,
+                    "port": self.server.server_port,
+                    "markerHooks": marker_hook_config.is_file(),
+                },
             )
             return
 
@@ -437,6 +573,39 @@ class CursorUsageHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         parsed = urlparse(self.path)
+
+        if parsed.path == "/api/markers/session":
+            try:
+                body = _read_json_body(self)
+            except json.JSONDecodeError:
+                _json_response(self, 400, {"error": "Ungültiges JSON"})
+                return
+
+            with _markers_lock:
+                store = _load_markers_store()
+                updated, error = _apply_marker_session(store, body)
+                if error:
+                    _json_response(self, 400, error)
+                    return
+                try:
+                    _save_markers_store(updated)
+                except OSError as exc:
+                    _json_response(self, 500, {"error": str(exc)})
+                    return
+
+            marker_id = _marker_id_for_session(str(body.get("sessionId") or ""))
+            marker = _find_marker(updated.get("markers", []), marker_id)
+            _json_response(
+                self,
+                200,
+                {
+                    "ok": True,
+                    "action": body.get("action"),
+                    "marker": marker,
+                },
+            )
+            return
+
         if parsed.path != "/api/events":
             _json_response(self, 404, {"error": "Not found"})
             return

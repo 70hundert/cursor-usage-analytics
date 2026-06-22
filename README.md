@@ -84,6 +84,27 @@ Reverse-engineered Endpoints (Quelle: [dmwyatt/cursor-usage](https://github.com/
 
 Im Analytics-Dashboard: **Live (Proxy)** oder **Beides**. Health: http://127.0.0.1:8060/health
 
+## Optional: Auto-Marker (Cursor Hooks)
+
+Projekt-Marker können automatisch aus Composer-Chats erzeugt werden — **ohne Drittanbieter-Extension**, nur mit nativen [Cursor Hooks](https://cursor.com/docs/hooks.md).
+
+**Voraussetzungen:** `python serve.py` läuft, User-ID in `config/users.json` bekannt.
+
+```powershell
+.\scripts\setup-marker-hooks.ps1
+```
+
+Danach `%USERPROFILE%\.cursor\marker-hook.json` anpassen (`defaultUser`, optional `dashboardRoot` für Offline-Fallback). Cursor neu laden; Hooks unter **Settings → Hooks** prüfen.
+
+| Composer-Modus | Auto-Marker |
+| -------------- | ----------- |
+| Agent | Ja |
+| Edit | Ja |
+| Ask | Nein (Standard) |
+| Tab (Inline) | Nein |
+
+Gilt in **Agents Window** und **Editor** gleichermaßen (dieselbe Composer-Pipeline). Details: [docs/REFERENCE.md — Auto-Marker](docs/REFERENCE.md#auto-marker-cursor-hooks-optional).
+
 **Disclaimer:** Keine offizielle Personal-API. Endpoints können sich ändern; Session-Tokens laufen ab. Nutzung auf eigenes Risiko — Cursor-Nutzungsbedingungen beachten.
 
 ## Konfiguration
@@ -93,6 +114,8 @@ Im Analytics-Dashboard: **Live (Proxy)** oder **Beides**. Health: http://127.0.0
 | `CURSOR_WEB_HOST` | `127.0.0.1` | Bind-Adresse (nicht öffentlich exponieren) |
 | `CURSOR_WEB_PORT` | `8060` | HTTP-Port |
 | `CURSOR_SESSION_TOKEN_<USER>` | — | Session-Token pro User-ID aus `config/users.json` |
+| `CURSOR_MARKER_DEFAULT_USER` | — | Optional: Dashboard-User für Auto-Marker-Hooks |
+| `CURSOR_MARKER_API_BASE` | `http://127.0.0.1:8060` | Optional: API-Basis für Hook-Skript |
 
 ## Projektstruktur
 
@@ -101,6 +124,9 @@ serve.py
 config/users.example.json   # nach config/users.json kopieren
 samples/                    # Demo-CSV + Marker (committed)
 scripts/generate_demo_data.py
+scripts/cursor-marker-hook.py
+scripts/setup-marker-hooks.ps1
+config/marker-hook.example.json
 cursor-usage-analytics.html
 static/cursor-analytics/   # parser, metrics, charts, markers, users-config, i18n
 data/                      # CSV-Exports (gitignored, lokal anlegen)

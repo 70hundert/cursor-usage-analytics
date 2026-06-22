@@ -20,10 +20,14 @@ if ($env:CURSOR_WEB_PORT) {
 
 $listeners = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
 if ($listeners) {
-    $pids = $listeners | Select-Object -ExpandProperty OwningProcess -Unique
-    Write-Host "Warnung: Port $port ist bereits belegt (PID(s): $($pids -join ', '))."
-    Write-Host 'Alten Server beenden mit: .\stop.ps1'
-    Write-Host ""
+    $pids = @(
+        $listeners |
+            Select-Object -ExpandProperty OwningProcess -Unique |
+            Where-Object { $_ -gt 0 }
+    )
+    Write-Host "Fehler: Port $port ist bereits belegt (PID(s): $($pids -join ', '))."
+    Write-Host "Alten Server beenden mit: .\stop.ps1"
+    exit 1
 }
 
 & $venvPython serve.py

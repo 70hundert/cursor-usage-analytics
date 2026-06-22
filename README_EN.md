@@ -82,6 +82,27 @@ Reverse-engineered endpoints (credit: [dmwyatt/cursor-usage](https://github.com/
 
 In analytics: **Live (proxy)** or **Both**. Health: http://127.0.0.1:8060/health
 
+## Optional: Auto-markers (Cursor Hooks)
+
+Project markers can be created automatically from Composer chats — **no third-party extension**, only native [Cursor Hooks](https://cursor.com/docs/hooks.md).
+
+**Requirements:** `python serve.py` running; user id from `config/users.json`.
+
+```powershell
+.\scripts\setup-marker-hooks.ps1
+```
+
+Then edit `%USERPROFILE%\.cursor\marker-hook.json` (`defaultUser`, optional `dashboardRoot` for offline fallback). Reload Cursor; check **Settings → Hooks**.
+
+| Composer mode | Auto-marker |
+| ------------- | ----------- |
+| Agent | Yes |
+| Edit | Yes |
+| Ask | No (default) |
+| Tab (inline) | No |
+
+Works the same in the **Agents window** and the **editor** (same Composer pipeline). Details: [docs/REFERENCE.md — Auto-Marker](docs/REFERENCE.md#auto-marker-cursor-hooks-optional).
+
 **Disclaimer:** Not an official Cursor API. Endpoints may change; session tokens expire. Use at your own risk; respect Cursor’s terms of service.
 
 ## Configuration
@@ -91,6 +112,8 @@ In analytics: **Live (proxy)** or **Both**. Health: http://127.0.0.1:8060/health
 | `CURSOR_WEB_HOST` | `127.0.0.1` | Bind address |
 | `CURSOR_WEB_PORT` | `8060` | HTTP port |
 | `CURSOR_SESSION_TOKEN_<USER>` | — | Session token per user id in `config/users.json` |
+| `CURSOR_MARKER_DEFAULT_USER` | — | Optional: dashboard user for auto-marker hooks |
+| `CURSOR_MARKER_API_BASE` | `http://127.0.0.1:8060` | Optional: API base URL for hook script |
 
 ## Project structure
 
@@ -99,6 +122,9 @@ serve.py
 config/users.example.json
 samples/              # demo CSV + markers (committed)
 scripts/generate_demo_data.py
+scripts/cursor-marker-hook.py
+scripts/setup-marker-hooks.ps1
+config/marker-hook.example.json
 cursor-usage-analytics.html
 static/cursor-analytics/
 data/                 # gitignored CSV exports

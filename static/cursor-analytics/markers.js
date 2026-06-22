@@ -288,10 +288,10 @@
     }
 
     function resolveIntervalEndMs(marker, sortedMarkers, filterEndMs) {
-        if (marker.end) {
-            return new Date(marker.end).getTime();
-        }
         const startMs = new Date(marker.start).getTime();
+        if (marker.end) {
+            return Math.max(new Date(marker.end).getTime(), startMs + 1);
+        }
         const sameUser = markersForUser(sortedMarkers, marker.user === 'all' ? 'all' : marker.user);
         for (const next of sameUser) {
             const nextStart = new Date(next.start).getTime();
@@ -299,14 +299,26 @@
                 return nextStart;
             }
         }
-        return filterEndMs ?? Date.now();
+        let endMs = filterEndMs ?? Date.now();
+        if (endMs <= startMs) {
+            endMs = startMs + 60_000;
+        }
+        return endMs;
+    }
+
+    function markerIntervalMs(marker, allMarkers, filterEndMs) {
+        const startMs = new Date(marker.start).getTime();
+        let endMs = marker.end
+            ? new Date(marker.end).getTime()
+            : resolveIntervalEndMs(marker, allMarkers, filterEndMs);
+        if (endMs <= startMs) {
+            endMs = startMs + 60_000;
+        }
+        return { startMs, endMs };
     }
 
     function computeStats(events, marker, allMarkers, filterEndMs) {
-        const startMs = new Date(marker.start).getTime();
-        const endMs = marker.end
-            ? new Date(marker.end).getTime()
-            : resolveIntervalEndMs(marker, allMarkers, filterEndMs);
+        const { startMs, endMs } = markerIntervalMs(marker, allMarkers, filterEndMs);
 
         let calls = 0;
         let totalTokens = 0;
@@ -452,22 +464,29 @@
         if (!buckets?.length) {
             return null;
         }
+        if (endMs <= startMs) {
+            endMs = startMs + 60_000;
+        }
 
-        const { events, marker } = options;
+        const { events, marker, allMarkers } = options;
         const matchEvents = Boolean(marker && events?.length === buckets.length);
         let xMin = null;
         let xMax = null;
 
         for (let i = 0; i < buckets.length; i += 1) {
-            const bucketStart = bucketStartMs(buckets[i]);
-            const bucketEnd = bucketEndMs(buckets, i);
-            if (bucketStart >= endMs || bucketEnd <= startMs) {
-                continue;
-            }
-
             if (matchEvents) {
                 const userLabel = events[i].userLabel ?? events[i].user;
                 if (marker.user !== 'all' && userLabel && userLabel !== marker.user) {
+                    continue;
+                }
+                const owner = getMarkerForEvent(events[i], allMarkers || []);
+                if (owner?.id !== marker.id) {
+                    continue;
+                }
+            } else {
+                const bucketStart = bucketStartMs(buckets[i]);
+                const bucketEnd = bucketEndMs(buckets, i);
+                if (bucketStart >= endMs || bucketEnd <= startMs) {
                     continue;
                 }
             }
@@ -867,13 +886,11 @@
             }
 
             if (mode === 'category' && buckets?.length) {
-                const startMs = new Date(marker.start).getTime();
-                const endMs = marker.end
-                    ? new Date(marker.end).getTime()
-                    : resolveIntervalEndMs(marker, markers, filterEndMs);
+                const { startMs, endMs } = markerIntervalMs(marker, markers, filterEndMs);
                 const range = bucketIndexRangeForInterval(buckets, startMs, endMs, {
                     events: chartContext.events,
                     marker,
+                    allMarkers: markers,
                 });
                 if (!range) {
                     continue;
@@ -1015,13 +1032,11 @@
                 : {};
 
             if (mode === 'category' && buckets?.length) {
-                const startMs = new Date(marker.start).getTime();
-                const endMs = marker.end
-                    ? new Date(marker.end).getTime()
-                    : resolveIntervalEndMs(marker, markers, filterEndMs);
+                const { startMs, endMs } = markerIntervalMs(marker, markers, filterEndMs);
                 const range = bucketIndexRangeForInterval(buckets, startMs, endMs, {
                     events: chartContext.events,
                     marker,
+                    allMarkers: markers,
                 });
                 if (!range) {
                     return;
