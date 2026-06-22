@@ -5,7 +5,7 @@ Diese Dateien sind **fiktive Beispieldaten** für Screenshots, lokale Tests und 
 | Datei | Inhalt |
 | ----- | ------ |
 | `usage-events-demo.csv` | 4 Wochen Usage-Events (User-ID `demo` über `config/users.json`) |
-| `project-markers-demo.json` | Beispiel-Projekt-Marker für denselben Zeitraum |
+| `project-markers-demo.json` | Beispiel-Projekt-Marker für denselben Zeitraum (inkl. Notizen für Hover-Popover in Charts/Tabellen) |
 
 ## Neu erzeugen
 
@@ -22,4 +22,4 @@ Copy-Item config\users.example.json config\users.json
 python serve.py
 ```
 
-Browser: http://127.0.0.1:8060/ — User **Demo** wählen. Projekt-Marker werden beim ersten Serverstart aus dieser Datei nach `data/project-markers.json` übernommen (falls dort noch keine Datei existiert).
+Browser: http://127.0.0.1:8060/ — User **Demo** wählen. Projekt-Marker werden beim ersten Serverstart aus dieser Datei nach `data/project-markers.json` übernommen (falls dort noch keine Datei existiert). Markierte Tabellenzeilen zeigen beim Hover Marker-Details inkl. Notiz (abschaltbar via Checkbox „Marker-Info beim Hover“).

@@ -17,7 +17,7 @@ Master-Referenz für AI-Chats. Abdeckung: Hub, Analytics (Thin-Shell), Shared-Mo
 | CSV/API-Parsing, Event-Modell, Dedupe                         | `static/cursor-analytics/parser.js`                                                            |
 | KPIs, Filter, Aggregationen, Granularität                     | `static/cursor-analytics/metrics.js`                                                           |
 | Chart-Rendering, Legend-Persistenz, Zoom, Marker-Annotationen | `static/cursor-analytics/charts.js`                                                            |
-| Projekt-Marker (CRUD, Statistik, Sync)                        | `static/cursor-analytics/markers.js`                                                           |
+| Projekt-Marker (CRUD, Statistik, Sync, Popover)               | `static/cursor-analytics/markers.js`                                                           |
 | Analytics-UI, Live-Fetch, Toolbar, Budget                     | `cursor-usage-analytics.html` (inline `<script>`)                                              |
 | Live-API, Static-Serving, Event-Cache                         | `serve.py`                                                                                     |
 | Multi-User-Konfiguration                                      | `users-config.js`, `serve.py` (`USER_TOKENS`), `.env`                                          |
@@ -129,7 +129,7 @@ Event-Cache: In-Memory, TTL `CURSOR_EVENTS_CACHE_TTL` (Default 120 s), Key `user
 | Section             | ID / Selektor                                                      | Inhalt                                                                                                                                                   |
 | ------------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Toolbar             | `#main-toolbar`                                                    | Datenquelle, User, CSV, Live, Export, Marker Export/Import                                                                                               |
-| Projekt-Marker      | `#marker-card`, `#marker-table-body`, `#marker-charts-section`     | Intervall-Statistik, Breakdown-Charts (Projekt/Kategorie)                                                                                                |
+| Projekt-Marker      | `#marker-card`, `#marker-table-body`, `#marker-charts-section`     | Intervall-Statistik, Breakdown-Charts (Projekt/Kategorie), optionaler Hover-Popover (`[data-marker-table-popover]`)                                    |
 | Projekt-Filter      | `#project-filter`                                                  | Filter für Einzelanfragen-Tabelle                                                                                                                        |
 | Marker-Dialog       | `#marker-modal`, `#marker-form`                                    | CRUD (Von/Bis/Projekt/Aufgabe/Notiz)                                                                                                                     |
 | Zeitraum / Anfragen | `#date-range-panel`                                                | Modus-Umschalter (`data-selection-mode`), Zeitraum-Presets (`#time-range-group`), Anfragen-Presets (`#count-range-group`, `data-count`), Custom datetime |
@@ -138,7 +138,7 @@ Event-Cache: In-Memory, TTL `CURSOR_EVENTS_CACHE_TTL` (Default 120 s), Key `user
 | KPIs                | `#kpi-grid`                                                        | Dynamisch gerendert                                                                                                                                      |
 | Übersicht-Chart     | `#overview-section`, `#chart-overview-daily`                       | Zeitraum: Buckets nach Granularität; Anfragen: Buckets pro Event (wie Granularität „Pro Anfrage“)                                                        |
 | Detail-Charts       | `#chart-top-cost`, `#chart-top-tokens`, …                          | 8 Canvas-Elemente                                                                                                                                        |
-| Tabellen            | `#daily-table-body`, `#expensive-table-body`, `#events-table-body` | Tages-, Teuerste-, Einzelanfragen (Spalte **Projekt**)                                                                                                   |
+| Tabellen            | `#daily-table-body`, `#expensive-table-body`, `#events-table-body` | Tages-, Teuerste-, Einzelanfragen (Spalte **Projekt**); markierte Zeilen: `data-marker-id` → Marker-Popover beim Hover (abschaltbar)                   |
 | Pagination          | `#events-pagination`                                               | 50 Events/Seite                                                                                                                                          |
 | Budget              | `#budget-input`, `#budget-panel`                                   | Monatsbudget USD                                                                                                                                         |
 
@@ -166,6 +166,12 @@ Event-Cache: In-Memory, TTL `CURSOR_EVENTS_CACHE_TTL` (Default 120 s), Key `user
 | `#load-hint`                                      | `<p>`           | Lade-Details                                                     |
 | `#marker-add-overview` / `[data-marker-add]`      | Button          | Marker-Dialog (aktuelle Datum/Uhrzeit als Start)                 |
 | `#marker-export-btn`, `#marker-import-input`      | Button / File   | Marker JSON Export/Import                                        |
+| `[data-marker-table-popover]`                     | Checkbox        | Tabellen-Hover-Popover ein/aus (3× synchron: Teuerste Events, Einzelanfragen, Projekt-Marker) |
+| `[data-marker-display-host]`                      | Container       | Chart-Marker-Steuerung (Anzeigen, Beschriftungen, Projekt-Filter) |
+| `[data-marker-chart-visible]`                     | Button          | Marker-Linien/Boxen in Charts ein/aus                            |
+| `[data-marker-labels-visible]`                    | Button          | Marker-Beschriftungen in Charts ein/aus                          |
+| `[data-marker-project-filter]`                    | `<select>`      | Marker in Charts nach Projekt filtern                            |
+| `#marker-chart-popover`                           | `<div>`         | Gemeinsamer Marker-Info-Popover (Charts + Tabellen)              |
 | `#project-filter`                                 | `<select>`      | Events-Tabelle nach Projekt filtern                              |
 
 
@@ -205,7 +211,7 @@ Keine Monkey-Patches. CSV-Parsing ausschließlich in `parser.js` (`parseUsageEve
 
 - **Kein gemeinsames Stylesheet** — Design-Tokens in `:root` in `cursor-usage-analytics.html`
 - Tokens: `--bg`, `--surface`, `--surface-2`, `--text`, `--muted`, `--accent`, `--warn`, `--danger`, `--border`, `--radius`
-- Analytics-Klassen: `.dashboard-grid`, `.kpi-grid`, `.drop-zone`, `.live-loading`, `.events-pagination`
+- Analytics-Klassen: `.dashboard-grid`, `.kpi-grid`, `.drop-zone`, `.live-loading`, `.events-pagination`, `.marker-chart-popover`
 - Dynamischer Zustand: `.btn--active`, `.btn--loading`, `.drop-zone--hidden`, `.status-error`, `[aria-pressed="true"]` auf Chart-Höhe-Buttons
 
 ---
@@ -280,7 +286,22 @@ Marker sind **keine CSV-Daten** — manuell gesetzte Metadaten zu Zeitintervalle
 - `**user`:** `info` | `slope` | `all`
 - Statistik (`computeStats`): Events im Intervall — nicht persistiert.
 
-**Chart-Annotationen:** Overview + Cumulative nutzen Kategorie-Achse → Bucket-Index-Mapping via `sortKey`.
+**Chart-Annotationen:** Overview + Cumulative nutzen Kategorie-Achse → Bucket-Index-Mapping via `sortKey`. Hover auf Annotationen öffnet `#marker-chart-popover` (`showChartPopover`). Timeline-Charts ergänzen den Chart.js-Tooltip um Projekt, Aufgabe und Notiz (`markerTooltipLines` in `charts.js`).
+
+#### Marker-Info-Popover (Charts & Tabellen)
+
+Gemeinsame UI-Komponente in `markers.js` (`buildPopoverHtml`, `#marker-chart-popover`):
+
+| Kontext | Auslöser | API |
+| ------- | -------- | --- |
+| **Charts** | Hover/Klick auf Marker-Annotation (Overview, Cumulative, Timeline) | `showChartPopover()` |
+| **Tabellen** | Hover auf `tr[data-marker-id]` in `#expensive-table-body`, `#events-table-body`, `#marker-table-body` | `showTableMarkerPopover()` via `mountMarkerTableHover()` (Analytics-HTML) |
+
+**Popover-Inhalt:** Projekt, Aufgabe, Benutzer, Von/Bis, Notiz (falls gesetzt), Intervall-Statistik (Events, Tokens, Kosten), Button „Bearbeiten“ → `#marker-modal`.
+
+**Tabellen abschalten:** Checkbox `[data-marker-table-popover]` (i18n: `showTableMarkerPopover`) — drei synchronisierte Instanzen in den Toolbars von Teuerste Events, Einzelne Anfragen und Projekt-Marker. Persistenz: `cursor-marker-chart-display` → Feld `showTablePopover` (Default `true`). Bei Deaktivierung wird ein sichtbarer Popover sofort geschlossen.
+
+**Chart-Marker-Anzeige:** Buttons `[data-marker-chart-visible]`, `[data-marker-labels-visible]`, Select `[data-marker-project-filter]` — ebenfalls in `cursor-marker-chart-display` (`showMarkers`, `showLabels`, `projectFilter`).
 
 **Gotcha Granularität:** Bei Wechsel der Granularität verschieben sich Bucket-Grenzen — Marker-Positionen in Overview/Cumulative (Zeitraum-Modus mit grober Granularität) sind Näherungen. Marker-Boxen nutzen `bucketIndexRangeForInterval` (Überlappung von Intervall und sichtbaren Buckets; bei Pro-Anfrage-Buckets optional User-Filter).
 
@@ -397,9 +418,11 @@ Upstream: `https://cursor.com/api/usage-summary`, `https://cursor.com/api/dashbo
 | `cursor-analytics-time-range`         | `hours` / 24 h                | Aktiver Zeitraum-Filter (`mode`, `hours`, optional `customFrom`/`customTo`) |
 | `cursor-analytics-custom-range`       | heute−2d / heute              | Von/Bis-Zeitraum (Analytics, JSON `{ customFrom, customTo }`)               |
 | `cursor-analytics-chart-visibility`   | `{}`                          | Legend-Sichtbarkeit pro Chart-Key                                           |
+| `cursor-marker-chart-display`         | siehe unten                   | Chart-Marker-Sichtbarkeit + Tabellen-Hover-Popover                          |
 | `cursor-usage-markers-v1`             | `{ version: 1, markers: [] }` | Projekt-Marker (Primary Client-Cache)                                       |
 | `cursor-event-chart-markers-v1`       | —                             | Legacy-Key (Migration → `cursor-usage-markers-v1`)                          |
 
+**`cursor-marker-chart-display`** (JSON): `{ showMarkers: true, showLabels: true, projectFilter: 'all', showTablePopover: true }` — geladen via `loadMarkerChartDisplay()` / `saveMarkerChartDisplay()` in `markers.js`.
 
 Server-Datei: `data/project-markers.json` (liegt unter gitignored `data/`).
 
@@ -418,6 +441,7 @@ Server-Datei: `data/project-markers.json` (liegt unter gitignored `data/`).
 | API-Response-Format        | `parser.js` `normalizeApiEvent`, `serve.py` Proxy                            |
 | `serve.py`-Routen          | Analytics `fetch()` (`PROXY_BASE` = `''`), Marker `/api/markers`             |
 | Marker-Schema / Sync       | `markers.js`, `serve.py`, `cursor-usage-analytics.html`                      |
+| Marker-Popover / Tabellen-Hover | `markers.js`, `charts.js` (`markerTooltipLines`), `i18n.js`, `cursor-usage-analytics.html` |
 
 
 ---

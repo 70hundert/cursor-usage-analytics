@@ -11,6 +11,7 @@
         showMarkers: true,
         showLabels: true,
         projectFilter: 'all',
+        showTablePopover: true,
     };
 
     /** 10 Standard-Farben für Projekt-Marker (gut unterscheidbar auf dunklem Chart-Hintergrund). */
@@ -249,6 +250,7 @@
                 showLabels: parsed.showLabels !== false,
                 projectFilter:
                     typeof parsed.projectFilter === 'string' ? parsed.projectFilter : 'all',
+                showTablePopover: parsed.showTablePopover !== false,
             };
         } catch {
             return { ...DEFAULT_MARKER_CHART_DISPLAY };
@@ -263,6 +265,7 @@
                     showMarkers: prefs.showMarkers !== false,
                     showLabels: prefs.showLabels !== false,
                     projectFilter: prefs.projectFilter || 'all',
+                    showTablePopover: prefs.showTablePopover !== false,
                 })
             );
         } catch {
@@ -702,7 +705,7 @@
     }
 
     function getNativeClientPoint(event) {
-        const native = event?.native;
+        const native = event?.native ?? event;
         if (native && typeof native.clientX === 'number') {
             return { x: native.clientX, y: native.clientY };
         }
@@ -762,6 +765,11 @@
 
         el.hidden = false;
         positionPopoverStable(ctx, event);
+    }
+
+    /** Popover bei Tabellenzeilen-Hover (Position am Cursor, kein Chart-Kontext). */
+    function showTableMarkerPopover(marker, nativeEvent, chartContext) {
+        showChartPopover(marker, nativeEvent, chartContext, null);
     }
 
     function defaultHitWidthMs(chartContext) {
@@ -1248,6 +1256,8 @@
         annotationPluginOptions,
         chartMarkerLabelTopPadding,
         showChartPopover,
+        showTableMarkerPopover,
+        scheduleMarkerPopoverHide: scheduleHidePopover,
         hideChartPopover,
         getMarkerForEvent,
         projectColor,

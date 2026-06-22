@@ -1,6 +1,6 @@
 # Cursor Usage Dashboard
 
-Local dashboard for **Cursor IDE usage** — token timeline, costs, models, budget, and project markers. Built for personal multi-account setups (CSV + optional unofficial live API).
+Local dashboard for **Cursor IDE usage** — token timeline, costs, models, budget, and project markers (including hover info in charts and tables, optionally disableable). Built for personal multi-account setups (CSV + optional unofficial live API).
 
 **Deutsch:** [README.md](README.md)
 

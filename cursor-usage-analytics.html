@@ -1235,6 +1235,14 @@
 
         <section class="card">
             <h2 data-i18n="mostExpensiveEvents">Teuerste Events</h2>
+            <div class="toolbar" style="margin-bottom: 0.5rem;">
+                <div class="toolbar-group">
+                    <label class="toolbar-label">
+                        <input type="checkbox" data-marker-table-popover checked>
+                        <span data-i18n="showTableMarkerPopover">Marker-Info beim Hover</span>
+                    </label>
+                </div>
+            </div>
             <div class="usage-table-wrap">
                 <table class="usage-table">
                     <thead>
@@ -1285,6 +1293,12 @@
                     <label class="toolbar-label">
                         <input type="checkbox" id="events-included-only">
                         <span data-i18n="includedOnly">Nur Included</span>
+                    </label>
+                </div>
+                <div class="toolbar-group">
+                    <label class="toolbar-label">
+                        <input type="checkbox" data-marker-table-popover checked>
+                        <span data-i18n="showTableMarkerPopover">Marker-Info beim Hover</span>
                     </label>
                 </div>
                 <div class="toolbar-group">
@@ -1360,6 +1374,12 @@
                     <select class="project-filter-select" id="marker-project-filter" aria-label="Marker-Projekt-Filter">
                         <option value="all" data-i18n="allProjects">Alle Projekte</option>
                     </select>
+                </div>
+                <div class="toolbar-group">
+                    <label class="toolbar-label">
+                        <input type="checkbox" data-marker-table-popover checked>
+                        <span data-i18n="showTableMarkerPopover">Marker-Info beim Hover</span>
+                    </label>
                 </div>
                 <div class="toolbar-group">
                     <button type="button" class="btn" id="marker-add-table" data-i18n="markerSet">Marker setzen</button>
@@ -1674,7 +1694,12 @@
         let eventsFilterKey = '';
         let projectFilter = 'all';
         let markerTableProjectFilter = 'all';
-        let markerChartDisplay = { showMarkers: true, showLabels: true, projectFilter: 'all' };
+        let markerChartDisplay = {
+            showMarkers: true,
+            showLabels: true,
+            projectFilter: 'all',
+            showTablePopover: true,
+        };
         let eventsGroupMode = localStorage.getItem('events-group-mode') || 'marker';
         const EVENTS_PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
         const EVENTS_PAGE_SIZE_STORAGE_KEY = 'events-page-size';
@@ -1738,6 +1763,42 @@
             };
         }
 
+        function mountMarkerTableHover(tbody) {
+            if (!tbody || tbody.dataset.markerHoverBound === '1') {
+                return;
+            }
+            tbody.dataset.markerHoverBound = '1';
+            tbody.addEventListener('mouseover', (event) => {
+                if (markerChartDisplay.showTablePopover === false) {
+                    return;
+                }
+                const row = event.target.closest('tr[data-marker-id]');
+                if (!row || row.contains(event.relatedTarget)) {
+                    return;
+                }
+                const api = getMarkersApi();
+                if (!api) {
+                    return;
+                }
+                const marker = api.getStore().markers.find((m) => m.id === row.dataset.markerId);
+                if (!marker) {
+                    return;
+                }
+                const ctx = buildMarkerContext(filteredEvents());
+                if (!ctx) {
+                    return;
+                }
+                api.showTableMarkerPopover(marker, event, ctx);
+            });
+            tbody.addEventListener('mouseout', (event) => {
+                const row = event.target.closest('tr[data-marker-id]');
+                if (!row || row.contains(event.relatedTarget)) {
+                    return;
+                }
+                getMarkersApi()?.scheduleMarkerPopoverHide(300);
+            });
+        }
+
         function persistMarkerChartDisplay() {
             getMarkersApi()?.saveMarkerChartDisplay(markerChartDisplay);
         }
@@ -1753,6 +1814,12 @@
             `;
             document.querySelectorAll('[data-marker-display-host]').forEach((host) => {
                 host.innerHTML = template;
+            });
+        }
+
+        function syncMarkerTablePopoverUi() {
+            document.querySelectorAll('[data-marker-table-popover]').forEach((input) => {
+                input.checked = markerChartDisplay.showTablePopover !== false;
             });
         }
 
@@ -1807,6 +1874,18 @@
             }
 
             mountMarkerChartDisplayControls();
+            syncMarkerTablePopoverUi();
+
+            document.querySelectorAll('[data-marker-table-popover]').forEach((input) => {
+                input.addEventListener('change', () => {
+                    markerChartDisplay.showTablePopover = input.checked;
+                    persistMarkerChartDisplay();
+                    syncMarkerTablePopoverUi();
+                    if (!markerChartDisplay.showTablePopover) {
+                        getMarkersApi()?.hideChartPopover(true);
+                    }
+                });
+            });
 
             document.querySelectorAll('[data-marker-chart-visible]').forEach((btn) => {
                 btn.addEventListener('click', () => {
@@ -2516,6 +2595,10 @@
             });
 
             syncMarkerSortHeaders();
+
+            mountMarkerTableHover(document.getElementById('marker-table-body'));
+            mountMarkerTableHover(document.getElementById('events-table-body'));
+            mountMarkerTableHover(document.getElementById('expensive-table-body'));
 
             document.getElementById('marker-table-body')?.addEventListener('click', (event) => {
                 const groupRow = event.target.closest('[data-marker-group-key]');
@@ -3864,7 +3947,8 @@
             const memberAttr = groupKey
                 ? ` data-group-member="${String(groupKey).replace(/"/g, '&quot;')}"`
                 : '';
-            return `<tr class="${userRowClass(event.userLabel)}${markedClass} usage-table__row--group-member"${memberAttr}${hiddenAttr ? ' hidden' : ''}>
+            const markerIdAttr = marker ? ` data-marker-id="${marker.id}"` : '';
+            return `<tr class="${userRowClass(event.userLabel)}${markedClass} usage-table__row--group-member"${markerIdAttr}${memberAttr}${hiddenAttr ? ' hidden' : ''}>
                     <td>${dateTimeFmt.format(event.timestamp)}</td>
                     <td class="usage-table__user usage-table__user--${event.userLabel}">${event.userLabel}</td>
                     <td>${projectLabel}</td>
@@ -3888,7 +3972,8 @@
             const collapsed = collapsedEventGroups.has(group.key);
             const collapsedClass = collapsed ? ' usage-table__group-header--collapsed' : '';
             const safeKey = String(group.key).replace(/"/g, '&quot;');
-            return `<tr class="usage-table__group-header usage-table__group-header--toggle${collapsedClass}" data-group-key="${safeKey}" role="button" tabindex="0">
+            const markerIdAttr = group.marker ? ` data-marker-id="${group.marker.id}"` : '';
+            return `<tr class="usage-table__group-header usage-table__group-header--toggle${collapsedClass}" data-group-key="${safeKey}"${markerIdAttr} role="button" tabindex="0">
                     <td colspan="5"><span class="usage-table__group-chevron" aria-hidden="true"></span>${title}</td>
                     <td>—</td>
                     <td>—</td>
@@ -4063,7 +4148,8 @@
                     const rangeCell = marker
                         ? `<span class="usage-table__group-range">${formatEventGroupRange(marker, api, filterEndMs)}</span>`
                         : '—';
-                    return `<tr class="${userRowClass(row.userLabel)}${markedClass}">
+                    const markerIdAttr = marker ? ` data-marker-id="${marker.id}"` : '';
+                    return `<tr class="${userRowClass(row.userLabel)}${markedClass}"${markerIdAttr}>
                     <td>${dateTimeFmt.format(row.timestamp)}</td>
                     <td class="usage-table__user usage-table__user--${row.userLabel}">${row.userLabel}</td>
                     <td>${projectCell}</td>

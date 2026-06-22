@@ -1,6 +1,6 @@
 # Cursor Usage Dashboard
 
-Lokales Dashboard zur Analyse der **Cursor-Nutzung** — Token-Verlauf, Kosten, Modelle, Budget und Projekt-Marker. Für persönliche Multi-Account-Setups (CSV + optional inoffizielle Live-API).
+Lokales Dashboard zur Analyse der **Cursor-Nutzung** — Token-Verlauf, Kosten, Modelle, Budget und Projekt-Marker (inkl. Hover-Info in Charts und Tabellen, optional abschaltbar). Für persönliche Multi-Account-Setups (CSV + optional inoffizielle Live-API).
 
 **English:** [README_EN.md](README_EN.md)
 

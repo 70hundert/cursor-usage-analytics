@@ -5,8 +5,8 @@ Committed PNGs used in [README.md](../../README.md) and [README_EN.md](../../REA
 | File | Content |
 |------|---------|
 | `analytics-overview.png` | Analytics dashboard — KPIs and overview chart |
-| `analytics-markers.png` | Project markers on chart + marker table |
-| `events-table.png` | Individual requests table with filters |
+| `analytics-markers.png` | Project markers on chart + marker table (hover popover) |
+| `events-table.png` | Individual requests table with filters and optional marker hover info |
 
 ## Regenerate
 

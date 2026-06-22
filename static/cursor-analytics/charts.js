@@ -245,6 +245,9 @@
         if (marker.task) {
             lines.push(tf('chartTooltipTask', { task: marker.task }));
         }
+        if (marker.note) {
+            lines.push(tf('chartTooltipNote', { note: marker.note }));
+        }
         return lines;
     }
 
